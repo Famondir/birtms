@@ -12,13 +12,16 @@ new_birtms <- function(x = NULL,
   type = list()
   type$parametric <- match.arg(type_parametric, c('1PL', '2PL', '3PL'))
   type$response <- match.arg(type_response, c('dichotom', 'polytom'))
-  type$dimensionality <- match.arg(type_dimensionality, c('unidimensional', 'bifactor', 'twotier',
+  type$dimensionality <- match.arg(type_dimensionality, c('unidimensional', 'bifactor', 'twotier', 'testlet',
                                                           'multidimensional_unnested',
                                                           'multidimensional_compensatory',
                                                           'multidimensional_noncompensatory'))
   # ergeben sich die Eigenschaften des unnested multidimensinalen Modells aus dem compensatory?
   # können hier Kategorien zusammengefasst werden?
   # soll ein Typ higherorder eingeführt werden?
+  # sind das Testletmodell und das Bifactormodell beide als zwei Arten nötig?
+
+  # Itemdimensionality fehlt noch
   type$person_hierarchy <- match.arg(type_person_hierarchy, c('pooled', 'multilevel'))
   type$item_hierarchy <- match.arg(type_item_hierarchy, c('nonpooled', 'pooled'))
 
