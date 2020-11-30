@@ -2,7 +2,7 @@ new_birtms <- function(x = NULL,
                        type_parametric = '1PL',
                        type_response = 'dichotom',
                        type_dimensionality = 'unidimensional',
-                       type_person_hierarchy = 'pooled', type_item_hierarchy = 'pooled',
+                       type_person_hierarchy = 'pooled', type_item_hierarchy = 'pooled', # sind nicht gepoolte Schätzungen notwendig?
                        person_covariables = '', item_covariables = '', situation_covariables = '') {
   stopifnot(brms::is.brmsfit(x))
   stopifnot(is.character(person_covariables))
@@ -13,7 +13,7 @@ new_birtms <- function(x = NULL,
   type$parametric <- match.arg(type_parametric, c('1PL', '2PL', '3PL'))
   type$response <- match.arg(type_response, c('dichotom', 'polytom'))
   type$dimensionality <- match.arg(type_dimensionality, c('unidimensional', 'bifactor', 'twotier', 'testlet',
-                                                          'multidimensional_unnested',
+                                                          'multidimensional_unregular',
                                                           'multidimensional_compensatory',
                                                           'multidimensional_noncompensatory'))
   # ergeben sich die Eigenschaften des unnested multidimensinalen Modells aus dem compensatory?

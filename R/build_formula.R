@@ -8,13 +8,23 @@ build_formula <- function(variable_specifications, model_specifications) {
     stop('The variable specifications are not of type list or have length 0.')
   }
 
+  var_specs <- ensym_list(variable_specifications)
+
   if(length(model_specifications) < 1 || !is.list(model_specifications)) {
     stop('The model specifications are not of type list or have length 0.')
   }
 
-  if (model_specifications$response_type == 'dichotom') {
-    form <- build_formula_linear()
+  mod_specs <- model_specifications
 
+  if (mod_specs$response_type == 'dichotom') {
+    if (mod_specs$item_parameter_number == 1) {
+      if (! mod_specs$dimensionality_type %in% c('multidimensional_unregular', 'multidimensional_noncompensatory')) {
+        form <- build_formula_linear(var_specs)
+        return(form)
+      }
+    }
+
+    form <- build_formula_nonlinear(var_specs)
   } else {
     stop('At the moment only models for dichotomous response is implemented.')
   }
@@ -22,20 +32,115 @@ build_formula <- function(variable_specifications, model_specifications) {
   return(form)
 }
 
-build_formula_linear <- function() {
-  x <- expr(1 + theta - beta)
-  nl_formulae <- list(expr(theta ~ 1 + (1 | person)), expr(beta ~ 1 + (1 | item)))
+build_formula_nonlinear <- function(var_specs) {
+
+  nl_formulae <- list(expr(theta ~ 0 + (1 | !!var_specs$person)), expr(beta ~ 1 + (1 | !!var_specs$item)))
+  x <- expr(theta - beta)
 
   # creating the formula should be the last step,
   # because otherwise adding new terms would require stats::update.formula()
   # due to parenthesis creation / term order issues
-  main_formula <- expr(response ~ !!x)
+  main_formula <- expr(!!var_specs$response ~ !!x)
 
   form <- bf(formula = main_formula, nl = TRUE, flist = nl_formulae)
 }
 
-variable_specs <- list(item ='item', person = 'person')
-model_specs <- list(response_type = 'dichotom')
-f <- build_formula(variable_specs, model_specs)
+build_formula_linear <- function(var_specs) {
+  # a linear formula model specification is only possible if there are no unregular dimensions
+  # a linear formula is modeled faster by Stan
 
-make_stancode(f, irt_data)
+  # common intercept helps to reduce SD for all variables
+  # in a basic model (without regression coefficients etc.) the intercept can be interpreted as the item's mean difficulty
+  # e. g. if set describes content knowledge and contains (chemistry, physics, biology) than there mustn't be 'chemistry' in a second set as well
+  x <- expr(1)
+
+  # set person grouping
+  # multiple nestings are possible (e. g. students in classes in schools in countries)
+  # the first specified group has the lowest hierarchy level the last the highest: c(class, school, country)
+  if (is.null(var_specs$person_grouping)) {
+    p <- expr(!!var_specs$person)
+  } else {
+    p <- expr(!!var_specs$person_grouping / !!var_specs$person)
+  }
+
+  # set skill estimator for each group of regular ordered dimesnions
+  # a set of regular ordered dimensions assigns one dimension to each item
+  # multiple regular ordered dimensions are possible as long as the mapping of the dimensions doesn't overlap
+  if (length(var_specs$regular_dimensions) == 1) {
+    x <- expr(!!x + (!!var_specs$regular_dimensions | !!p))
+  } else if (length(var_specs$regular_dimensions) > 1) {
+    for (i in seq_along(var_specs$regular_dimensions)) {
+      x <- expr(!!x + (!!var_specs$regular_dimensions[[i]] | !!p))
+    }
+  } else {
+    x <- expr(!!x + (1 | !!p))
+  }
+
+  # set item grouping
+  # please consider if pooling on item groups is the desired effect or if you want to model something different (e. g. a testlet effect)
+  if (is.null(var_specs$item_grouping)) {
+    i <- expr(!!var_specs$item)
+  } else {
+    i <- expr(!!var_specs$item_grouping / !!var_specs$item)
+  }
+
+  # sets item terms and terms for DIF if requested
+  if (is.null(var_specs$dif)) {
+    x <- expr(!!x - (1 | !!i))
+  } else {
+    x <- expr(!!x - (0 + !!var_specs$dif | !!i) + !!var_specs$dif)
+  }
+
+  # sets terms for person covariables
+  if (length(var_specs$person_covariables) == 1) {
+    x <- expr(!!x + !!var_specs$person_covariables)
+  } else if (length(var_specs$person_covariables) > 1) {
+    for (i in seq_along(var_specs$person_covariables)) {
+      x <- expr(!!x + !!var_specs$person_covariables[[i]])
+    }
+  }
+
+  # sets terms for item covariables / characteristics
+  # e. g. a word count (numeric) or something catergorial (factors/strings) which gets dummy coded ("Did the item included a picture or video?")
+  # technically these are modeled not different from person covariables but it might be beneficial to think about the type of predictors included
+  # anyway, this distinction might be necessary for the model inspection in the upcoming Shiny app
+  if (length(var_specs$item_covariables) == 1) {
+    x <- expr(!!x + !!var_specs$item_covariables)
+  } else if (length(var_specs$item_covariables) > 1) {
+    for (i in seq_along(var_specs$item_covariables)) {
+      x <- expr(!!x + !!var_specs$item_covariables[[i]])
+    }
+  }
+
+  # sets terms for situation covariables / characteristics / description
+  # e. g. day time of test taking, time since last break, teacher in class
+  # technically these are modeled not different from person covariables (cf. item covariable comment)
+  if (length(var_specs$situation_covariables) == 1) {
+    x <- expr(!!x + !!var_specs$situation_covariables)
+  } else if (length(var_specs$situation_covariables) > 1) {
+    for (i in seq_along(var_specs$situation_covariables)) {
+      x <- expr(!!x + !!var_specs$situation_covariables[[i]])
+    }
+  }
+
+  # creating the formula should be the last step,
+  # because otherwise adding new terms would require stats::update.formula()
+  # due to parenthesis creation / term order issues
+  main_formula <- expr(!!var_specs$response ~ !!x)
+
+  form <- bf(formula = main_formula, nl = FALSE)
+}
+
+ensym_list <- function(string_list) {
+  sym_list <- string_list
+
+  for (i in seq_along(sym_list)) {
+    if (length(sym_list[[i]]) == 1) {
+      sym_list[[i]] <- sym(sym_list[[i]])
+    } else {
+      sym_list[[i]] <- ensym_list(as.list(sym_list[[i]])) # as.list allows to pass vectors or lists of parameters (e. g. for covariables)
+    }
+  }
+
+  return(sym_list)
+}
