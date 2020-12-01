@@ -11,7 +11,7 @@ build_formula <- function(variable_specifications = NULL, model_specifications =
   # selects the most suitable and efficient formula generator
   if (mod_specs$response_type == 'dichotom') {
     if (mod_specs$item_parameter_number == 1) {
-      if (substr(mod_specs$dimensionality_type, 1, 16) != 'multidimensional') {
+      if (! mod_specs$dimensionality_type %in% c('multidimensional_unregular', 'multidimensional_noncompensatory')) {
         form <- build_formula_linear(var_specs)
         return(form)
       } else if (mod_specs$dimensionality_type == 'multidimensional_noncompensatory') {
@@ -39,7 +39,7 @@ check_and_set_specifications <- function(specifications) {
   }
 
   # defines valid specification names
-  valid_names_variable <- c('response', 'item', 'person', 'unregular_dimensions', # 'regular_dimensions' were removed because they seem to underestimate the SD
+  valid_names_variable <- c('response', 'item', 'person', 'regular_dimensions', 'unregular_dimensions',
                             'person_covariables', 'item_covariables', 'situation_covariables', 'dif', 'person_grouping')
   valid_names_model <- c('response_type', 'item_parameter_number', 'dimensionality_type')
 
@@ -108,7 +108,7 @@ build_formula_linear <- function(var_specs) {
     }
   }
 
-  # set skill estimator for each group of regular ordered dimensions
+  # set skill estimator for each group of regular ordered dimesnions
   # a set of regular ordered dimensions assigns one dimension to each item
   # multiple regular ordered dimensions are possible as long as the mapping of the dimensions doesn't overlap
   if (length(var_specs$regular_dimensions) == 1) {
