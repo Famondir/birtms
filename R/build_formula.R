@@ -16,10 +16,13 @@ build_formula <- function(variable_specifications = NULL, model_specifications =
         return(form)
       } else if (mod_specs$dimensionality_type == 'multidimensional_noncompensatory') {
         stop('At the moment noncompensatory models are not implemented.')
+      } else {
+        form <- build_formula_nonlinear_1PL(var_specs, model_specs)
+        return(form)
       }
     }
 
-    form <- build_formula_nonlinear(var_specs)
+    form <- build_formula_nonlinear(var_specs, model_specs)
   } else {
     stop('At the moment only models for dichotomous response is implemented.')
   }
@@ -71,28 +74,7 @@ override_standard_specifications <- function(specifications, name) {
   return(reference_specs)
 }
 
-build_formula_nonlinear <- function(var_specs) {
-
-  nl_formulae <- list(expr(theta ~ 0 + (1 | !!var_specs$person)), expr(beta ~ 1 + (1 | !!var_specs$item)))
-  x <- expr(theta - beta)
-
-  # creating the formula should be the last step,
-  # because otherwise adding new terms would require stats::update.formula()
-  # due to parenthesis creation / term order issues
-  main_formula <- expr(!!var_specs$response ~ !!x)
-
-  form <- bf(formula = main_formula, nl = TRUE, flist = nl_formulae)
-}
-
-build_formula_linear <- function(var_specs) {
-  # a linear formula model specification is only possible if there are no unregular dimensions
-  # a linear formula is modeled faster by Stan
-
-  # common intercept helps to reduce SD for all variables
-  # in a basic model (without regression coefficients etc.) the intercept can be interpreted as the item's mean difficulty
-  # e. g. if set describes content knowledge and contains (chemistry, physics, biology) than there mustn't be 'chemistry' in a second set as well
-  x <- expr(1)
-
+set_person_grouping <- function(var_specs) {
   # set person grouping
   # multiple nestings are possible (e. g. students in classes in schools in countries)
   # the first specified group has the lowest hierarchy level the last the highest: c(class, school, country)
@@ -108,14 +90,112 @@ build_formula_linear <- function(var_specs) {
     }
   }
 
-  # set skill estimator for each group of regular ordered dimesnions
+  return(p)
+}
+
+build_formula_nonlinear_1PL <- function(var_specs, model_specs) {
+  nl_formulae <- list()
+
+  p <- set_person_grouping(var_specs)
+
+  counter_theta <- 1
+  if (model_specs$item_parameter_number == 1) {
+
+    if (length(var_specs$regular_dimensions) == 0 && length(var_specs$unregular_dimensions) == 0) {
+      stop('This model should get a linear formula.')
+    }
+    if (length(var_specs$regular_dimensions) == 1) {
+      x <- expr(!!sym(glue("theta{counter_theta}")))
+      nl_formulae <- c(nl_formulae, expr(!!sym(glue("theta{counter_theta}")) ~ 0 + (0 + !!var_specs$regular_dimensions | !!p)))
+
+      counter_theta <- counter_theta + 1
+    } else if (length(var_specs$regular_dimensions) > 1) {
+      for (i in seq_along(var_specs$regular_dimensions)) {
+        x <- expr(!!x + (!!var_specs$regular_dimensions[[i]] | !!p))
+      }
+    }
+  }
+
+  # creating the formula should be the last step,
+  # because otherwise adding new terms would require stats::update.formula()
+  # due to parenthesis creation / term order issues
+  main_formula <- expr(!!var_specs$response ~ !!x)
+
+  form <- bf(formula = main_formula, nl = TRUE, flist = nl_formulae, family = brmsfamily("bernoulli", link = "logit"))
+  return(form)
+}
+
+build_formula_nonlinear <- function(var_specs, model_specs) {
+  nl_formulae <- list()
+
+  p <- set_person_grouping(var_specs)
+
+  counter_theta <- 1
+  if (model_specs$item_parameter_number == 1) {
+
+    if (length(var_specs$regular_dimensions) == 0) {
+      x <- expr(sym(glue("theta{counter_theta}")))
+      x <- expr(!!x + (1 | !!p))
+    }
+
+    if (length(var_specs$regular_dimensions) == 1) {
+      x <- expr(sym(glue("theta{counter_theta}")))
+
+      expr(!!x + (!!var_specs$regular_dimensions | !!p))
+    } else if (length(var_specs$regular_dimensions) > 1) {
+      for (i in seq_along(var_specs$regular_dimensions)) {
+        x <- expr(!!x + (!!var_specs$regular_dimensions[[i]] | !!p))
+      }
+    }
+
+  } else if (model_specs$item_parameter_number %in% c(1, 2)) {
+
+  }
+
+  nl_formulae <- list(expr(theta ~ 0 + (1 | !!var_specs$person)), expr(beta ~ 1 + (1 | !!var_specs$item)))
+  x <- expr(theta - beta)
+
+  if (model_specs$item_parameter_number == 3) {
+    x <- expr(gamma + (1 - gamma) * inv_logit(!!x))
+  }
+
+
+
+  # creating the formula should be the last step,
+  # because otherwise adding new terms would require stats::update.formula()
+  # due to parenthesis creation / term order issues
+  main_formula <- expr(!!var_specs$response ~ !!x)
+
+  if (model_specs$item_parameter_number %in% c(1, 2)) {
+    form <- bf(formula = main_formula, nl = TRUE, flist = nl_formulae, family = brmsfamily("bernoulli", link = "logit"))
+  } else if (model_specs$item_parameter_number == 3) {
+    form <- bf(formula = main_formula, nl = TRUE, flist = nl_formulae, family = brmsfamily("bernoulli", link = "identity"))
+  } else {
+    stop('At the moment only 1-, 2- or 3-PL models are implemented.')
+  }
+
+}
+
+build_formula_linear <- function(var_specs) {
+  # a linear formula model specification is only possible for one-parametric models
+  # a linear formula model specification is only possible if there are no unregular dimensions
+  # a linear formula is modeled faster by Stan
+
+  # common intercept helps to reduce SD for all variables
+  # in a basic model (without regression coefficients etc.) the intercept can be interpreted as the item's mean difficulty
+  # e. g. if set describes content knowledge and contains (chemistry, physics, biology) than there mustn't be 'chemistry' in a second set as well
+  x <- expr(1)
+
+  p <- set_person_grouping(var_specs)
+
+  # set skill estimator for each group of regular ordered dimensions
   # a set of regular ordered dimensions assigns one dimension to each item
   # multiple regular ordered dimensions are possible as long as the mapping of the dimensions doesn't overlap
   if (length(var_specs$regular_dimensions) == 1) {
-    x <- expr(!!x + (!!var_specs$regular_dimensions | !!p))
+    x <- expr(!!x + (0 + !!var_specs$regular_dimensions | !!p))
   } else if (length(var_specs$regular_dimensions) > 1) {
     for (i in seq_along(var_specs$regular_dimensions)) {
-      x <- expr(!!x + (!!var_specs$regular_dimensions[[i]] | !!p))
+      x <- expr(!!x + (0 + !!var_specs$regular_dimensions[[i]] | !!p))
     }
   } else {
     x <- expr(!!x + (1 | !!p))
@@ -176,6 +256,7 @@ build_formula_linear <- function(var_specs) {
   main_formula <- expr(!!var_specs$response ~ !!x)
 
   form <- bf(formula = main_formula, nl = FALSE, family = brmsfamily("bernoulli", link = "logit"))
+  return(form)
 }
 
 ensym_list <- function(string_list) {
