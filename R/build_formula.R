@@ -4,9 +4,11 @@ library(brms)
 library(glue)
 
 build_formula <- function(variable_specifications = NULL, model_specifications = NULL) {
+  # checks validity of teh passed specification vectors and transforms the strings in variable_specifications to symbols
   var_specs <- check_and_set_specifications(variable_specifications) %>% ensym_list() # if %>% used all the way the passed name to check_and_set_specifications() will be "."
   mod_specs <- check_and_set_specifications(model_specifications)
 
+  # selects the most suitable and efficient formula generator
   if (mod_specs$response_type == 'dichotom') {
     if (mod_specs$item_parameter_number == 1) {
       if (! mod_specs$dimensionality_type %in% c('multidimensional_unregular', 'multidimensional_noncompensatory')) {
@@ -36,6 +38,20 @@ check_and_set_specifications <- function(specifications) {
     stop(glue('The {name} specifications are not of type list or have length 0.'))
   }
 
+  # defines valid specification names
+  valid_names_variable <- c('response', 'item', 'person', 'regular_dimensions', 'unregular_dimensions',
+                            'person_covariables', 'item_covariables', 'situation_covariables', 'dif', 'person_grouping')
+  valid_names_model <- c('response_type', 'item_parameter_number', 'dimensionality_type')
+
+  # checks if all names in the specification vector are valid
+  reference_names <- eval(sym(glue("valid_names_{name}")))
+  if (!all(names(specifications) %in% reference_names)) {
+    reference_names <- glue_collapse(reference_names, sep = ", ")
+    stop(glue('The {name} specifications contain an invalid name. Check for typos!\n
+              The allowed names are:\n
+              {reference_names}'))
+  }
+
   invisible(specifications)
 }
 
@@ -49,7 +65,7 @@ override_standard_specifications <- function(specifications, name) {
 
   # overrides reference settings
   for (i in names(specifications)) {
-    reference_specs[i] <- specifications[i] # attention: if names in specification vector are misstyped this will not throw an error but result in an unwanted formula!
+    reference_specs[i] <- specifications[i]
   }
 
   return(reference_specs)
@@ -159,7 +175,7 @@ build_formula_linear <- function(var_specs) {
   # due to parenthesis creation / term order issues
   main_formula <- expr(!!var_specs$response ~ !!x)
 
-  form <- bf(formula = main_formula, nl = FALSE)
+  form <- bf(formula = main_formula, nl = FALSE, family = brmsfamily("bernoulli", link = "logit"))
 }
 
 ensym_list <- function(string_list) {
