@@ -80,10 +80,16 @@ build_formula_linear <- function(var_specs) {
   # set person grouping
   # multiple nestings are possible (e. g. students in classes in schools in countries)
   # the first specified group has the lowest hierarchy level the last the highest: c(class, school, country)
-  if (is.null(var_specs$person_grouping)) {
-    p <- expr(!!var_specs$person)
-  } else {
-    p <- expr(!!var_specs$person_grouping / !!var_specs$person)
+  p <- expr(!!var_specs$person)
+
+  if (length(var_specs$person_grouping) == 1) {
+    p <- expr(!!var_specs$person_grouping / !!p)
+  } else if (length(var_specs$person_grouping) > 1) {
+    # for multiple nesting the formula will print () around the groupings that aren't necessary in the specification and not part of the ast
+    # e. g.: "response ~ 1 + (1 | school/(class/person)) - (1 | item)" equals "response ~ 1 + (1 | school/class/person) - (1 | item)"
+    for (i in seq_along(var_specs$person_grouping)) {
+      p <- expr(!!var_specs$person_grouping[[i]] / !!p)
+    }
   }
 
   # set skill estimator for each group of regular ordered dimesnions
