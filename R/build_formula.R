@@ -1,26 +1,19 @@
 library(rlang)
 library(dplyr)
 library(brms)
+library(glue)
 
-build_formula <- function(variable_specifications, model_specifications) {
-
-  if(length(variable_specifications) < 1 || !is.list(variable_specifications)) {
-    stop('The variable specifications are not of type list or have length 0.')
-  }
-
-  var_specs <- ensym_list(variable_specifications)
-
-  if(length(model_specifications) < 1 || !is.list(model_specifications)) {
-    stop('The model specifications are not of type list or have length 0.')
-  }
-
-  mod_specs <- model_specifications
+build_formula <- function(variable_specifications = NULL, model_specifications = NULL) {
+  var_specs <- check_and_set_specifications(variable_specifications) %>% ensym_list() # if %>% used all the way the passed name to check_and_set_specifications() will be "."
+  mod_specs <- check_and_set_specifications(model_specifications)
 
   if (mod_specs$response_type == 'dichotom') {
     if (mod_specs$item_parameter_number == 1) {
       if (! mod_specs$dimensionality_type %in% c('multidimensional_unregular', 'multidimensional_noncompensatory')) {
         form <- build_formula_linear(var_specs)
         return(form)
+      } else if (mod_specs$dimensionality_type == 'multidimensional_noncompensatory') {
+        stop('At the moment noncompensatory models are not implemented.')
       }
     }
 
@@ -30,6 +23,36 @@ build_formula <- function(variable_specifications, model_specifications) {
   }
 
   return(form)
+}
+
+check_and_set_specifications <- function(specifications) {
+  # extracts the first part (using prefix notation `[[`(x,i)) of the passed variable name (cuts at "_").
+  name <- enexpr(specifications) %>% as_string() %>% strsplit(x = ., split = "_") %>% `[[`(., 1) %>% `[[`(., 1)
+
+  specifications <- override_standard_specifications(specifications, name)
+
+  # checks if the specification vector is a list of character(vectors)
+  if(length(specifications) < 1 || !is.list(specifications)) {
+    stop(glue('The {name} specifications are not of type list or have length 0.'))
+  }
+
+  invisible(specifications)
+}
+
+override_standard_specifications <- function(specifications, name) {
+  # defines the reference specifications for model and variable specifications
+  variable_specs <- list(response = 'response', item ='item', person = 'person')
+  model_specs <- list(response_type = 'dichotom', item_parameter_number = 1, dimensionality_type = 'unidimensional')
+
+  # sets the specification list to compare with depending on input for name ("variable" or "model")
+  reference_specs <- eval(eval(expr(sym(glue("{name}_specs")))))
+
+  # overrides reference settings
+  for (i in names(specifications)) {
+    reference_specs[i] <- specifications[i] # attention: if names in specification vector are misstyped this will not throw an error but result in an unwanted formula!
+  }
+
+  return(reference_specs)
 }
 
 build_formula_nonlinear <- function(var_specs) {
@@ -85,6 +108,8 @@ build_formula_linear <- function(var_specs) {
   }
 
   # sets item terms and terms for DIF if requested
+  # DIF value is the difference between the two item estimators (so non of these is the "reference" category)
+  # for analysis show the (absolute?) difference
   if (is.null(var_specs$dif)) {
     x <- expr(!!x - (1 | !!i))
   } else {
@@ -134,6 +159,7 @@ build_formula_linear <- function(var_specs) {
 ensym_list <- function(string_list) {
   sym_list <- string_list
 
+  # recursively converts character list into list of symbols to use in expression composition
   for (i in seq_along(sym_list)) {
     if (length(sym_list[[i]]) == 1) {
       sym_list[[i]] <- sym(sym_list[[i]])
