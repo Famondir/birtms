@@ -43,7 +43,8 @@ check_and_set_specifications <- function(specifications) {
 
   # defines valid specification names
   valid_names_variable <- c('response', 'item', 'person', 'regular_dimensions', 'unregular_dimensions',
-                            'person_covariables', 'item_covariables', 'situation_covariables', 'dif', 'person_grouping')
+                            'person_covariables', 'item_covariables', 'situation_covariables', 'dif',
+                            'person_grouping', 'item_grouping')
   valid_names_model <- c('response_type', 'item_parameter_number', 'dimensionality_type')
 
   # checks if all names in the specification vector are valid
@@ -93,27 +94,148 @@ set_person_grouping <- function(var_specs) {
   return(p)
 }
 
-build_formula_nonlinear_1PL <- function(var_specs, model_specs) {
-  nl_formulae <- list()
+set_item_grouping <- function(var_specs) {
+  # set item grouping
+  # please consider if pooling on item groups is the desired effect or if you want to model something different (e. g. a testlet effect)
+  if (is.null(var_specs$item_grouping)) {
+    i <- expr(!!var_specs$item)
+  } else {
+    i <- expr(!!var_specs$item_grouping / !!var_specs$item)
+  }
 
+  return(i)
+}
+
+add_covars_linear <- function(x, specifications) {
+  if (length(specifications) == 1) {
+    x <- expr(!!x + !!specifications)
+  } else if (length(specifications) > 1) {
+    for (i in seq_along(specifications)) {
+      x <- expr(!!x + !!specifications[[i]])
+    }
+  }
+
+  return(x)
+}
+
+add_covars_nonlinear <- function(x, specifications) {
+  name <- enexpr(specifications) %>% as_string() %>% strsplit(x = ., split = "_") %>% `[[`(., 1) %>% `[[`(., 1)
+  print(name)
+
+  if (length(specifications) == 1) {
+    x <- expr(!!x + !!specifications)
+  } else if (length(specifications) > 1) {
+    for (i in seq_along(specifications)) {
+      x <- expr(!!x + !!specifications[[i]])
+    }
+  }
+
+  return(x)
+}
+
+build_formula_nonlinear_1PL <- function(var_specs, model_specs) {
+  x <- expr(skillintercept)
+  nl_formulae <- list(expr(skillintercept ~ 1))
+
+  # sets person grouping term
   p <- set_person_grouping(var_specs)
 
+  # set skill estimator for each group of regular ordered dimensions (c. f. build_formula_linear)
   counter_theta <- 1
-  if (model_specs$item_parameter_number == 1) {
+  if (length(var_specs$regular_dimensions) == 0 && length(var_specs$unregular_dimensions) == 0) {
+    stop('This model should get a linear formula.')
+  }
 
-    if (length(var_specs$regular_dimensions) == 0 && length(var_specs$unregular_dimensions) == 0) {
-      stop('This model should get a linear formula.')
-    }
-    if (length(var_specs$regular_dimensions) == 1) {
-      x <- expr(!!sym(glue("theta{counter_theta}")))
-      nl_formulae <- c(nl_formulae, expr(!!sym(glue("theta{counter_theta}")) ~ 0 + (0 + !!var_specs$regular_dimensions | !!p)))
+  if (length(var_specs$regular_dimensions) == 1) {
+    x <- expr(!!x + !!sym(glue("theta{counter_theta}")))
+    nl_formulae <- c(nl_formulae, expr(!!sym(glue("theta{counter_theta}")) ~ 0 + (0 + !!var_specs$regular_dimensions | !!p)))
+
+    counter_theta <- counter_theta + 1
+  } else if (length(var_specs$regular_dimensions) > 1) {
+    for (i in seq_along(var_specs$regular_dimensions)) {
+      x <- expr(!!x + !!sym(glue("theta{counter_theta}")))
+      nl_formulae <- c(nl_formulae, expr(!!sym(glue("theta{counter_theta}")) ~ 0 + (0 + !!var_specs$regular_dimensions[[i]] | !!p)))
 
       counter_theta <- counter_theta + 1
-    } else if (length(var_specs$regular_dimensions) > 1) {
-      for (i in seq_along(var_specs$regular_dimensions)) {
-        x <- expr(!!x + (!!var_specs$regular_dimensions[[i]] | !!p))
-      }
     }
+  }
+
+  # set skill estimator for each unregular dimension
+  if (length(var_specs$unregular_dimensions) == 1) {
+    x <- expr(!!x + (!!var_specs$unregular_dimensions * !!sym(glue("theta{counter_theta}"))))
+    nl_formulae <- c(nl_formulae, expr(!!sym(glue("theta{counter_theta}")) ~ 0 + (0 + !!var_specs$unregular_dimensions | !!p)))
+
+    counter_theta <- counter_theta + 1
+  } else if (length(var_specs$unregular_dimensions) > 1) {
+    for (i in seq_along(var_specs$unregular_dimensions)) {
+      x <- expr(!!x + (!!var_specs$unregular_dimensions[[i]] * !!sym(glue("theta{counter_theta}"))))
+      nl_formulae <- c(nl_formulae, expr(!!sym(glue("theta{counter_theta}")) ~ 0 + (0 + !!var_specs$unregular_dimensions[[i]] | !!p)))
+
+      counter_theta <- counter_theta + 1
+    }
+  }
+
+  # sets item grouping term
+  i <- set_item_grouping(var_specs)
+
+  # sets item terms and terms for DIF if requested (c. f. build_formula_linear)
+  x <- expr(!!x - beta)
+
+  if (is.null(var_specs$dif)) {
+    nl_formulae <- c(nl_formulae, expr(beta ~ 0 + (1 | !!i)))
+  } else {
+    nl_formulae <- c(nl_formulae, expr(beta ~ 0 + (0 + !!var_specs$dif | !!i) + !!var_specs$dif))
+  }
+
+  # sets terms for person covariables
+  if (!is.null(var_specs$person_covariables)) {
+    x <- expr(!!x + personcovars)
+  }
+
+  if (length(var_specs$person_covariables) == 1) {
+    nl_formulae <- c(nl_formulae, expr(personcovars ~ 0 + !!var_specs$person_covariables))
+  } else if (length(var_specs$person_covariables) > 1) {
+    pcovs <- expr(0 + !!var_specs$person_covariables[[1]])
+
+    for (i in seq_along(var_specs$person_covariables)[-1]) {
+      pcovs <- expr(!!pcovs + !!var_specs$person_covariables[[i]])
+    }
+
+    nl_formulae <- c(nl_formulae, expr(personcovars ~ !!pcovs))
+  }
+
+  # sets terms for item covariables
+  if (!is.null(var_specs$item_covariables)) {
+    x <- expr(!!x + itemcovars)
+  }
+
+  if (length(var_specs$item_covariables) == 1) {
+    nl_formulae <- c(nl_formulae, expr(itemcovars ~ 0 + !!var_specs$item_covariables))
+  } else if (length(var_specs$item_covariables) > 1) {
+    pcovs <- expr(0 + !!var_specs$item_covariables[[1]])
+
+    for (i in seq_along(var_specs$item_covariables)[-1]) {
+      pcovs <- expr(!!pcovs + !!var_specs$item_covariables[[i]])
+    }
+
+    nl_formulae <- c(nl_formulae, expr(itemcovars ~ !!pcovs))
+  }
+
+  # sets terms for situation covariables
+  if (!is.null(var_specs$situation_covariables)) {
+    x <- expr(!!x + situationcovars)
+  }
+
+  if (length(var_specs$situation_covariables) == 1) {
+    nl_formulae <- c(nl_formulae, expr(situationcovars ~ 0 + !!var_specs$situation_covariables))
+  } else if (length(var_specs$situation_covariables) > 1) {
+    pcovs <- expr(0 + !!var_specs$situation_covariables[[1]])
+
+    for (i in seq_along(var_specs$situation_covariables)[-1]) {
+      pcovs <- expr(!!pcovs + !!var_specs$situation_covariables[[i]])
+    }
+
+    nl_formulae <- c(nl_formulae, expr(situationcovars ~ !!pcovs))
   }
 
   # creating the formula should be the last step,
@@ -186,11 +308,13 @@ build_formula_linear <- function(var_specs) {
   # e. g. if set describes content knowledge and contains (chemistry, physics, biology) than there mustn't be 'chemistry' in a second set as well
   x <- expr(1)
 
+  # sets person grouping term
   p <- set_person_grouping(var_specs)
 
   # set skill estimator for each group of regular ordered dimensions
   # a set of regular ordered dimensions assigns one dimension to each item
   # multiple regular ordered dimensions are possible as long as the mapping of the dimensions doesn't overlap
+  # @2PL: estimations with regular dimension sets seem to underestimate the underlying alpha SD (uncorrelated dimensions)
   if (length(var_specs$regular_dimensions) == 1) {
     x <- expr(!!x + (0 + !!var_specs$regular_dimensions | !!p))
   } else if (length(var_specs$regular_dimensions) > 1) {
@@ -201,13 +325,8 @@ build_formula_linear <- function(var_specs) {
     x <- expr(!!x + (1 | !!p))
   }
 
-  # set item grouping
-  # please consider if pooling on item groups is the desired effect or if you want to model something different (e. g. a testlet effect)
-  if (is.null(var_specs$item_grouping)) {
-    i <- expr(!!var_specs$item)
-  } else {
-    i <- expr(!!var_specs$item_grouping / !!var_specs$item)
-  }
+  # sets item grouping term
+  i <- set_item_grouping(var_specs)
 
   # sets item terms and terms for DIF if requested
   # DIF value is the difference between the two item estimators (so non of these is the "reference" category)
@@ -219,13 +338,15 @@ build_formula_linear <- function(var_specs) {
   }
 
   # sets terms for person covariables
-  if (length(var_specs$person_covariables) == 1) {
-    x <- expr(!!x + !!var_specs$person_covariables)
-  } else if (length(var_specs$person_covariables) > 1) {
-    for (i in seq_along(var_specs$person_covariables)) {
-      x <- expr(!!x + !!var_specs$person_covariables[[i]])
-    }
-  }
+  # if (length(var_specs$person_covariables) == 1) {
+  #   x <- expr(!!x + !!var_specs$person_covariables)
+  # } else if (length(var_specs$person_covariables) > 1) {
+  #   for (i in seq_along(var_specs$person_covariables)) {
+  #     x <- expr(!!x + !!var_specs$person_covariables[[i]])
+  #   }
+  # }
+
+  x <- add_covars_linear(x, var_specs$person_covariables)
 
   # sets terms for item covariables / characteristics
   # e. g. a word count (numeric) or something catergorial (factors/strings) which gets dummy coded ("Did the item included a picture or video?")
