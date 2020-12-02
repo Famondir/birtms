@@ -2,6 +2,7 @@ library(rlang)
 library(dplyr)
 library(brms)
 library(glue)
+library(zeallot)
 
 build_formula <- function(variable_specifications = NULL, model_specifications = NULL) {
   # checks validity of teh passed specification vectors and transforms the strings in variable_specifications to symbols
@@ -118,19 +119,27 @@ add_covars_linear <- function(x, specifications) {
   return(x)
 }
 
-add_covars_nonlinear <- function(x, specifications) {
+add_covars_nonlinear <- function(x, nl_formulae, specifications) {
   name <- enexpr(specifications) %>% as_string() %>% strsplit(x = ., split = "_") %>% `[[`(., 1) %>% `[[`(., 1)
   print(name)
 
-  if (length(specifications) == 1) {
-    x <- expr(!!x + !!specifications)
-  } else if (length(specifications) > 1) {
-    for (i in seq_along(specifications)) {
-      x <- expr(!!x + !!specifications[[i]])
-    }
+  if (!is.null(specifications)) {
+    x <- expr(!!x + !!sym(glue("{name}covars")))
   }
 
-  return(x)
+  if (length(specifications) == 1) {
+    nl_formulae <- c(nl_formulae, expr(!!sym(glue("{name}covars")) ~ 0 + !!specifications))
+  } else if (length(specifications) > 1) {
+    pcovs <- expr(0 + !!specifications[[1]])
+
+    for (i in seq_along(specifications)[-1]) {
+      pcovs <- expr(!!pcovs + !!specifications[[i]])
+    }
+
+    nl_formulae <- c(nl_formulae, expr(!!sym(glue("{name}covars")) ~ !!pcovs))
+  }
+
+  return(list(x, nl_formulae))
 }
 
 build_formula_nonlinear_1PL <- function(var_specs, model_specs) {
@@ -188,55 +197,16 @@ build_formula_nonlinear_1PL <- function(var_specs, model_specs) {
   }
 
   # sets terms for person covariables
-  if (!is.null(var_specs$person_covariables)) {
-    x <- expr(!!x + personcovars)
-  }
-
-  if (length(var_specs$person_covariables) == 1) {
-    nl_formulae <- c(nl_formulae, expr(personcovars ~ 0 + !!var_specs$person_covariables))
-  } else if (length(var_specs$person_covariables) > 1) {
-    pcovs <- expr(0 + !!var_specs$person_covariables[[1]])
-
-    for (i in seq_along(var_specs$person_covariables)[-1]) {
-      pcovs <- expr(!!pcovs + !!var_specs$person_covariables[[i]])
-    }
-
-    nl_formulae <- c(nl_formulae, expr(personcovars ~ !!pcovs))
-  }
+  person_covariables <- var_specs$person_covariables
+  c(x, nl_formulae) %<-% add_covars_nonlinear(x, nl_formulae, person_covariables)
 
   # sets terms for item covariables
-  if (!is.null(var_specs$item_covariables)) {
-    x <- expr(!!x + itemcovars)
-  }
-
-  if (length(var_specs$item_covariables) == 1) {
-    nl_formulae <- c(nl_formulae, expr(itemcovars ~ 0 + !!var_specs$item_covariables))
-  } else if (length(var_specs$item_covariables) > 1) {
-    pcovs <- expr(0 + !!var_specs$item_covariables[[1]])
-
-    for (i in seq_along(var_specs$item_covariables)[-1]) {
-      pcovs <- expr(!!pcovs + !!var_specs$item_covariables[[i]])
-    }
-
-    nl_formulae <- c(nl_formulae, expr(itemcovars ~ !!pcovs))
-  }
+  item_covariables <- var_specs$item_covariables
+  c(x, nl_formulae) %<-% add_covars_nonlinear(x, nl_formulae, item_covariables)
 
   # sets terms for situation covariables
-  if (!is.null(var_specs$situation_covariables)) {
-    x <- expr(!!x + situationcovars)
-  }
-
-  if (length(var_specs$situation_covariables) == 1) {
-    nl_formulae <- c(nl_formulae, expr(situationcovars ~ 0 + !!var_specs$situation_covariables))
-  } else if (length(var_specs$situation_covariables) > 1) {
-    pcovs <- expr(0 + !!var_specs$situation_covariables[[1]])
-
-    for (i in seq_along(var_specs$situation_covariables)[-1]) {
-      pcovs <- expr(!!pcovs + !!var_specs$situation_covariables[[i]])
-    }
-
-    nl_formulae <- c(nl_formulae, expr(situationcovars ~ !!pcovs))
-  }
+  situation_covariables <- var_specs$situation_covariables
+  c(x, nl_formulae) %<-% add_covars_nonlinear(x, nl_formulae, situation_covariables)
 
   # creating the formula should be the last step,
   # because otherwise adding new terms would require stats::update.formula()
@@ -338,38 +308,18 @@ build_formula_linear <- function(var_specs) {
   }
 
   # sets terms for person covariables
-  # if (length(var_specs$person_covariables) == 1) {
-  #   x <- expr(!!x + !!var_specs$person_covariables)
-  # } else if (length(var_specs$person_covariables) > 1) {
-  #   for (i in seq_along(var_specs$person_covariables)) {
-  #     x <- expr(!!x + !!var_specs$person_covariables[[i]])
-  #   }
-  # }
-
   x <- add_covars_linear(x, var_specs$person_covariables)
 
   # sets terms for item covariables / characteristics
   # e. g. a word count (numeric) or something catergorial (factors/strings) which gets dummy coded ("Did the item included a picture or video?")
   # technically these are modeled not different from person covariables but it might be beneficial to think about the type of predictors included
   # anyway, this distinction might be necessary for the model inspection in the upcoming Shiny app
-  if (length(var_specs$item_covariables) == 1) {
-    x <- expr(!!x + !!var_specs$item_covariables)
-  } else if (length(var_specs$item_covariables) > 1) {
-    for (i in seq_along(var_specs$item_covariables)) {
-      x <- expr(!!x + !!var_specs$item_covariables[[i]])
-    }
-  }
+  x <- add_covars_linear(x, var_specs$item_covariables)
 
   # sets terms for situation covariables / characteristics / description
   # e. g. day time of test taking, time since last break, teacher in class
   # technically these are modeled not different from person covariables (cf. item covariable comment)
-  if (length(var_specs$situation_covariables) == 1) {
-    x <- expr(!!x + !!var_specs$situation_covariables)
-  } else if (length(var_specs$situation_covariables) > 1) {
-    for (i in seq_along(var_specs$situation_covariables)) {
-      x <- expr(!!x + !!var_specs$situation_covariables[[i]])
-    }
-  }
+  x <- add_covars_linear(x, var_specs$situation_covariables)
 
   # creating the formula should be the last step,
   # because otherwise adding new terms would require stats::update.formula()
