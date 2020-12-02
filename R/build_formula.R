@@ -13,17 +13,17 @@ build_formula <- function(variable_specifications = NULL, model_specifications =
   if (mod_specs$response_type == 'dichotom') {
     if (mod_specs$item_parameter_number == 1) {
       if (! mod_specs$dimensionality_type %in% c('multidimensional_unregular', 'multidimensional_noncompensatory')) {
-        form <- build_formula_linear(var_specs)
+        form <- build_formula_linear(var_specs, mod_specs$add_common_dimension)
         return(form)
       } else if (mod_specs$dimensionality_type == 'multidimensional_noncompensatory') {
         stop('At the moment noncompensatory models are not implemented.')
       } else {
-        form <- build_formula_nonlinear_1PL(var_specs, model_specs)
+        form <- build_formula_nonlinear_1PL(var_specs, mod_specs$add_common_dimension)
         return(form)
       }
     }
 
-    form <- build_formula_nonlinear(var_specs, model_specs)
+    form <- build_formula_nonlinear_2PL(var_specs, mod_specs$add_common_dimension)
   } else {
     stop('At the moment only models for dichotomous response is implemented.')
   }
@@ -45,8 +45,8 @@ check_and_set_specifications <- function(specifications) {
   # defines valid specification names
   valid_names_variable <- c('response', 'item', 'person', 'regular_dimensions', 'unregular_dimensions',
                             'person_covariables', 'item_covariables', 'situation_covariables', 'dif',
-                            'person_grouping', 'item_grouping')
-  valid_names_model <- c('response_type', 'item_parameter_number', 'dimensionality_type')
+                            'person_grouping', 'item_grouping', 'skillintercept')
+  valid_names_model <- c('response_type', 'item_parameter_number', 'dimensionality_type', 'add_common_dimension')
 
   # checks if all names in the specification vector are valid
   reference_names <- eval(sym(glue("valid_names_{name}")))
@@ -63,7 +63,8 @@ check_and_set_specifications <- function(specifications) {
 override_standard_specifications <- function(specifications, name) {
   # defines the reference specifications for model and variable specifications
   variable_specs <- list(response = 'response', item ='item', person = 'person')
-  model_specs <- list(response_type = 'dichotom', item_parameter_number = 1, dimensionality_type = 'unidimensional')
+  model_specs <- list(response_type = 'dichotom', item_parameter_number = 1, dimensionality_type = 'unidimensional',
+                      add_common_dimension = FALSE)
 
   # sets the specification list to compare with depending on input for name ("variable" or "model")
   reference_specs <- eval(eval(expr(sym(glue("{name}_specs")))))
@@ -121,7 +122,6 @@ add_covars_linear <- function(x, specifications) {
 
 add_covars_nonlinear <- function(x, nl_formulae, specifications) {
   name <- enexpr(specifications) %>% as_string() %>% strsplit(x = ., split = "_") %>% `[[`(., 1) %>% `[[`(., 1)
-  print(name)
 
   if (!is.null(specifications)) {
     x <- expr(!!x + !!sym(glue("{name}covars")))
@@ -142,12 +142,25 @@ add_covars_nonlinear <- function(x, nl_formulae, specifications) {
   return(list(x, nl_formulae))
 }
 
-build_formula_nonlinear_1PL <- function(var_specs, model_specs) {
+build_formula_nonlinear_1PL <- function(var_specs, add_common_dimension = FALSE) {
+
+  # common intercept helps to reduce SD for all variables
+  # Attention!: different intercepts for different dimensions would model a difference in the mean skill value but seems to lead to big uncertainty
   x <- expr(skillintercept)
-  nl_formulae <- list(expr(skillintercept ~ 1))
+  if (is.null(var_specs$skillintercept)) {
+    nl_formulae <- list(expr(skillintercept ~ 1))
+  } else {
+    nl_formulae <- list(expr(skillintercept ~ !!var_specs$skillintercept))
+  }
 
   # sets person grouping term
   p <- set_person_grouping(var_specs)
+
+  # adds a common dimension estimator (needed for e. g. testlet models)
+  if(add_common_dimension && !(is.null(var_specs$regular_dimensions) && is.null(var_specs$unregular_dimensions))) {
+    x <- expr(!!x + commontheta)
+    nl_formulae <- c(nl_formulae, expr(commontheta ~ (1 | !!p)))
+  }
 
   # set skill estimator for each group of regular ordered dimensions (c. f. build_formula_linear)
   counter_theta <- 1
@@ -217,58 +230,95 @@ build_formula_nonlinear_1PL <- function(var_specs, model_specs) {
   return(form)
 }
 
-build_formula_nonlinear <- function(var_specs, model_specs) {
-  nl_formulae <- list()
+build_formula_nonlinear_2PL <- function(var_specs, add_common_dimension = FALSE) {
 
+  # common intercept helps to reduce SD for all variables
+  # Attention!: different intercepts for different dimensions would model a difference in the mean skill value but seems to lead to big uncertainty
+  x <- expr(skillintercept)
+  if (is.null(var_specs$skillintercept)) {
+    nl_formulae <- list(expr(skillintercept ~ 1))
+  } else {
+    nl_formulae <- list(expr(skillintercept ~ !!var_specs$skillintercept))
+  }
+
+  # sets person grouping term
   p <- set_person_grouping(var_specs)
 
+  # adds a common dimension estimator (needed for e. g. testlet models)
+  if(add_common_dimension && !(is.null(var_specs$regular_dimensions) && is.null(var_specs$unregular_dimensions))) {
+    x <- expr(!!x + commontheta)
+    nl_formulae <- c(nl_formulae, expr(commontheta ~ (1 | !!p)))
+  }
+
+  # set skill estimator for each group of regular ordered dimensions (c. f. build_formula_linear)
   counter_theta <- 1
-  if (model_specs$item_parameter_number == 1) {
-
-    if (length(var_specs$regular_dimensions) == 0) {
-      x <- expr(sym(glue("theta{counter_theta}")))
-      x <- expr(!!x + (1 | !!p))
-    }
-
-    if (length(var_specs$regular_dimensions) == 1) {
-      x <- expr(sym(glue("theta{counter_theta}")))
-
-      expr(!!x + (!!var_specs$regular_dimensions | !!p))
-    } else if (length(var_specs$regular_dimensions) > 1) {
-      for (i in seq_along(var_specs$regular_dimensions)) {
-        x <- expr(!!x + (!!var_specs$regular_dimensions[[i]] | !!p))
-      }
-    }
-
-  } else if (model_specs$item_parameter_number %in% c(1, 2)) {
-
+  if (length(var_specs$regular_dimensions) == 0 && length(var_specs$unregular_dimensions) == 0) {
+    stop('This model should get a linear formula.')
   }
 
-  nl_formulae <- list(expr(theta ~ 0 + (1 | !!var_specs$person)), expr(beta ~ 1 + (1 | !!var_specs$item)))
-  x <- expr(theta - beta)
+  if (length(var_specs$regular_dimensions) == 1) {
+    x <- expr(!!x + !!sym(glue("theta{counter_theta}")))
+    nl_formulae <- c(nl_formulae, expr(!!sym(glue("theta{counter_theta}")) ~ 0 + (0 + !!var_specs$regular_dimensions | !!p)))
 
-  if (model_specs$item_parameter_number == 3) {
-    x <- expr(gamma + (1 - gamma) * inv_logit(!!x))
+    counter_theta <- counter_theta + 1
+  } else if (length(var_specs$regular_dimensions) > 1) {
+    for (i in seq_along(var_specs$regular_dimensions)) {
+      x <- expr(!!x + !!sym(glue("theta{counter_theta}")))
+      nl_formulae <- c(nl_formulae, expr(!!sym(glue("theta{counter_theta}")) ~ 0 + (0 + !!var_specs$regular_dimensions[[i]] | !!p)))
+
+      counter_theta <- counter_theta + 1
+    }
   }
 
+  # set skill estimator for each unregular dimension
+  if (length(var_specs$unregular_dimensions) == 1) {
+    x <- expr(!!x + (!!var_specs$unregular_dimensions * !!sym(glue("theta{counter_theta}"))))
+    nl_formulae <- c(nl_formulae, expr(!!sym(glue("theta{counter_theta}")) ~ 0 + (0 + !!var_specs$unregular_dimensions | !!p)))
 
+    counter_theta <- counter_theta + 1
+  } else if (length(var_specs$unregular_dimensions) > 1) {
+    for (i in seq_along(var_specs$unregular_dimensions)) {
+      x <- expr(!!x + (!!var_specs$unregular_dimensions[[i]] * !!sym(glue("theta{counter_theta}"))))
+      nl_formulae <- c(nl_formulae, expr(!!sym(glue("theta{counter_theta}")) ~ 0 + (0 + !!var_specs$unregular_dimensions[[i]] | !!p)))
+
+      counter_theta <- counter_theta + 1
+    }
+  }
+
+  # sets item grouping term
+  i <- set_item_grouping(var_specs)
+
+  # sets item terms and terms for DIF if requested (c. f. build_formula_linear)
+  x <- expr(!!x - beta)
+
+  if (is.null(var_specs$dif)) {
+    nl_formulae <- c(nl_formulae, expr(beta ~ 0 + (1 | !!i)))
+  } else {
+    nl_formulae <- c(nl_formulae, expr(beta ~ 0 + (0 + !!var_specs$dif | !!i) + !!var_specs$dif))
+  }
+
+  # sets terms for person covariables
+  person_covariables <- var_specs$person_covariables
+  c(x, nl_formulae) %<-% add_covars_nonlinear(x, nl_formulae, person_covariables)
+
+  # sets terms for item covariables
+  item_covariables <- var_specs$item_covariables
+  c(x, nl_formulae) %<-% add_covars_nonlinear(x, nl_formulae, item_covariables)
+
+  # sets terms for situation covariables
+  situation_covariables <- var_specs$situation_covariables
+  c(x, nl_formulae) %<-% add_covars_nonlinear(x, nl_formulae, situation_covariables)
 
   # creating the formula should be the last step,
   # because otherwise adding new terms would require stats::update.formula()
   # due to parenthesis creation / term order issues
   main_formula <- expr(!!var_specs$response ~ !!x)
 
-  if (model_specs$item_parameter_number %in% c(1, 2)) {
-    form <- bf(formula = main_formula, nl = TRUE, flist = nl_formulae, family = brmsfamily("bernoulli", link = "logit"))
-  } else if (model_specs$item_parameter_number == 3) {
-    form <- bf(formula = main_formula, nl = TRUE, flist = nl_formulae, family = brmsfamily("bernoulli", link = "identity"))
-  } else {
-    stop('At the moment only 1-, 2- or 3-PL models are implemented.')
-  }
-
+  form <- bf(formula = main_formula, nl = TRUE, flist = nl_formulae, family = brmsfamily("bernoulli", link = "logit"))
+  return(form)
 }
 
-build_formula_linear <- function(var_specs) {
+build_formula_linear <- function(var_specs, add_common_dimension = FALSE) {
   # a linear formula model specification is only possible for one-parametric models
   # a linear formula model specification is only possible if there are no unregular dimensions
   # a linear formula is modeled faster by Stan
@@ -276,10 +326,21 @@ build_formula_linear <- function(var_specs) {
   # common intercept helps to reduce SD for all variables
   # in a basic model (without regression coefficients etc.) the intercept can be interpreted as the item's mean difficulty
   # e. g. if set describes content knowledge and contains (chemistry, physics, biology) than there mustn't be 'chemistry' in a second set as well
-  x <- expr(1)
+  # Attention!: different intercepts for different dimensions would model a difference in the mean skill value but seems to lead to big uncertainty
+  if (is.null(var_specs$skillintercept)) {
+    x <- expr(1)
+  } else {
+    x <- expr(!!var_specs$skillintercept)
+  }
+
 
   # sets person grouping term
   p <- set_person_grouping(var_specs)
+
+  # adds a common dimension estimator (needed for e. g. testlet models)
+  if(add_common_dimension && !is.null(var_specs$regular_dimensions)) {
+    x <- expr(!!x + (1 | !!p))
+  }
 
   # set skill estimator for each group of regular ordered dimensions
   # a set of regular ordered dimensions assigns one dimension to each item
