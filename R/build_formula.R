@@ -44,7 +44,8 @@ check_and_set_specifications <- function(specifications) {
   # defines valid specification names
   valid_names_variable <- c('response', 'item', 'person', 'regular_dimensions', 'unregular_dimensions',
                             'person_covariables', 'item_covariables', 'situation_covariables', 'dif',
-                            'person_grouping', 'item_grouping', 'skillintercept')
+                            'person_grouping', 'item_grouping', 'skillintercept',
+                            'pseudo_guess_dimension', 'careless_error_dimension')
   valid_names_model <- c('response_type', 'item_parameter_number', 'dimensionality_type', 'add_common_dimension')
 
   # checks if all names in the specification vector are valid
@@ -292,12 +293,46 @@ build_formula_nonlinear <- function(var_specs, add_common_dimension = FALSE, ite
   situation_covariables <- var_specs$situation_covariables
   c(x, nl_formulae) %<-% add_covars_nonlinear(x, nl_formulae, situation_covariables)
 
-  # creating the formula should be the last step,
-  # because otherwise adding new terms would require stats::update.formula()
-  # due to parenthesis creation / term order issues
-  main_formula <- expr(!!var_specs$response ~ !!x)
+  if (item_parameter_number %in% c(1, 2)) {
+    # creating the formula should be the last step,
+    # because otherwise adding new terms would require stats::update.formula()
+    # due to parenthesis creation / term order issues
+    main_formula <- expr(!!var_specs$response ~ !!x)
 
-  form <- bf(formula = main_formula, nl = TRUE, flist = nl_formulae, family = brmsfamily("bernoulli", link = "logit"))
+    form <- bf(formula = main_formula, nl = TRUE, flist = nl_formulae, family = brmsfamily("bernoulli", link = "logit"))
+
+  } else if (item_parameter_number %in% c(3, 4)) {
+
+    # sets main formula for 3PL or 4PL
+    if (item_parameter_number == 3) {
+      main_formula <- expr(!!var_specs$response ~ gamma + (1 - gamma) * inv_logit(!!x))
+    } else {
+      main_formula <- expr(!!var_specs$response ~ gamma + (1 - psi - gamma) * inv_logit(!!x))
+    }
+
+    # sets the group for which the pseudo guessing parameter should vary (e. g. a one parameter for each item, each testlet or a single one for the whole test)
+    if (is.null(var_specs$pseudo_guess_dimension)) {
+      pseudo_guess_grouping <- 1
+    } else if (length(var_specs$pseudo_guess_dimension) == 1) {
+      pseudo_guess_grouping <- expr(1 + (1 | !!var_specs$pseudo_guess_dimension))
+    } else stop(glue('Only one dimension is allowed for the pseudo guess parameter. You specified:\n{glue_collapse(var_specs$pseudo_guess_dimension, sep = ", ")}'))
+
+    form <- bf(formula = main_formula, nl = TRUE, flist = nl_formulae, family = brmsfamily("bernoulli", link = "identity")) +
+      lf(expr(logitgamma ~ !!pseudo_guess_grouping)) + nlf(gamma ~ inv_logit(logitgamma))
+
+    if (item_parameter_number == 4) {
+
+      # sets the group for which the careless error parameter should vary (e. g. a one parameter for each item, each testlet or a single one for the whole test)
+      if (is.null(var_specs$careless_error_dimension)) {
+        careless_error_grouping <- 1
+      } else if (length(var_specs$careless_error_dimension) == 1) {
+        careless_error_grouping <- expr(1 + (1 | !!var_specs$careless_error_dimension))
+      } else stop(glue('Only one dimension is allowed for the pseudo guess parameter. You specified:\n{glue_collapse(var_specs$careless_error_dimension, sep = ", ")}'))
+
+      form <- form + lf(expr(logitpsi ~ !!careless_error_grouping)) + nlf(psi ~ inv_logit(logitpsi))
+    }
+  }
+
   return(form)
 }
 
