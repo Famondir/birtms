@@ -154,59 +154,59 @@ build_formula_nonlinear_1PL <- function(var_specs, add_common_dimension = FALSE)
   }
 
   # sets person grouping term
-  p <- set_person_grouping(var_specs)
+  person_group <- set_person_grouping(var_specs)
 
   # adds a common dimension estimator (needed for e. g. testlet models)
   if(add_common_dimension && !(is.null(var_specs$regular_dimensions) && is.null(var_specs$unregular_dimensions))) {
     x <- expr(!!x + commontheta)
-    nl_formulae <- c(nl_formulae, expr(commontheta ~ (1 | !!p)))
+    nl_formulae <- c(nl_formulae, expr(commontheta ~ (1 | !!person_group)))
   }
 
   # set skill estimator for each group of regular ordered dimensions (c. f. build_formula_linear)
-  counter_theta <- 1
+  counter_dimension <- 1
   if (length(var_specs$regular_dimensions) == 0 && length(var_specs$unregular_dimensions) == 0) {
     stop('This model should get a linear formula.')
   }
 
   if (length(var_specs$regular_dimensions) == 1) {
-    x <- expr(!!x + !!sym(glue("theta{counter_theta}")))
-    nl_formulae <- c(nl_formulae, expr(!!sym(glue("theta{counter_theta}")) ~ 0 + (0 + !!var_specs$regular_dimensions | !!p)))
+    x <- expr(!!x + !!sym(glue("theta{counter_dimension}")))
+    nl_formulae <- c(nl_formulae, expr(!!sym(glue("theta{counter_dimension}")) ~ 0 + (0 + !!var_specs$regular_dimensions | !!person_group)))
 
-    counter_theta <- counter_theta + 1
+    counter_dimension <- counter_dimension + 1
   } else if (length(var_specs$regular_dimensions) > 1) {
     for (i in seq_along(var_specs$regular_dimensions)) {
-      x <- expr(!!x + !!sym(glue("theta{counter_theta}")))
-      nl_formulae <- c(nl_formulae, expr(!!sym(glue("theta{counter_theta}")) ~ 0 + (0 + !!var_specs$regular_dimensions[[i]] | !!p)))
+      x <- expr(!!x + !!sym(glue("theta{counter_dimension}")))
+      nl_formulae <- c(nl_formulae, expr(!!sym(glue("theta{counter_dimension}")) ~ 0 + (0 + !!var_specs$regular_dimensions[[i]] | !!person_group)))
 
-      counter_theta <- counter_theta + 1
+      counter_dimension <- counter_dimension + 1
     }
   }
 
   # set skill estimator for each unregular dimension
   if (length(var_specs$unregular_dimensions) == 1) {
-    x <- expr(!!x + (!!var_specs$unregular_dimensions * !!sym(glue("theta{counter_theta}"))))
-    nl_formulae <- c(nl_formulae, expr(!!sym(glue("theta{counter_theta}")) ~ 0 + (0 + !!var_specs$unregular_dimensions | !!p)))
+    x <- expr(!!x + !!var_specs$unregular_dimensions * !!sym(glue("theta{counter_dimension}")))
+    nl_formulae <- c(nl_formulae, expr(!!sym(glue("theta{counter_dimension}")) ~ 0 + (1 | !!person_group)))
 
-    counter_theta <- counter_theta + 1
+    counter_dimension <- counter_dimension + 1
   } else if (length(var_specs$unregular_dimensions) > 1) {
     for (i in seq_along(var_specs$unregular_dimensions)) {
-      x <- expr(!!x + (!!var_specs$unregular_dimensions[[i]] * !!sym(glue("theta{counter_theta}"))))
-      nl_formulae <- c(nl_formulae, expr(!!sym(glue("theta{counter_theta}")) ~ 0 + (0 + !!var_specs$unregular_dimensions[[i]] | !!p)))
+      x <- expr(!!x + !!var_specs$unregular_dimensions[[i]] * !!sym(glue("theta{counter_dimension}")))
+      nl_formulae <- c(nl_formulae, expr(!!sym(glue("theta{counter_dimension}")) ~ 0 + (1 | !!person_group)))
 
-      counter_theta <- counter_theta + 1
+      counter_dimension <- counter_dimension + 1
     }
   }
 
   # sets item grouping term
-  i <- set_item_grouping(var_specs)
+  item_group <- set_item_grouping(var_specs)
 
   # sets item terms and terms for DIF if requested (c. f. build_formula_linear)
   x <- expr(!!x - beta)
 
   if (is.null(var_specs$dif)) {
-    nl_formulae <- c(nl_formulae, expr(beta ~ 0 + (1 | !!i)))
+    nl_formulae <- c(nl_formulae, expr(beta ~ 0 + (1 | !!item_group)))
   } else {
-    nl_formulae <- c(nl_formulae, expr(beta ~ 0 + (0 + !!var_specs$dif | !!i) + !!var_specs$dif))
+    nl_formulae <- c(nl_formulae, expr(beta ~ 0 + (0 + !!var_specs$dif | !!item_group) + !!var_specs$dif))
   }
 
   # sets terms for person covariables
@@ -242,59 +242,69 @@ build_formula_nonlinear_2PL <- function(var_specs, add_common_dimension = FALSE)
   }
 
   # sets person grouping term
-  p <- set_person_grouping(var_specs)
+  person_group <- set_person_grouping(var_specs)
 
+  # sets item grouping term
+  item_group <- set_item_grouping(var_specs)
+
+  alpha_formulae <- list()
   # adds a common dimension estimator (needed for e. g. testlet models)
   if(add_common_dimension && !(is.null(var_specs$regular_dimensions) && is.null(var_specs$unregular_dimensions))) {
-    x <- expr(!!x + commontheta)
-    nl_formulae <- c(nl_formulae, expr(commontheta ~ (1 | !!p)))
+    x <- expr(!!x + commontheta * exp(logcommonalpha))
+    nl_formulae <- c(nl_formulae, expr(commontheta ~ (1 | !!person_group)))
+    alpha_formulae <- c(alpha_formulae, expr(logcommonalpha ~ (1 | !!item_group)))
   }
 
   # set skill estimator for each group of regular ordered dimensions (c. f. build_formula_linear)
-  counter_theta <- 1
-  if (length(var_specs$regular_dimensions) == 0 && length(var_specs$unregular_dimensions) == 0) {
-    stop('This model should get a linear formula.')
-  }
+  counter_dimension <- 1
 
   if (length(var_specs$regular_dimensions) == 1) {
-    x <- expr(!!x + !!sym(glue("theta{counter_theta}")))
-    nl_formulae <- c(nl_formulae, expr(!!sym(glue("theta{counter_theta}")) ~ 0 + (0 + !!var_specs$regular_dimensions | !!p)))
+    x <- expr(!!x + !!sym(glue("theta{counter_dimension}")) * exp(!!sym(glue("logalpha{counter_dimension}"))))
+    nl_formulae <- c(nl_formulae, expr(!!sym(glue("theta{counter_dimension}")) ~ 0 + (0 + !!var_specs$regular_dimensions | !!person_group)))
+    alpha_formulae <- c(alpha_formulae, expr(!!sym(glue("logalpha{counter_dimension}")) ~ (1 | !!item_group)))
 
-    counter_theta <- counter_theta + 1
+    counter_dimension <- counter_dimension + 1
   } else if (length(var_specs$regular_dimensions) > 1) {
     for (i in seq_along(var_specs$regular_dimensions)) {
-      x <- expr(!!x + !!sym(glue("theta{counter_theta}")))
-      nl_formulae <- c(nl_formulae, expr(!!sym(glue("theta{counter_theta}")) ~ 0 + (0 + !!var_specs$regular_dimensions[[i]] | !!p)))
+      x <- expr(!!x + !!sym(glue("theta{counter_dimension}")) * exp(!!sym(glue("logalpha{counter_dimension}"))))
+      nl_formulae <- c(nl_formulae, expr(!!sym(glue("theta{counter_dimension}")) ~ 0 + (0 + !!var_specs$regular_dimensions[[i]] | !!person_group)))
+      alpha_formulae <- c(alpha_formulae, expr(!!sym(glue("logalpha{counter_dimension}")) ~ (1 | !!item_group)))
 
-      counter_theta <- counter_theta + 1
+      counter_dimension <- counter_dimension + 1
     }
   }
 
   # set skill estimator for each unregular dimension
-  if (length(var_specs$unregular_dimensions) == 1) {
-    x <- expr(!!x + (!!var_specs$unregular_dimensions * !!sym(glue("theta{counter_theta}"))))
-    nl_formulae <- c(nl_formulae, expr(!!sym(glue("theta{counter_theta}")) ~ 0 + (0 + !!var_specs$unregular_dimensions | !!p)))
+  # builds stan code to set logalphas on a constant value if thi item does not belong to that dimension (mostly cosmetic)
+  stan_code <- ''
 
-    counter_theta <- counter_theta + 1
+  if (length(var_specs$unregular_dimensions) == 1) {
+    x <- expr(!!x + !!var_specs$unregular_dimensions * !!sym(glue("theta{counter_dimension}")) * exp(!!sym(glue("logalpha{counter_dimension}"))))
+    nl_formulae <- c(nl_formulae, expr(!!sym(glue("theta{counter_dimension}")) ~ 0 + (1 | !!person_group)))
+    alpha_formulae <- c(alpha_formulae, expr(!!sym(glue("logalpha{counter_dimension}")) ~ (1 | !!item_group)))
+    stan_code <- glue('{stan_code}r_{counter_dimension+1}_logalpha{counter_dimension}_1 = r_{counter_dimension+1}_logalpha{counter_dimension}_1 .* {as_string(var_specs$unregular_dimensions)};')
+
+    counter_dimension <- counter_dimension + 1
   } else if (length(var_specs$unregular_dimensions) > 1) {
     for (i in seq_along(var_specs$unregular_dimensions)) {
-      x <- expr(!!x + (!!var_specs$unregular_dimensions[[i]] * !!sym(glue("theta{counter_theta}"))))
-      nl_formulae <- c(nl_formulae, expr(!!sym(glue("theta{counter_theta}")) ~ 0 + (0 + !!var_specs$unregular_dimensions[[i]] | !!p)))
+      x <- expr(!!x + !!var_specs$unregular_dimensions[[i]] * !!sym(glue("theta{counter_dimension}")) * exp(!!sym(glue("logalpha{counter_dimension}"))))
+      nl_formulae <- c(nl_formulae, expr(!!sym(glue("theta{counter_dimension}")) ~ 0 + (1 | !!person_group)))
+      alpha_formulae <- c(alpha_formulae, expr(!!sym(glue("logalpha{counter_dimension}")) ~ (1 | !!item_group)))
+      stan_code <- glue('{stan_code}r_{(length(var_specs$item_grouping)+1)*(counter_dimension+1)}_logalpha{counter_dimension}_1 = r_{(length(var_specs$item_grouping)+1)*(counter_dimension+1)}_logalpha{counter_dimension}_1 .* {as_string(var_specs$unregular_dimensions[[i]])};')
 
-      counter_theta <- counter_theta + 1
+      counter_dimension <- counter_dimension + 1
     }
   }
 
-  # sets item grouping term
-  i <- set_item_grouping(var_specs)
+  nl_formulae <- c(alpha_formulae, nl_formulae)
 
   # sets item terms and terms for DIF if requested (c. f. build_formula_linear)
   x <- expr(!!x - beta)
 
   if (is.null(var_specs$dif)) {
-    nl_formulae <- c(nl_formulae, expr(beta ~ 0 + (1 | !!i)))
+    nl_formulae <- c(nl_formulae, expr(beta ~ 0 + (1 | !!item_group)))
   } else {
-    nl_formulae <- c(nl_formulae, expr(beta ~ 0 + (0 + !!var_specs$dif | !!i) + !!var_specs$dif))
+    nl_formulae <- c(nl_formulae, expr(beta ~ 0 + (0 + !!var_specs$dif | !!item_group) + !!var_specs$dif))
   }
 
   # sets terms for person covariables
@@ -335,11 +345,11 @@ build_formula_linear <- function(var_specs, add_common_dimension = FALSE) {
 
 
   # sets person grouping term
-  p <- set_person_grouping(var_specs)
+  person_group <- set_person_grouping(var_specs)
 
   # adds a common dimension estimator (needed for e. g. testlet models)
   if(add_common_dimension && !is.null(var_specs$regular_dimensions)) {
-    x <- expr(!!x + (1 | !!p))
+    x <- expr(!!x + (1 | !!person_group))
   }
 
   # set skill estimator for each group of regular ordered dimensions
@@ -347,25 +357,25 @@ build_formula_linear <- function(var_specs, add_common_dimension = FALSE) {
   # multiple regular ordered dimensions are possible as long as the mapping of the dimensions doesn't overlap
   # @2PL: estimations with regular dimension sets seem to underestimate the underlying alpha SD (uncorrelated dimensions)
   if (length(var_specs$regular_dimensions) == 1) {
-    x <- expr(!!x + (0 + !!var_specs$regular_dimensions | !!p))
+    x <- expr(!!x + (0 + !!var_specs$regular_dimensions | !!person_group))
   } else if (length(var_specs$regular_dimensions) > 1) {
     for (i in seq_along(var_specs$regular_dimensions)) {
-      x <- expr(!!x + (0 + !!var_specs$regular_dimensions[[i]] | !!p))
+      x <- expr(!!x + (0 + !!var_specs$regular_dimensions[[i]] | !!person_group))
     }
   } else {
     x <- expr(!!x + (1 | !!p))
   }
 
   # sets item grouping term
-  i <- set_item_grouping(var_specs)
+  item_group <- set_item_grouping(var_specs)
 
   # sets item terms and terms for DIF if requested
   # DIF value is the difference between the two item estimators (so non of these is the "reference" category)
   # for analysis show the (absolute?) difference
   if (is.null(var_specs$dif)) {
-    x <- expr(!!x - (1 | !!i))
+    x <- expr(!!x - (1 | !!item_group))
   } else {
-    x <- expr(!!x - (0 + !!var_specs$dif | !!i) + !!var_specs$dif)
+    x <- expr(!!x - (0 + !!var_specs$dif | !!item_group) + !!var_specs$dif)
   }
 
   # sets terms for person covariables
