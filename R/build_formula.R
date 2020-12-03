@@ -13,17 +13,16 @@ build_formula <- function(variable_specifications = NULL, model_specifications =
   if (mod_specs$response_type == 'dichotom') {
     if (mod_specs$item_parameter_number == 1) {
       if (! mod_specs$dimensionality_type %in% c('multidimensional_unregular', 'multidimensional_noncompensatory')) {
+        # specifies a linear formula if possible
         form <- build_formula_linear(var_specs, mod_specs$add_common_dimension)
         return(form)
       } else if (mod_specs$dimensionality_type == 'multidimensional_noncompensatory') {
         stop('At the moment noncompensatory models are not implemented.')
-      } else {
-        form <- build_formula_nonlinear_1PL(var_specs, mod_specs$add_common_dimension)
-        return(form)
       }
     }
 
-    form <- build_formula_nonlinear_2PL(var_specs, mod_specs$add_common_dimension)
+    # specifies a nonlinear formula otherwise
+    form <- build_formula_nonlinear(var_specs, mod_specs$add_common_dimension, mod_specs$item_parameter_number)
   } else {
     stop('At the moment only models for dichotomous response is implemented.')
   }
@@ -142,17 +141,7 @@ add_covars_nonlinear <- function(x, nl_formulae, specifications) {
   return(list(x, nl_formulae))
 }
 
-build_formula_nonlinear_1PL <- function(var_specs, add_common_dimension = FALSE) {
-
-  # common intercept helps to reduce SD for all variables
-  # Attention!: different intercepts for different dimensions would model a difference in the mean skill value but seems to lead to big uncertainty
-  x <- expr(skillintercept)
-  if (is.null(var_specs$skillintercept)) {
-    nl_formulae <- list(expr(skillintercept ~ 1))
-  } else {
-    nl_formulae <- list(expr(skillintercept ~ !!var_specs$skillintercept))
-  }
-
+add_skill_terms_1PL <- function(x, nl_formulae, var_specs, add_common_dimension) {
   # sets person grouping term
   person_group <- set_person_grouping(var_specs)
 
@@ -197,50 +186,10 @@ build_formula_nonlinear_1PL <- function(var_specs, add_common_dimension = FALSE)
     }
   }
 
-  # sets item grouping term
-  item_group <- set_item_grouping(var_specs)
-
-  # sets item terms and terms for DIF if requested (c. f. build_formula_linear)
-  x <- expr(!!x - beta)
-
-  if (is.null(var_specs$dif)) {
-    nl_formulae <- c(nl_formulae, expr(beta ~ 0 + (1 | !!item_group)))
-  } else {
-    nl_formulae <- c(nl_formulae, expr(beta ~ 0 + (0 + !!var_specs$dif | !!item_group) + !!var_specs$dif))
-  }
-
-  # sets terms for person covariables
-  person_covariables <- var_specs$person_covariables
-  c(x, nl_formulae) %<-% add_covars_nonlinear(x, nl_formulae, person_covariables)
-
-  # sets terms for item covariables
-  item_covariables <- var_specs$item_covariables
-  c(x, nl_formulae) %<-% add_covars_nonlinear(x, nl_formulae, item_covariables)
-
-  # sets terms for situation covariables
-  situation_covariables <- var_specs$situation_covariables
-  c(x, nl_formulae) %<-% add_covars_nonlinear(x, nl_formulae, situation_covariables)
-
-  # creating the formula should be the last step,
-  # because otherwise adding new terms would require stats::update.formula()
-  # due to parenthesis creation / term order issues
-  main_formula <- expr(!!var_specs$response ~ !!x)
-
-  form <- bf(formula = main_formula, nl = TRUE, flist = nl_formulae, family = brmsfamily("bernoulli", link = "logit"))
-  return(form)
+  return(list(x, nl_formulae))
 }
 
-build_formula_nonlinear_2PL <- function(var_specs, add_common_dimension = FALSE) {
-
-  # common intercept helps to reduce SD for all variables
-  # Attention!: different intercepts for different dimensions would model a difference in the mean skill value but seems to lead to big uncertainty
-  x <- expr(skillintercept)
-  if (is.null(var_specs$skillintercept)) {
-    nl_formulae <- list(expr(skillintercept ~ 1))
-  } else {
-    nl_formulae <- list(expr(skillintercept ~ !!var_specs$skillintercept))
-  }
-
+add_skill_terms_2PL <- function(x, nl_formulae, var_specs, add_common_dimension) {
   # sets person grouping term
   person_group <- set_person_grouping(var_specs)
 
@@ -297,6 +246,30 @@ build_formula_nonlinear_2PL <- function(var_specs, add_common_dimension = FALSE)
   }
 
   nl_formulae <- c(alpha_formulae, nl_formulae)
+
+  return(list(x, nl_formulae))
+}
+
+build_formula_nonlinear <- function(var_specs, add_common_dimension = FALSE, item_parameter_number) {
+
+  # common intercept helps to reduce SD for all variables
+  # Attention!: different intercepts for different dimensions would model a difference in the mean skill value but seems to lead to big uncertainty
+  x <- expr(skillintercept)
+  if (is.null(var_specs$skillintercept)) {
+    nl_formulae <- list(expr(skillintercept ~ 1))
+  } else {
+    nl_formulae <- list(expr(skillintercept ~ !!var_specs$skillintercept))
+  }
+
+  # adds person skill related terms (theta and possibly alpha)
+  if (item_parameter_number == 1) {
+    c(x, nl_formulae) %<-% add_skill_terms_1PL(x, nl_formulae, var_specs, add_common_dimension)
+  } else if (item_parameter_number %in% c(2, 3, 4)) {
+    c(x, nl_formulae) %<-% add_skill_terms_2PL(x, nl_formulae, var_specs, add_common_dimension)
+  }
+
+  # sets item grouping term
+  item_group <- set_item_grouping(var_specs)
 
   # sets item terms and terms for DIF if requested (c. f. build_formula_linear)
   x <- expr(!!x - beta)
