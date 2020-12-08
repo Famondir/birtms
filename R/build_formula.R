@@ -1,23 +1,42 @@
-library(rlang)
-library(dplyr)
-library(brms)
-library(glue)
-library(zeallot)
+# library(rlang)
+# library(dplyr)
+# library(brms)
+# library(glue)
+# library(zeallot)
 
+
+#' Builds a brmsformula
+#'
+#' Builds a brmsformula for an IRT model based on user input. This is the main function for formula generantion.
+#' It calls further functions to build an appropriate formula. It can be called without it's arguments which
+#' loads the standard settings for a linear 1PL model.
+#'
+#' @param variable_specifications Named list of characters or strings.
+#' @param model_specifications Named list of strings and numerics.
+#'
+#' @return Returns an object of type brmsformula to use it with brms::brm()
+#' @export
+#'
+#' @seealso \code{\link[brms]{brmsformula}}
+#'
+#' @examples
+#' build_formula()
 build_formula <- function(variable_specifications = NULL, model_specifications = NULL) {
   # checks validity of teh passed specification vectors and transforms the strings in variable_specifications to symbols
   var_specs <- check_and_set_specifications(variable_specifications) %>% ensym_list() # if %>% used all the way the passed name to check_and_set_specifications() will be "."
   mod_specs <- check_and_set_specifications(model_specifications)
 
+  if (mod_specs$dimensionality_type == 'multidimensional_noncompensatory') {
+    stop('At the moment noncompensatory models are not implemented.')
+  }
+
   # selects the most suitable and efficient formula generator
   if (mod_specs$response_type == 'dichotom') {
     if (mod_specs$item_parameter_number == 1) {
-      if (! mod_specs$dimensionality_type %in% c('multidimensional_unregular', 'multidimensional_noncompensatory')) {
+      if (length(var_specs$unregular_dimensions) == 0) {
         # specifies a linear formula if possible
         form <- build_formula_linear(var_specs, mod_specs$add_common_dimension)
         return(form)
-      } else if (mod_specs$dimensionality_type == 'multidimensional_noncompensatory') {
-        stop('At the moment noncompensatory models are not implemented.')
       }
     }
 
@@ -30,29 +49,42 @@ build_formula <- function(variable_specifications = NULL, model_specifications =
   return(form)
 }
 
+#' Checks model specifications and possibly adds standard settings
+#'
+#' Calls override_standard_specifications() to override the standard specifications with user specifications.
+#' Checks if all specifications (the names of the list) come from a list of valid names.
+#'
+#' @param specifications a named list
+#'
+#' @return a list
+#' @export
+#' @keywords internal
+#' @importFrom glue glue
+#'
+#' @examples
 check_and_set_specifications <- function(specifications) {
   # extracts the first part (using prefix notation `[[`(x,i)) of the passed variable name (cuts at "_").
-  name <- enexpr(specifications) %>% as_string() %>% strsplit(x = ., split = "_") %>% `[[`(., 1) %>% `[[`(., 1)
+  type <- rlang::enexpr(specifications) %>% rlang::as_string() %>% strsplit(x = ., split = "_") %>% `[[`(., 1) %>% `[[`(., 1)
 
-  specifications <- override_standard_specifications(specifications, name)
+  specifications <- override_standard_specifications(specifications, type)
 
   # checks if the specification vector is a list of character(vectors)
   if(length(specifications) < 1 || !is.list(specifications)) {
-    stop(glue('The {name} specifications are not of type list or have length 0.'))
+    stop(glue('The {type} specifications are not of type list or have length 0.'))
   }
 
   # defines valid specification names
   valid_names_variable <- c('response', 'item', 'person', 'regular_dimensions', 'unregular_dimensions',
-                            'person_covariables', 'item_covariables', 'situation_covariables', 'dif',
+                            'person_covariables', 'item_covariables', 'situation_covariables', 'uniform_dif',
                             'person_grouping', 'item_grouping', 'skillintercept',
                             'pseudo_guess_dimension', 'careless_error_dimension')
   valid_names_model <- c('response_type', 'item_parameter_number', 'dimensionality_type', 'add_common_dimension')
 
   # checks if all names in the specification vector are valid
-  reference_names <- eval(sym(glue("valid_names_{name}")))
+  reference_names <- eval(sym(glue("valid_names_{type}")))
   if (!all(names(specifications) %in% reference_names)) {
-    reference_names <- glue_collapse(reference_names, sep = ", ")
-    stop(glue('The {name} specifications contain an invalid name. Check for typos!\n
+    reference_names <- glue::glue_collapse(reference_names, sep = ", ")
+    stop(glue('The {type} specifications contain an invalid name. Check for typos!\n
               The allowed names are:\n
               {reference_names}'))
   }
@@ -60,14 +92,27 @@ check_and_set_specifications <- function(specifications) {
   invisible(specifications)
 }
 
-override_standard_specifications <- function(specifications, name) {
+#' Augmants the standard specifications with user specifications
+#'
+#' @param specifications a named list
+#' @param type the type of the
+#'
+#' @return a named list
+#' @export
+#' @keywords internal
+#' @importFrom glue glue
+#' @importFrom rlang expr
+#' @importFrom rlang sym
+#'
+#' @examples
+override_standard_specifications <- function(specifications, type) {
   # defines the reference specifications for model and variable specifications
   variable_specs <- list(response = 'response', item ='item', person = 'person')
   model_specs <- list(response_type = 'dichotom', item_parameter_number = 1, dimensionality_type = 'unidimensional',
                       add_common_dimension = FALSE)
 
-  # sets the specification list to compare with depending on input for name ("variable" or "model")
-  reference_specs <- eval(eval(expr(sym(glue("{name}_specs")))))
+  # sets the specification list to compare with depending on input for type ("variable" or "model")
+  reference_specs <- eval(eval(expr(sym(glue("{type}_specs")))))
 
   # overrides reference settings
   for (i in names(specifications)) {
@@ -77,6 +122,15 @@ override_standard_specifications <- function(specifications, name) {
   return(reference_specs)
 }
 
+#' Title
+#'
+#' @param var_specs
+#'
+#' @return
+#' @export
+#' @importFrom rlang expr
+#'
+#' @examples
 set_person_grouping <- function(var_specs) {
   # set person grouping
   # multiple nestings are possible (e. g. students in classes in schools in countries)
@@ -96,6 +150,15 @@ set_person_grouping <- function(var_specs) {
   return(p)
 }
 
+#' Title
+#'
+#' @param var_specs
+#'
+#' @return
+#' @export
+#' @importFrom rlang expr
+#'
+#' @examples
 set_item_grouping <- function(var_specs) {
   # set item grouping
   # please consider if pooling on item groups is the desired effect or if you want to model something different (e. g. a testlet effect)
@@ -120,8 +183,21 @@ add_covars_linear <- function(x, specifications) {
   return(x)
 }
 
+#' Title
+#'
+#' @param x
+#' @param nl_formulae
+#' @param specifications
+#'
+#' @return
+#' @export
+#' @importFrom glue glue
+#' @importFrom rlang expr
+#' @importFrom rlang sym
+#'
+#' @examples
 add_covars_nonlinear <- function(x, nl_formulae, specifications) {
-  name <- enexpr(specifications) %>% as_string() %>% strsplit(x = ., split = "_") %>% `[[`(., 1) %>% `[[`(., 1)
+  name <- rlang::enexpr(specifications) %>% rlang::as_string() %>% strsplit(x = ., split = "_") %>% `[[`(., 1) %>% `[[`(., 1)
 
   if (!is.null(specifications)) {
     x <- expr(!!x + !!sym(glue("{name}covars")))
@@ -142,6 +218,20 @@ add_covars_nonlinear <- function(x, nl_formulae, specifications) {
   return(list(x, nl_formulae))
 }
 
+#' Title
+#'
+#' @param x
+#' @param nl_formulae
+#' @param var_specs
+#' @param add_common_dimension
+#'
+#' @return
+#' @export
+#' @importFrom glue glue
+#' @importFrom rlang expr
+#' @importFrom rlang sym
+#'
+#' @examples
 add_skill_terms_1PL <- function(x, nl_formulae, var_specs, add_common_dimension) {
   # sets person grouping term
   person_group <- set_person_grouping(var_specs)
@@ -154,7 +244,7 @@ add_skill_terms_1PL <- function(x, nl_formulae, var_specs, add_common_dimension)
 
   # set skill estimator for each group of regular ordered dimensions (c. f. build_formula_linear)
   counter_dimension <- 1
-  if (length(var_specs$regular_dimensions) == 0 && length(var_specs$unregular_dimensions) == 0) {
+  if (length(var_specs$unregular_dimensions) == 0) {
     stop('This model should get a linear formula.')
   }
 
@@ -190,6 +280,20 @@ add_skill_terms_1PL <- function(x, nl_formulae, var_specs, add_common_dimension)
   return(list(x, nl_formulae))
 }
 
+#' Title
+#'
+#' @param x
+#' @param nl_formulae
+#' @param var_specs
+#' @param add_common_dimension
+#'
+#' @return
+#' @export
+#' @importFrom glue glue
+#' @importFrom rlang expr
+#' @importFrom rlang sym
+#'
+#' @examples
 add_skill_terms_2PL <- function(x, nl_formulae, var_specs, add_common_dimension) {
   # sets person grouping term
   person_group <- set_person_grouping(var_specs)
@@ -199,10 +303,14 @@ add_skill_terms_2PL <- function(x, nl_formulae, var_specs, add_common_dimension)
 
   alpha_formulae <- list()
   # adds a common dimension estimator (needed for e. g. testlet models)
-  if(add_common_dimension && !(is.null(var_specs$regular_dimensions) && is.null(var_specs$unregular_dimensions))) {
-    x <- expr(!!x + commontheta * exp(logcommonalpha))
+  if (is.null(var_specs$regular_dimensions) && is.null(var_specs$unregular_dimensions)) {
+    x <- expr(!!x + theta * exp(logalpha))
+    nl_formulae <- c(nl_formulae, expr(theta ~ (1 | !!person_group)))
+    alpha_formulae <- c(alpha_formulae, expr(logalpha ~ (1 | !!item_group)))
+  } else if(add_common_dimension) {
+    x <- expr(!!x + commontheta * exp(commonlogalpha))
     nl_formulae <- c(nl_formulae, expr(commontheta ~ (1 | !!person_group)))
-    alpha_formulae <- c(alpha_formulae, expr(logcommonalpha ~ (1 | !!item_group)))
+    alpha_formulae <- c(alpha_formulae, expr(commonlogalpha ~ (1 | !!item_group)))
   }
 
   # set skill estimator for each group of regular ordered dimensions (c. f. build_formula_linear)
@@ -226,13 +334,14 @@ add_skill_terms_2PL <- function(x, nl_formulae, var_specs, add_common_dimension)
 
   # set skill estimator for each unregular dimension
   # builds stan code to set logalphas on a constant value if thi item does not belong to that dimension (mostly cosmetic)
-  stan_code <- ''
+  # stan code altering can crash the model if it is done wrong (e. g. when items get reordered due to multilevel)
+  # stan_code <- ''
 
   if (length(var_specs$unregular_dimensions) == 1) {
     x <- expr(!!x + !!var_specs$unregular_dimensions * !!sym(glue("theta{counter_dimension}")) * exp(!!sym(glue("logalpha{counter_dimension}"))))
     nl_formulae <- c(nl_formulae, expr(!!sym(glue("theta{counter_dimension}")) ~ 0 + (1 | !!person_group)))
     alpha_formulae <- c(alpha_formulae, expr(!!sym(glue("logalpha{counter_dimension}")) ~ (1 | !!item_group)))
-    stan_code <- glue('{stan_code}r_{counter_dimension+1}_logalpha{counter_dimension}_1 = r_{counter_dimension+1}_logalpha{counter_dimension}_1 .* {as_string(var_specs$unregular_dimensions)};')
+    # stan_code <- glue('{stan_code}r_{counter_dimension+1}_logalpha{counter_dimension}_1 = r_{counter_dimension+1}_logalpha{counter_dimension}_1 .* {rlang::as_string(var_specs$unregular_dimensions)};')
 
     counter_dimension <- counter_dimension + 1
   } else if (length(var_specs$unregular_dimensions) > 1) {
@@ -240,7 +349,7 @@ add_skill_terms_2PL <- function(x, nl_formulae, var_specs, add_common_dimension)
       x <- expr(!!x + !!var_specs$unregular_dimensions[[i]] * !!sym(glue("theta{counter_dimension}")) * exp(!!sym(glue("logalpha{counter_dimension}"))))
       nl_formulae <- c(nl_formulae, expr(!!sym(glue("theta{counter_dimension}")) ~ 0 + (1 | !!person_group)))
       alpha_formulae <- c(alpha_formulae, expr(!!sym(glue("logalpha{counter_dimension}")) ~ (1 | !!item_group)))
-      stan_code <- glue('{stan_code}r_{(length(var_specs$item_grouping)+1)*(counter_dimension+1)}_logalpha{counter_dimension}_1 = r_{(length(var_specs$item_grouping)+1)*(counter_dimension+1)}_logalpha{counter_dimension}_1 .* {as_string(var_specs$unregular_dimensions[[i]])};')
+      # stan_code <- glue('{stan_code}r_{(length(var_specs$item_grouping)+1)*(counter_dimension+1)}_logalpha{counter_dimension}_1 = r_{(length(var_specs$item_grouping)+1)*(counter_dimension+1)}_logalpha{counter_dimension}_1 .* {rlang::as_string(var_specs$unregular_dimensions[[i]])};')
 
       counter_dimension <- counter_dimension + 1
     }
@@ -251,6 +360,19 @@ add_skill_terms_2PL <- function(x, nl_formulae, var_specs, add_common_dimension)
   return(list(x, nl_formulae))
 }
 
+#' Title
+#'
+#' @param var_specs
+#' @param add_common_dimension
+#' @param item_parameter_number
+#'
+#' @return
+#' @export
+#' @importFrom glue glue
+#' @importFrom rlang expr
+#' @importFrom zeallot %<-%
+#'
+#' @examples
 build_formula_nonlinear <- function(var_specs, add_common_dimension = FALSE, item_parameter_number) {
 
   # common intercept helps to reduce SD for all variables
@@ -275,10 +397,10 @@ build_formula_nonlinear <- function(var_specs, add_common_dimension = FALSE, ite
   # sets item terms and terms for DIF if requested (c. f. build_formula_linear)
   x <- expr(!!x - beta)
 
-  if (is.null(var_specs$dif)) {
+  if (is.null(var_specs$uniform_dif)) {
     nl_formulae <- c(nl_formulae, expr(beta ~ 0 + (1 | !!item_group)))
   } else {
-    nl_formulae <- c(nl_formulae, expr(beta ~ 0 + (0 + !!var_specs$dif | !!item_group) + !!var_specs$dif))
+    nl_formulae <- c(nl_formulae, expr(beta ~ 0 + (0 + !!var_specs$uniform_dif | !!item_group) + !!var_specs$uniform_dif))
   }
 
   # sets terms for person covariables
@@ -299,7 +421,7 @@ build_formula_nonlinear <- function(var_specs, add_common_dimension = FALSE, ite
     # due to parenthesis creation / term order issues
     main_formula <- expr(!!var_specs$response ~ !!x)
 
-    form <- bf(formula = main_formula, nl = TRUE, flist = nl_formulae, family = brmsfamily("bernoulli", link = "logit"))
+    form <- brms::bf(formula = main_formula, nl = TRUE, flist = nl_formulae, family = brms::brmsfamily("bernoulli", link = "logit"))
 
   } else if (item_parameter_number %in% c(3, 4)) {
 
@@ -315,10 +437,10 @@ build_formula_nonlinear <- function(var_specs, add_common_dimension = FALSE, ite
       pseudo_guess_grouping <- 1
     } else if (length(var_specs$pseudo_guess_dimension) == 1) {
       pseudo_guess_grouping <- expr(1 + (1 | !!var_specs$pseudo_guess_dimension))
-    } else stop(glue('Only one dimension is allowed for the pseudo guess parameter. You specified:\n{glue_collapse(var_specs$pseudo_guess_dimension, sep = ", ")}'))
+    } else stop(glue('Only one dimension is allowed for the pseudo guess parameter. You specified:\n{glue::glue_collapse(var_specs$pseudo_guess_dimension, sep = ", ")}'))
 
-    form <- bf(formula = main_formula, nl = TRUE, flist = nl_formulae, family = brmsfamily("bernoulli", link = "identity")) +
-      lf(expr(logitgamma ~ !!pseudo_guess_grouping)) + nlf(gamma ~ inv_logit(logitgamma))
+    form <- brms::bf(formula = main_formula, nl = TRUE, flist = nl_formulae, family = brms::brmsfamily("bernoulli", link = "identity")) +
+      brms::lf(expr(logitgamma ~ !!pseudo_guess_grouping)) + brms::nlf(gamma ~ inv_logit(logitgamma))
 
     if (item_parameter_number == 4) {
 
@@ -327,19 +449,33 @@ build_formula_nonlinear <- function(var_specs, add_common_dimension = FALSE, ite
         careless_error_grouping <- 1
       } else if (length(var_specs$careless_error_dimension) == 1) {
         careless_error_grouping <- expr(1 + (1 | !!var_specs$careless_error_dimension))
-      } else stop(glue('Only one dimension is allowed for the pseudo guess parameter. You specified:\n{glue_collapse(var_specs$careless_error_dimension, sep = ", ")}'))
+      } else stop(glue('Only one dimension is allowed for the pseudo guess parameter. You specified:\n{glue::glue_collapse(var_specs$careless_error_dimension, sep = ", ")}'))
 
-      form <- form + lf(expr(logitpsi ~ !!careless_error_grouping)) + nlf(psi ~ inv_logit(logitpsi))
+      form <- form + brms::lf(expr(logitpsi ~ !!careless_error_grouping)) + brms::nlf(psi ~ inv_logit(logitpsi))
     }
   }
 
   return(form)
 }
 
+#' Title
+#'
+#' @param var_specs
+#' @param add_common_dimension
+#'
+#' @return
+#' @export
+#' @importFrom rlang expr
+#'
+#' @examples
 build_formula_linear <- function(var_specs, add_common_dimension = FALSE) {
   # a linear formula model specification is only possible for one-parametric models
   # a linear formula model specification is only possible if there are no unregular dimensions
   # a linear formula is modeled faster by Stan
+
+  if (length(var_specs$unregular_dimensions) > 0) {
+    stop('This model should get a nonlinear formula.')
+  }
 
   # common intercept helps to reduce SD for all variables
   # in a basic model (without regression coefficients etc.) the intercept can be interpreted as the item's mean difficulty
@@ -350,7 +486,6 @@ build_formula_linear <- function(var_specs, add_common_dimension = FALSE) {
   } else {
     x <- expr(!!var_specs$skillintercept)
   }
-
 
   # sets person grouping term
   person_group <- set_person_grouping(var_specs)
@@ -371,7 +506,7 @@ build_formula_linear <- function(var_specs, add_common_dimension = FALSE) {
       x <- expr(!!x + (0 + !!var_specs$regular_dimensions[[i]] | !!person_group))
     }
   } else {
-    x <- expr(!!x + (1 | !!p))
+    x <- expr(!!x + (1 | !!person_group))
   }
 
   # sets item grouping term
@@ -380,10 +515,10 @@ build_formula_linear <- function(var_specs, add_common_dimension = FALSE) {
   # sets item terms and terms for DIF if requested
   # DIF value is the difference between the two item estimators (so non of these is the "reference" category)
   # for analysis show the (absolute?) difference
-  if (is.null(var_specs$dif)) {
+  if (is.null(var_specs$uniform_dif)) {
     x <- expr(!!x - (1 | !!item_group))
   } else {
-    x <- expr(!!x - (0 + !!var_specs$dif | !!item_group) + !!var_specs$dif)
+    x <- expr(!!x - (0 + !!var_specs$uniform_dif | !!item_group) + !!var_specs$uniform_dif)
   }
 
   # sets terms for person covariables
@@ -405,10 +540,19 @@ build_formula_linear <- function(var_specs, add_common_dimension = FALSE) {
   # due to parenthesis creation / term order issues
   main_formula <- expr(!!var_specs$response ~ !!x)
 
-  form <- bf(formula = main_formula, nl = FALSE, family = brmsfamily("bernoulli", link = "logit"))
+  form <- brms::bf(formula = main_formula, nl = FALSE, family = brms::brmsfamily("bernoulli", link = "logit"))
   return(form)
 }
 
+#' Title
+#'
+#' @param string_list
+#'
+#' @return
+#' @export
+#' @importFrom rlang sym
+#'
+#' @examples
 ensym_list <- function(string_list) {
   sym_list <- string_list
 
