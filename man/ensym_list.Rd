@@ -7,10 +7,10 @@
 ensym_list(string_list)
 }
 \arguments{
-\item{string_list}{}
+\item{string_list}{named list of strings and characters}
 }
 \value{
-
+list of symbols
 }
 \description{
 Title

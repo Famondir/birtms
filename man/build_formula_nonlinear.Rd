@@ -11,10 +11,14 @@ build_formula_nonlinear(
 )
 }
 \arguments{
-\item{item_parameter_number}{}
+\item{var_specs}{a named list of symbols}
+
+\item{add_common_dimension}{boolean}
+
+\item{item_parameter_number}{numeric (more precise integer)}
 }
 \value{
-
+brmsformula
 }
 \description{
 Title

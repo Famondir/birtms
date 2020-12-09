@@ -7,10 +7,16 @@
 add_skill_terms_2PL(x, nl_formulae, var_specs, add_common_dimension)
 }
 \arguments{
-\item{add_common_dimension}{}
+\item{x}{an expression}
+
+\item{nl_formulae}{a list of expressions}
+
+\item{var_specs}{a named list of symbols}
+
+\item{add_common_dimension}{boolean}
 }
 \value{
-
+list of expressions
 }
 \description{
 Title

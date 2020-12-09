@@ -1,11 +1,11 @@
 Package: birtms
 Type: Package
-Title: What the Package Does (Title Case)
+Title: Creates and analyses IRT models
 Version: 0.1.0
-Author: Who wrote it
-Maintainer: The package maintainer <yourself@somewhere.net>
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
+Author: Simon Schäfer
+Maintainer: Simon Schäfer <simon.d.schaefer@chemie.hu-berlin.de>
+Description:    Helps building IRT model formulae to model data with brms / RStan based on bayesian statistics.
+                Comes with functions for model comparison, model analysis and model description possibly also with graphical methods.
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true

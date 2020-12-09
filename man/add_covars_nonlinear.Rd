@@ -7,10 +7,14 @@
 add_covars_nonlinear(x, nl_formulae, specifications)
 }
 \arguments{
-\item{specifications}{}
+\item{x}{an expression}
+
+\item{nl_formulae}{a list of expressions}
+
+\item{specifications}{a list of symbols}
 }
 \value{
-
+list of expressions
 }
 \description{
 Title

@@ -7,10 +7,12 @@
 build_formula_linear(var_specs, add_common_dimension = FALSE)
 }
 \arguments{
-\item{add_common_dimension}{}
+\item{var_specs}{a named list of symbols}
+
+\item{add_common_dimension}{boolean}
 }
 \value{
-
+brmsformula
 }
 \description{
 Title

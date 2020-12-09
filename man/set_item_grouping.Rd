@@ -7,10 +7,10 @@
 set_item_grouping(var_specs)
 }
 \arguments{
-\item{var_specs}{}
+\item{var_specs}{a named list of symbols}
 }
 \value{
-
+an expression p
 }
 \description{
 Title

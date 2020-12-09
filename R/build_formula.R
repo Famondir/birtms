@@ -1,9 +1,4 @@
-# library(rlang)
-# library(dplyr)
-# library(brms)
-# library(glue)
-# library(zeallot)
-
+if(getRversion() >= "2.15.1")  utils::globalVariables(c("commontheta", "theta", "logalpha", "commonlogalpha", "skillintercept"))
 
 #' Builds a brmsformula
 #'
@@ -54,7 +49,7 @@ build_formula <- function(variable_specifications = NULL, model_specifications =
 #' Calls override_standard_specifications() to override the standard specifications with user specifications.
 #' Checks if all specifications (the names of the list) come from a list of valid names.
 #'
-#' @param specifications a named list
+#' @param specifications a named list of characters
 #'
 #' @return a list
 #' @export
@@ -62,9 +57,11 @@ build_formula <- function(variable_specifications = NULL, model_specifications =
 #' @importFrom glue glue
 #'
 #' @examples
+#' variable_specifications <- list(response = "answer")
+#' check_and_set_specifications(variable_specifications)
 check_and_set_specifications <- function(specifications) {
   # extracts the first part (using prefix notation `[[`(x,i)) of the passed variable name (cuts at "_").
-  type <- rlang::enexpr(specifications) %>% rlang::as_string() %>% strsplit(x = ., split = "_") %>% `[[`(., 1) %>% `[[`(., 1)
+  type <- rlang::enexpr(specifications) %>% rlang::as_string() %>% strsplit(split = "_") %>% `[[`(1) %>% `[[`(1)
 
   specifications <- override_standard_specifications(specifications, type)
 
@@ -124,9 +121,9 @@ override_standard_specifications <- function(specifications, type) {
 
 #' Title
 #'
-#' @param var_specs
+#' @param var_specs a named list of symbols
 #'
-#' @return
+#' @return an expression p
 #' @export
 #' @importFrom rlang expr
 #'
@@ -152,9 +149,9 @@ set_person_grouping <- function(var_specs) {
 
 #' Title
 #'
-#' @param var_specs
+#' @param var_specs a named list of symbols
 #'
-#' @return
+#' @return an expression p
 #' @export
 #' @importFrom rlang expr
 #'
@@ -185,11 +182,11 @@ add_covars_linear <- function(x, specifications) {
 
 #' Title
 #'
-#' @param x
-#' @param nl_formulae
-#' @param specifications
+#' @param x an expression
+#' @param nl_formulae a list of expressions
+#' @param specifications a list of symbols
 #'
-#' @return
+#' @return list of expressions
 #' @export
 #' @importFrom glue glue
 #' @importFrom rlang expr
@@ -197,7 +194,7 @@ add_covars_linear <- function(x, specifications) {
 #'
 #' @examples
 add_covars_nonlinear <- function(x, nl_formulae, specifications) {
-  name <- rlang::enexpr(specifications) %>% rlang::as_string() %>% strsplit(x = ., split = "_") %>% `[[`(., 1) %>% `[[`(., 1)
+  name <- rlang::enexpr(specifications) %>% rlang::as_string() %>% strsplit(split = "_") %>% `[[`(1) %>% `[[`(1)
 
   if (!is.null(specifications)) {
     x <- expr(!!x + !!sym(glue("{name}covars")))
@@ -220,12 +217,12 @@ add_covars_nonlinear <- function(x, nl_formulae, specifications) {
 
 #' Title
 #'
-#' @param x
-#' @param nl_formulae
-#' @param var_specs
-#' @param add_common_dimension
+#' @param x an expression
+#' @param nl_formulae a list of expressions
+#' @param var_specs a named list of symbols
+#' @param add_common_dimension boolean
 #'
-#' @return
+#' @return list of expressions
 #' @export
 #' @importFrom glue glue
 #' @importFrom rlang expr
@@ -282,12 +279,12 @@ add_skill_terms_1PL <- function(x, nl_formulae, var_specs, add_common_dimension)
 
 #' Title
 #'
-#' @param x
-#' @param nl_formulae
-#' @param var_specs
-#' @param add_common_dimension
+#' @param x an expression
+#' @param nl_formulae a list of expressions
+#' @param var_specs a named list of symbols
+#' @param add_common_dimension boolean
 #'
-#' @return
+#' @return list of expressions
 #' @export
 #' @importFrom glue glue
 #' @importFrom rlang expr
@@ -362,11 +359,11 @@ add_skill_terms_2PL <- function(x, nl_formulae, var_specs, add_common_dimension)
 
 #' Title
 #'
-#' @param var_specs
-#' @param add_common_dimension
-#' @param item_parameter_number
+#' @param var_specs a named list of symbols
+#' @param add_common_dimension boolean
+#' @param item_parameter_number numeric (more precise integer)
 #'
-#' @return
+#' @return brmsformula
 #' @export
 #' @importFrom glue glue
 #' @importFrom rlang expr
@@ -460,10 +457,10 @@ build_formula_nonlinear <- function(var_specs, add_common_dimension = FALSE, ite
 
 #' Title
 #'
-#' @param var_specs
-#' @param add_common_dimension
+#' @param var_specs a named list of symbols
+#' @param add_common_dimension boolean
 #'
-#' @return
+#' @return brmsformula
 #' @export
 #' @importFrom rlang expr
 #'
@@ -546,9 +543,9 @@ build_formula_linear <- function(var_specs, add_common_dimension = FALSE) {
 
 #' Title
 #'
-#' @param string_list
+#' @param string_list named list of strings and characters
 #'
-#' @return
+#' @return list of symbols
 #' @export
 #' @importFrom rlang sym
 #'
