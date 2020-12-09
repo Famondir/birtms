@@ -15,9 +15,10 @@ build_formula(variable_specifications = NULL, model_specifications = NULL)
 Returns an object of type brmsformula to use it with brms::brm()
 }
 \description{
-Builds a brmsformula for an IRT model based on user input. This is the main function for formula generantion.
-It calls further functions to build an appropriate formula. It can be called without it's arguments which
-loads the standard settings for a linear 1PL model.
+Builds a brmsformula for an IRT model based on user input. This is the main
+function for formula generantion. It calls further functions to build an
+appropriate formula. It can be called without it's arguments which loads the
+standard settings for a linear 1PL model.
 }
 \examples{
 build_formula()

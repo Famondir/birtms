@@ -1,10 +1,14 @@
+# Sets the expressions used to build the formula as global variables to inform R
+# CMD check that they are intended to have no definition at time of package
+# building
 if(getRversion() >= "2.15.1")  utils::globalVariables(c("commontheta", "theta", "logalpha", "commonlogalpha", "skillintercept"))
 
 #' Builds a brmsformula
 #'
-#' Builds a brmsformula for an IRT model based on user input. This is the main function for formula generantion.
-#' It calls further functions to build an appropriate formula. It can be called without it's arguments which
-#' loads the standard settings for a linear 1PL model.
+#' Builds a brmsformula for an IRT model based on user input. This is the main
+#' function for formula generantion. It calls further functions to build an
+#' appropriate formula. It can be called without it's arguments which loads the
+#' standard settings for a linear 1PL model.
 #'
 #' @param variable_specifications Named list of characters or strings.
 #' @param model_specifications Named list of strings and numerics.
@@ -17,7 +21,8 @@ if(getRversion() >= "2.15.1")  utils::globalVariables(c("commontheta", "theta", 
 #' @examples
 #' build_formula()
 build_formula <- function(variable_specifications = NULL, model_specifications = NULL) {
-  # checks validity of teh passed specification vectors and transforms the strings in variable_specifications to symbols
+  # checks validity of teh passed specification vectors and transforms the
+  # strings in variable_specifications to symbols
   var_specs <- check_and_set_specifications(variable_specifications) %>% ensym_list() # if %>% used all the way the passed name to check_and_set_specifications() will be "."
   mod_specs <- check_and_set_specifications(model_specifications)
 
@@ -46,19 +51,17 @@ build_formula <- function(variable_specifications = NULL, model_specifications =
 
 #' Checks model specifications and possibly adds standard settings
 #'
-#' Calls override_standard_specifications() to override the standard specifications with user specifications.
-#' Checks if all specifications (the names of the list) come from a list of valid names.
+#' Calls override_standard_specifications() to override the standard
+#' specifications with user specifications. Checks if all specifications (the
+#' names of the list) come from a list of valid names.
 #'
 #' @param specifications a named list of characters
 #'
 #' @return a list
-#' @export
 #' @keywords internal
 #' @importFrom glue glue
 #'
 #' @examples
-#' variable_specifications <- list(response = "answer")
-#' check_and_set_specifications(variable_specifications)
 check_and_set_specifications <- function(specifications) {
   # extracts the first part (using prefix notation `[[`(x,i)) of the passed variable name (cuts at "_").
   type <- rlang::enexpr(specifications) %>% rlang::as_string() %>% strsplit(split = "_") %>% `[[`(1) %>% `[[`(1)
@@ -95,7 +98,6 @@ check_and_set_specifications <- function(specifications) {
 #' @param type the type of the
 #'
 #' @return a named list
-#' @export
 #' @keywords internal
 #' @importFrom glue glue
 #' @importFrom rlang expr
@@ -108,7 +110,8 @@ override_standard_specifications <- function(specifications, type) {
   model_specs <- list(response_type = 'dichotom', item_parameter_number = 1, dimensionality_type = 'unidimensional',
                       add_common_dimension = FALSE)
 
-  # sets the specification list to compare with depending on input for type ("variable" or "model")
+  # sets the specification list to compare with depending on input for type
+  # ("variable" or "model")
   reference_specs <- eval(eval(expr(sym(glue("{type}_specs")))))
 
   # overrides reference settings
@@ -124,21 +127,23 @@ override_standard_specifications <- function(specifications, type) {
 #' @param var_specs a named list of symbols
 #'
 #' @return an expression p
-#' @export
 #' @importFrom rlang expr
 #'
 #' @examples
 set_person_grouping <- function(var_specs) {
   # set person grouping
-  # multiple nestings are possible (e. g. students in classes in schools in countries)
-  # the first specified group has the lowest hierarchy level the last the highest: c(class, school, country)
+  # multiple nestings are possible (e. g. students in classes in schools in
+  # countries) the first specified group has the lowest hierarchy level the last
+  # the highest: c(class, school, country)
   p <- expr(!!var_specs$person)
 
   if (length(var_specs$person_grouping) == 1) {
     p <- expr(!!var_specs$person_grouping / !!p)
   } else if (length(var_specs$person_grouping) > 1) {
-    # for multiple nesting the formula will print () around the groupings that aren't necessary in the specification and not part of the ast
-    # e. g.: "response ~ 1 + (1 | school/(class/person)) - (1 | item)" equals "response ~ 1 + (1 | school/class/person) - (1 | item)"
+    # for multiple nesting the formula will print () around the groupings that
+    # aren't necessary in the specification and not part of the ast e. g.:
+    # "response ~ 1 + (1 | school/(class/person)) - (1 | item)" equals "response
+    # ~ 1 + (1 | school/class/person) - (1 | item)"
     for (i in seq_along(var_specs$person_grouping)) {
       p <- expr(!!var_specs$person_grouping[[i]] / !!p)
     }
@@ -152,7 +157,6 @@ set_person_grouping <- function(var_specs) {
 #' @param var_specs a named list of symbols
 #'
 #' @return an expression p
-#' @export
 #' @importFrom rlang expr
 #'
 #' @examples
@@ -187,7 +191,6 @@ add_covars_linear <- function(x, specifications) {
 #' @param specifications a list of symbols
 #'
 #' @return list of expressions
-#' @export
 #' @importFrom glue glue
 #' @importFrom rlang expr
 #' @importFrom rlang sym
@@ -223,7 +226,6 @@ add_covars_nonlinear <- function(x, nl_formulae, specifications) {
 #' @param add_common_dimension boolean
 #'
 #' @return list of expressions
-#' @export
 #' @importFrom glue glue
 #' @importFrom rlang expr
 #' @importFrom rlang sym
@@ -285,7 +287,6 @@ add_skill_terms_1PL <- function(x, nl_formulae, var_specs, add_common_dimension)
 #' @param add_common_dimension boolean
 #'
 #' @return list of expressions
-#' @export
 #' @importFrom glue glue
 #' @importFrom rlang expr
 #' @importFrom rlang sym
@@ -364,7 +365,6 @@ add_skill_terms_2PL <- function(x, nl_formulae, var_specs, add_common_dimension)
 #' @param item_parameter_number numeric (more precise integer)
 #'
 #' @return brmsformula
-#' @export
 #' @importFrom glue glue
 #' @importFrom rlang expr
 #' @importFrom zeallot %<-%
@@ -461,7 +461,6 @@ build_formula_nonlinear <- function(var_specs, add_common_dimension = FALSE, ite
 #' @param add_common_dimension boolean
 #'
 #' @return brmsformula
-#' @export
 #' @importFrom rlang expr
 #'
 #' @examples

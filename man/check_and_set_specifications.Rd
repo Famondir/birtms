@@ -13,11 +13,8 @@ check_and_set_specifications(specifications)
 a list
 }
 \description{
-Calls override_standard_specifications() to override the standard specifications with user specifications.
-Checks if all specifications (the names of the list) come from a list of valid names.
-}
-\examples{
-variable_specifications <- list(response = "answer")
-check_and_set_specifications(variable_specifications)
+Calls override_standard_specifications() to override the standard
+specifications with user specifications. Checks if all specifications (the
+names of the list) come from a list of valid names.
 }
 \keyword{internal}
