@@ -58,10 +58,7 @@ build_formula <- function(variable_specifications = NULL, model_specifications =
 #' @param specifications a named list of characters
 #'
 #' @return a list
-#' @keywords internal
 #' @importFrom glue glue
-#'
-#' @examples
 check_and_set_specifications <- function(specifications) {
   # extracts the first part (using prefix notation `[[`(x,i)) of the passed variable name (cuts at "_").
   type <- rlang::enexpr(specifications) %>% rlang::as_string() %>% strsplit(split = "_") %>% `[[`(1) %>% `[[`(1)
@@ -98,12 +95,9 @@ check_and_set_specifications <- function(specifications) {
 #' @param type the type of the
 #'
 #' @return a named list
-#' @keywords internal
 #' @importFrom glue glue
 #' @importFrom rlang expr
 #' @importFrom rlang sym
-#'
-#' @examples
 override_standard_specifications <- function(specifications, type) {
   # defines the reference specifications for model and variable specifications
   variable_specs <- list(response = 'response', item ='item', person = 'person')
@@ -128,8 +122,6 @@ override_standard_specifications <- function(specifications, type) {
 #'
 #' @return an expression p
 #' @importFrom rlang expr
-#'
-#' @examples
 set_person_grouping <- function(var_specs) {
   # set person grouping
   # multiple nestings are possible (e. g. students in classes in schools in
@@ -158,8 +150,6 @@ set_person_grouping <- function(var_specs) {
 #'
 #' @return an expression p
 #' @importFrom rlang expr
-#'
-#' @examples
 set_item_grouping <- function(var_specs) {
   # set item grouping
   # please consider if pooling on item groups is the desired effect or if you want to model something different (e. g. a testlet effect)
@@ -194,8 +184,6 @@ add_covars_linear <- function(x, specifications) {
 #' @importFrom glue glue
 #' @importFrom rlang expr
 #' @importFrom rlang sym
-#'
-#' @examples
 add_covars_nonlinear <- function(x, nl_formulae, specifications) {
   name <- rlang::enexpr(specifications) %>% rlang::as_string() %>% strsplit(split = "_") %>% `[[`(1) %>% `[[`(1)
 
@@ -229,8 +217,6 @@ add_covars_nonlinear <- function(x, nl_formulae, specifications) {
 #' @importFrom glue glue
 #' @importFrom rlang expr
 #' @importFrom rlang sym
-#'
-#' @examples
 add_skill_terms_1PL <- function(x, nl_formulae, var_specs, add_common_dimension) {
   # sets person grouping term
   person_group <- set_person_grouping(var_specs)
@@ -290,8 +276,6 @@ add_skill_terms_1PL <- function(x, nl_formulae, var_specs, add_common_dimension)
 #' @importFrom glue glue
 #' @importFrom rlang expr
 #' @importFrom rlang sym
-#'
-#' @examples
 add_skill_terms_2PL <- function(x, nl_formulae, var_specs, add_common_dimension) {
   # sets person grouping term
   person_group <- set_person_grouping(var_specs)
@@ -368,8 +352,6 @@ add_skill_terms_2PL <- function(x, nl_formulae, var_specs, add_common_dimension)
 #' @importFrom glue glue
 #' @importFrom rlang expr
 #' @importFrom zeallot %<-%
-#'
-#' @examples
 build_formula_nonlinear <- function(var_specs, add_common_dimension = FALSE, item_parameter_number) {
 
   # common intercept helps to reduce SD for all variables
@@ -462,8 +444,6 @@ build_formula_nonlinear <- function(var_specs, add_common_dimension = FALSE, ite
 #'
 #' @return brmsformula
 #' @importFrom rlang expr
-#'
-#' @examples
 build_formula_linear <- function(var_specs, add_common_dimension = FALSE) {
   # a linear formula model specification is only possible for one-parametric models
   # a linear formula model specification is only possible if there are no unregular dimensions
@@ -547,8 +527,6 @@ build_formula_linear <- function(var_specs, add_common_dimension = FALSE) {
 #' @return list of symbols
 #' @export
 #' @importFrom rlang sym
-#'
-#' @examples
 ensym_list <- function(string_list) {
   sym_list <- string_list
 
