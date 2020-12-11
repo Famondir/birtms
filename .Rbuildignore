@@ -2,3 +2,5 @@
 ^\.Rproj\.user$
 ^build_formula_test$
 ^LICENSE\.md$
+^data-raw$
+^interactive_scripts$

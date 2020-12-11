@@ -17,4 +17,3 @@ Calls override_standard_specifications() to override the standard
 specifications with user specifications. Checks if all specifications (the
 names of the list) come from a list of valid names.
 }
-\keyword{internal}

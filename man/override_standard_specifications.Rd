@@ -17,4 +17,3 @@ a named list
 \description{
 Augmants the standard specifications with user specifications
 }
-\keyword{internal}

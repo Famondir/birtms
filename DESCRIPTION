@@ -2,7 +2,7 @@ Package: birtms
 Type: Package
 Title: Creates and analyses IRT models
 Version: 0.0.0.9000
-Authors@R: person("Simon", "Schäfer", email = "simon.d.schaefer@chemie.hu-berlin.de", role = c("aut", "cre"))
+Authors@R: person("Simon", "Schaefer", email = "simon.d.schaefer@chemie.hu-berlin.de", role = c("aut", "cre"))
 Description: Helps building IRT model formulae to model data with brms / RStan based on bayesian statistics.
     Comes with functions for model comparison, model analysis and model description possibly also with graphical methods.
 License: GPL-3
@@ -21,3 +21,4 @@ Imports:
     magrittr
 RoxygenNote: 7.1.1
 VignetteBuilder: knitr
+Config/testthat/edition: 3

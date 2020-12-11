@@ -134,8 +134,8 @@ set_person_grouping <- function(var_specs) {
   } else if (length(var_specs$person_grouping) > 1) {
     # for multiple nesting the formula will print () around the groupings that
     # aren't necessary in the specification and not part of the ast e. g.:
-    # "response ~ 1 + (1 | school/(class/person)) - (1 | item)" equals "response
-    # ~ 1 + (1 | school/class/person) - (1 | item)"
+    # "response ~ 1 + (1 | school/(class/person)) + (1 | item)" equals "response
+    # ~ 1 + (1 | school/class/person) + (1 | item)"
     for (i in seq_along(var_specs$person_grouping)) {
       p <- expr(!!var_specs$person_grouping[[i]] / !!p)
     }
@@ -286,58 +286,52 @@ add_skill_terms_2PL <- function(x, nl_formulae, var_specs, add_common_dimension)
   alpha_formulae <- list()
   # adds a common dimension estimator (needed for e. g. testlet models)
   if (is.null(var_specs$regular_dimensions) && is.null(var_specs$unregular_dimensions)) {
-    x <- expr(!!x + theta * exp(logalpha))
-    nl_formulae <- c(nl_formulae, expr(theta ~ (1 | !!person_group)))
-    alpha_formulae <- c(alpha_formulae, expr(logalpha ~ (1 | !!item_group)))
+    x <- expr(!!x + exp(logalpha) * theta)
+    nl_formulae <- c(nl_formulae, expr(theta ~ 0 + (1 | !!person_group)))
+    alpha_formulae <- c(alpha_formulae, expr(logalpha ~ 1 + (1 | !!item_group)))
   } else if(add_common_dimension) {
-    x <- expr(!!x + commontheta * exp(commonlogalpha))
-    nl_formulae <- c(nl_formulae, expr(commontheta ~ (1 | !!person_group)))
-    alpha_formulae <- c(alpha_formulae, expr(commonlogalpha ~ (1 | !!item_group)))
+    x <- expr(!!x + exp(commonlogalpha) * commontheta)
+    nl_formulae <- c(nl_formulae, expr(commontheta ~ 0 + (1 | !!person_group)))
+    alpha_formulae <- c(alpha_formulae, expr(commonlogalpha ~ 1 + (1 | !!item_group)))
   }
 
   # set skill estimator for each group of regular ordered dimensions (c. f. build_formula_linear)
   counter_dimension <- 1
 
   if (length(var_specs$regular_dimensions) == 1) {
-    x <- expr(!!x + !!sym(glue("theta{counter_dimension}")) * exp(!!sym(glue("logalpha{counter_dimension}"))))
+    x <- expr(!!x + exp(!!sym(glue("logalpha{counter_dimension}"))) * !!sym(glue("theta{counter_dimension}")))
     nl_formulae <- c(nl_formulae, expr(!!sym(glue("theta{counter_dimension}")) ~ 0 + (0 + !!var_specs$regular_dimensions | !!person_group)))
-    alpha_formulae <- c(alpha_formulae, expr(!!sym(glue("logalpha{counter_dimension}")) ~ (1 | !!item_group)))
+    alpha_formulae <- c(alpha_formulae, expr(!!sym(glue("logalpha{counter_dimension}")) ~ 1 + (1 | !!item_group)))
 
     counter_dimension <- counter_dimension + 1
   } else if (length(var_specs$regular_dimensions) > 1) {
     for (i in seq_along(var_specs$regular_dimensions)) {
-      x <- expr(!!x + !!sym(glue("theta{counter_dimension}")) * exp(!!sym(glue("logalpha{counter_dimension}"))))
+      x <- expr(!!x + exp(!!sym(glue("logalpha{counter_dimension}"))) * !!sym(glue("theta{counter_dimension}")))
       nl_formulae <- c(nl_formulae, expr(!!sym(glue("theta{counter_dimension}")) ~ 0 + (0 + !!var_specs$regular_dimensions[[i]] | !!person_group)))
-      alpha_formulae <- c(alpha_formulae, expr(!!sym(glue("logalpha{counter_dimension}")) ~ (1 | !!item_group)))
+      alpha_formulae <- c(alpha_formulae, expr(!!sym(glue("logalpha{counter_dimension}")) ~ 1 + (1 | !!item_group)))
 
       counter_dimension <- counter_dimension + 1
     }
   }
 
   # set skill estimator for each unregular dimension
-  # builds stan code to set logalphas on a constant value if thi item does not belong to that dimension (mostly cosmetic)
-  # stan code altering can crash the model if it is done wrong (e. g. when items get reordered due to multilevel)
-  # stan_code <- ''
-
   if (length(var_specs$unregular_dimensions) == 1) {
-    x <- expr(!!x + !!var_specs$unregular_dimensions * !!sym(glue("theta{counter_dimension}")) * exp(!!sym(glue("logalpha{counter_dimension}"))))
+    x <- expr(!!x + !!var_specs$unregular_dimensions * exp(!!sym(glue("logalpha{counter_dimension}"))) * !!sym(glue("theta{counter_dimension}")))
     nl_formulae <- c(nl_formulae, expr(!!sym(glue("theta{counter_dimension}")) ~ 0 + (1 | !!person_group)))
-    alpha_formulae <- c(alpha_formulae, expr(!!sym(glue("logalpha{counter_dimension}")) ~ (1 | !!item_group)))
-    # stan_code <- glue('{stan_code}r_{counter_dimension+1}_logalpha{counter_dimension}_1 = r_{counter_dimension+1}_logalpha{counter_dimension}_1 .* {rlang::as_string(var_specs$unregular_dimensions)};')
+    alpha_formulae <- c(alpha_formulae, expr(!!sym(glue("logalpha{counter_dimension}")) ~ 1 + (1 | !!item_group)))
 
     counter_dimension <- counter_dimension + 1
   } else if (length(var_specs$unregular_dimensions) > 1) {
     for (i in seq_along(var_specs$unregular_dimensions)) {
-      x <- expr(!!x + !!var_specs$unregular_dimensions[[i]] * !!sym(glue("theta{counter_dimension}")) * exp(!!sym(glue("logalpha{counter_dimension}"))))
+      x <- expr(!!x + !!var_specs$unregular_dimensions[[i]] * exp(!!sym(glue("logalpha{counter_dimension}"))) * !!sym(glue("theta{counter_dimension}")))
       nl_formulae <- c(nl_formulae, expr(!!sym(glue("theta{counter_dimension}")) ~ 0 + (1 | !!person_group)))
-      alpha_formulae <- c(alpha_formulae, expr(!!sym(glue("logalpha{counter_dimension}")) ~ (1 | !!item_group)))
-      # stan_code <- glue('{stan_code}r_{(length(var_specs$item_grouping)+1)*(counter_dimension+1)}_logalpha{counter_dimension}_1 = r_{(length(var_specs$item_grouping)+1)*(counter_dimension+1)}_logalpha{counter_dimension}_1 .* {rlang::as_string(var_specs$unregular_dimensions[[i]])};')
+      alpha_formulae <- c(alpha_formulae, expr(!!sym(glue("logalpha{counter_dimension}")) ~ 1 + (1 | !!item_group)))
 
       counter_dimension <- counter_dimension + 1
     }
   }
 
-  nl_formulae <- c(alpha_formulae, nl_formulae)
+  nl_formulae <- c(nl_formulae, alpha_formulae)
 
   return(list(x, nl_formulae))
 }
@@ -374,7 +368,7 @@ build_formula_nonlinear <- function(var_specs, add_common_dimension = FALSE, ite
   item_group <- set_item_grouping(var_specs)
 
   # sets item terms and terms for DIF if requested (c. f. build_formula_linear)
-  x <- expr(!!x - beta)
+  x <- expr(!!x + beta)
 
   if (is.null(var_specs$uniform_dif)) {
     nl_formulae <- c(nl_formulae, expr(beta ~ 0 + (1 | !!item_group)))
@@ -492,9 +486,9 @@ build_formula_linear <- function(var_specs, add_common_dimension = FALSE) {
   # DIF value is the difference between the two item estimators (so non of these is the "reference" category)
   # for analysis show the (absolute?) difference
   if (is.null(var_specs$uniform_dif)) {
-    x <- expr(!!x - (1 | !!item_group))
+    x <- expr(!!x + (1 | !!item_group))
   } else {
-    x <- expr(!!x - (0 + !!var_specs$uniform_dif | !!item_group) + !!var_specs$uniform_dif)
+    x <- expr(!!x + (0 + !!var_specs$uniform_dif | !!item_group) + !!var_specs$uniform_dif)
   }
 
   # sets terms for person covariables
@@ -525,7 +519,6 @@ build_formula_linear <- function(var_specs, add_common_dimension = FALSE) {
 #' @param string_list named list of strings and characters
 #'
 #' @return list of symbols
-#' @export
 #' @importFrom rlang sym
 ensym_list <- function(string_list) {
   sym_list <- string_list
