@@ -116,7 +116,7 @@ override_standard_specifications <- function(specifications, type) {
   return(reference_specs)
 }
 
-#' Title
+#' Combines hierarchy and DIF specifications for person variables
 #'
 #' @param var_specs a named list of symbols
 #'
@@ -162,6 +162,13 @@ set_item_grouping <- function(var_specs) {
   return(i)
 }
 
+#' Title
+#'
+#' @param x an expression
+#' @param specifications a list of symbols
+#'
+#' @return an expression x
+#' #' @importFrom rlang expr
 add_covars_linear <- function(x, specifications) {
   if (length(specifications) == 1) {
     x <- expr(!!x + !!specifications)
@@ -336,6 +343,14 @@ add_skill_terms_2PL <- function(x, nl_formulae, var_specs, add_common_dimension)
   return(list(x, nl_formulae))
 }
 
+get_skillintercept <- function(skillintercept = NULL) {
+  if (is.null(skillintercept)) {
+    x <- expr(1)
+  } else {
+    x <- expr(!!skillintercept)
+  }
+}
+
 #' Title
 #'
 #' @param var_specs a named list of symbols
@@ -351,11 +366,7 @@ build_formula_nonlinear <- function(var_specs, add_common_dimension = FALSE, ite
   # common intercept helps to reduce SD for all variables
   # Attention!: different intercepts for different dimensions would model a difference in the mean skill value but seems to lead to big uncertainty
   x <- expr(skillintercept)
-  if (is.null(var_specs$skillintercept)) {
-    nl_formulae <- list(expr(skillintercept ~ 1))
-  } else {
-    nl_formulae <- list(expr(skillintercept ~ !!var_specs$skillintercept))
-  }
+  nl_formulae <- list(expr(skillintercept ~ !!get_skillintercept(var_specs$skillintercept)))
 
   # adds person skill related terms (theta and possibly alpha)
   if (item_parameter_number == 1) {
@@ -451,11 +462,7 @@ build_formula_linear <- function(var_specs, add_common_dimension = FALSE) {
   # in a basic model (without regression coefficients etc.) the intercept can be interpreted as the item's mean difficulty
   # e. g. if set describes content knowledge and contains (chemistry, physics, biology) than there mustn't be 'chemistry' in a second set as well
   # Attention!: different intercepts for different dimensions would model a difference in the mean skill value but seems to lead to big uncertainty
-  if (is.null(var_specs$skillintercept)) {
-    x <- expr(1)
-  } else {
-    x <- expr(!!var_specs$skillintercept)
-  }
+  x <- get_skillintercept(var_specs$skillintercept)
 
   # sets person grouping term
   person_group <- set_person_grouping(var_specs)
