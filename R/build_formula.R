@@ -23,7 +23,8 @@ if(getRversion() >= "2.15.1")  utils::globalVariables(c("commontheta", "theta", 
 build_formula <- function(variable_specifications = NULL, model_specifications = NULL) {
   # checks validity of teh passed specification vectors and transforms the
   # strings in variable_specifications to symbols
-  var_specs <- check_and_set_specifications(variable_specifications) %>% ensym_list() # if %>% used all the way the passed name to check_and_set_specifications() will be "."
+  var_specs <- check_and_set_specifications(variable_specifications) %>%
+    ensym_list() %>% enlist_syms() # if %>% used all the way the passed name to check_and_set_specifications() will be "."
   mod_specs <- check_and_set_specifications(model_specifications)
 
   if (mod_specs$dimensionality_type == 'multidimensional_noncompensatory') {
@@ -64,11 +65,6 @@ check_and_set_specifications <- function(specifications) {
   type <- rlang::enexpr(specifications) %>% rlang::as_string() %>% strsplit(split = "_") %>% `[[`(1) %>% `[[`(1)
 
   specifications <- override_standard_specifications(specifications, type)
-
-  # checks if the specification vector is a list of character(vectors)
-  if(length(specifications) < 1 || !is.list(specifications)) {
-    stop(glue('The {type} specifications are not of type list or have length 0.'))
-  }
 
   # defines valid specification names
   valid_names_variable <- c('response', 'item', 'person', 'regular_dimensions', 'unregular_dimensions',
@@ -127,11 +123,9 @@ set_person_grouping <- function(var_specs) {
   # multiple nestings are possible (e. g. students in classes in schools in
   # countries) the first specified group has the lowest hierarchy level the last
   # the highest: c(class, school, country)
-  p <- expr(!!var_specs$person)
+  p <- expr(!!var_specs$person[[1]])
 
-  if (length(var_specs$person_grouping) == 1) {
-    p <- expr(!!var_specs$person_grouping / !!p)
-  } else if (length(var_specs$person_grouping) > 1) {
+  if (!is.null(var_specs$person_grouping)) {
     # for multiple nesting the formula will print () around the groupings that
     # aren't necessary in the specification and not part of the ast e. g.:
     # "response ~ 1 + (1 | school/(class/person)) + (1 | item)" equals "response
@@ -152,11 +146,14 @@ set_person_grouping <- function(var_specs) {
 #' @importFrom rlang expr
 set_item_grouping <- function(var_specs) {
   # set item grouping
-  # please consider if pooling on item groups is the desired effect or if you want to model something different (e. g. a testlet effect)
-  if (is.null(var_specs$item_grouping)) {
-    i <- expr(!!var_specs$item)
-  } else {
-    i <- expr(!!var_specs$item_grouping / !!var_specs$item)
+  i <- expr(!!var_specs$item[[1]])
+
+  if (!is.null(var_specs$item_grouping)) {
+    message('Please consider if pooling on item groups is the desired effect or if you want to model something different (e. g. a testlet effect).')
+
+    for (j in seq_along(var_specs$item_grouping)) {
+      i <- expr(!!var_specs$item_grouping[[j]] / !!i)
+    }
   }
 
   return(i)
@@ -196,11 +193,7 @@ add_covars_nonlinear <- function(x, nl_formulae, specifications) {
 
   if (!is.null(specifications)) {
     x <- expr(!!x + !!sym(glue("{name}covars")))
-  }
 
-  if (length(specifications) == 1) {
-    nl_formulae <- c(nl_formulae, expr(!!sym(glue("{name}covars")) ~ 0 + !!specifications))
-  } else if (length(specifications) > 1) {
     pcovs <- expr(0 + !!specifications[[1]])
 
     for (i in seq_along(specifications)[-1]) {
@@ -209,6 +202,18 @@ add_covars_nonlinear <- function(x, nl_formulae, specifications) {
 
     nl_formulae <- c(nl_formulae, expr(!!sym(glue("{name}covars")) ~ !!pcovs))
   }
+
+  # if (length(specifications) == 1) {
+  #   nl_formulae <- c(nl_formulae, expr(!!sym(glue("{name}covars")) ~ 0 + !!specifications))
+  # } else if (length(specifications) > 1) {
+  #   pcovs <- expr(0 + !!specifications[[1]])
+  #
+  #   for (i in seq_along(specifications)[-1]) {
+  #     pcovs <- expr(!!pcovs + !!specifications[[i]])
+  #   }
+  #
+  #   nl_formulae <- c(nl_formulae, expr(!!sym(glue("{name}covars")) ~ !!pcovs))
+  # }
 
   return(list(x, nl_formulae))
 }
@@ -225,27 +230,23 @@ add_covars_nonlinear <- function(x, nl_formulae, specifications) {
 #' @importFrom rlang expr
 #' @importFrom rlang sym
 add_skill_terms_1PL <- function(x, nl_formulae, var_specs, add_common_dimension) {
+  if (is.null(var_specs$unregular_dimensions)) {
+    stop('This model should get a linear formula.')
+  }
+
   # sets person grouping term
   person_group <- set_person_grouping(var_specs)
 
   # adds a common dimension estimator (needed for e. g. testlet models)
-  if(add_common_dimension && !(is.null(var_specs$regular_dimensions) && is.null(var_specs$unregular_dimensions))) {
+  if(add_common_dimension || (is.null(var_specs$regular_dimensions) && length(var_specs$unregular_dimensions) == 1)) {
     x <- expr(!!x + commontheta)
-    nl_formulae <- c(nl_formulae, expr(commontheta ~ (1 | !!person_group)))
+    nl_formulae <- c(nl_formulae, expr(commontheta ~ 0 + (1 | !!person_group)))
   }
 
   # set skill estimator for each group of regular ordered dimensions (c. f. build_formula_linear)
   counter_dimension <- 1
-  if (length(var_specs$unregular_dimensions) == 0) {
-    stop('This model should get a linear formula.')
-  }
 
-  if (length(var_specs$regular_dimensions) == 1) {
-    x <- expr(!!x + !!sym(glue("theta{counter_dimension}")))
-    nl_formulae <- c(nl_formulae, expr(!!sym(glue("theta{counter_dimension}")) ~ 0 + (0 + !!var_specs$regular_dimensions | !!person_group)))
-
-    counter_dimension <- counter_dimension + 1
-  } else if (length(var_specs$regular_dimensions) > 1) {
+  if (!is.null(var_specs$regular_dimensions)) {
     for (i in seq_along(var_specs$regular_dimensions)) {
       x <- expr(!!x + !!sym(glue("theta{counter_dimension}")))
       nl_formulae <- c(nl_formulae, expr(!!sym(glue("theta{counter_dimension}")) ~ 0 + (0 + !!var_specs$regular_dimensions[[i]] | !!person_group)))
@@ -255,12 +256,7 @@ add_skill_terms_1PL <- function(x, nl_formulae, var_specs, add_common_dimension)
   }
 
   # set skill estimator for each unregular dimension
-  if (length(var_specs$unregular_dimensions) == 1) {
-    x <- expr(!!x + !!var_specs$unregular_dimensions * !!sym(glue("theta{counter_dimension}")))
-    nl_formulae <- c(nl_formulae, expr(!!sym(glue("theta{counter_dimension}")) ~ 0 + (1 | !!person_group)))
-
-    counter_dimension <- counter_dimension + 1
-  } else if (length(var_specs$unregular_dimensions) > 1) {
+  if (!is.null(var_specs$unregular_dimensions)) {
     for (i in seq_along(var_specs$unregular_dimensions)) {
       x <- expr(!!x + !!var_specs$unregular_dimensions[[i]] * !!sym(glue("theta{counter_dimension}")))
       nl_formulae <- c(nl_formulae, expr(!!sym(glue("theta{counter_dimension}")) ~ 0 + (1 | !!person_group)))
@@ -296,7 +292,7 @@ add_skill_terms_2PL <- function(x, nl_formulae, var_specs, add_common_dimension)
     x <- expr(!!x + exp(logalpha) * theta)
     nl_formulae <- c(nl_formulae, expr(theta ~ 0 + (1 | !!person_group)))
     alpha_formulae <- c(alpha_formulae, expr(logalpha ~ 1 + (1 | !!item_group)))
-  } else if(add_common_dimension) {
+  } else if(add_common_dimension || (is.null(var_specs$regular_dimensions) && length(var_specs$unregular_dimensions) == 1)) {
     x <- expr(!!x + exp(commonlogalpha) * commontheta)
     nl_formulae <- c(nl_formulae, expr(commontheta ~ 0 + (1 | !!person_group)))
     alpha_formulae <- c(alpha_formulae, expr(commonlogalpha ~ 1 + (1 | !!item_group)))
@@ -305,13 +301,7 @@ add_skill_terms_2PL <- function(x, nl_formulae, var_specs, add_common_dimension)
   # set skill estimator for each group of regular ordered dimensions (c. f. build_formula_linear)
   counter_dimension <- 1
 
-  if (length(var_specs$regular_dimensions) == 1) {
-    x <- expr(!!x + exp(!!sym(glue("logalpha{counter_dimension}"))) * !!sym(glue("theta{counter_dimension}")))
-    nl_formulae <- c(nl_formulae, expr(!!sym(glue("theta{counter_dimension}")) ~ 0 + (0 + !!var_specs$regular_dimensions | !!person_group)))
-    alpha_formulae <- c(alpha_formulae, expr(!!sym(glue("logalpha{counter_dimension}")) ~ 1 + (1 | !!item_group)))
-
-    counter_dimension <- counter_dimension + 1
-  } else if (length(var_specs$regular_dimensions) > 1) {
+  if (!is.null(var_specs$regular_dimensions)) {
     for (i in seq_along(var_specs$regular_dimensions)) {
       x <- expr(!!x + exp(!!sym(glue("logalpha{counter_dimension}"))) * !!sym(glue("theta{counter_dimension}")))
       nl_formulae <- c(nl_formulae, expr(!!sym(glue("theta{counter_dimension}")) ~ 0 + (0 + !!var_specs$regular_dimensions[[i]] | !!person_group)))
@@ -322,13 +312,7 @@ add_skill_terms_2PL <- function(x, nl_formulae, var_specs, add_common_dimension)
   }
 
   # set skill estimator for each unregular dimension
-  if (length(var_specs$unregular_dimensions) == 1) {
-    x <- expr(!!x + !!var_specs$unregular_dimensions * exp(!!sym(glue("logalpha{counter_dimension}"))) * !!sym(glue("theta{counter_dimension}")))
-    nl_formulae <- c(nl_formulae, expr(!!sym(glue("theta{counter_dimension}")) ~ 0 + (1 | !!person_group)))
-    alpha_formulae <- c(alpha_formulae, expr(!!sym(glue("logalpha{counter_dimension}")) ~ 1 + (1 | !!item_group)))
-
-    counter_dimension <- counter_dimension + 1
-  } else if (length(var_specs$unregular_dimensions) > 1) {
+  if (!is.null(var_specs$unregular_dimensions) > 1) {
     for (i in seq_along(var_specs$unregular_dimensions)) {
       x <- expr(!!x + !!var_specs$unregular_dimensions[[i]] * exp(!!sym(glue("logalpha{counter_dimension}"))) * !!sym(glue("theta{counter_dimension}")))
       nl_formulae <- c(nl_formulae, expr(!!sym(glue("theta{counter_dimension}")) ~ 0 + (1 | !!person_group)))
@@ -343,11 +327,35 @@ add_skill_terms_2PL <- function(x, nl_formulae, var_specs, add_common_dimension)
   return(list(x, nl_formulae))
 }
 
+add_skill_terms_linear <- function(x, var_specs, add_common_dimension) {
+  # sets person grouping term
+  person_group <- set_person_grouping(var_specs)
+
+  # adds a common dimension estimator (needed for e. g. testlet models)
+  if(add_common_dimension && !is.null(var_specs$regular_dimensions)) {
+    x <- expr(!!x + (1 | !!person_group))
+  }
+
+  # set skill estimator for each group of regular ordered dimensions
+  # a set of regular ordered dimensions assigns one dimension to each item
+  # multiple regular ordered dimensions are possible as long as the mapping of the dimensions doesn't overlap
+  # @2PL: estimations with regular dimension sets seem to underestimate the underlying alpha SD (uncorrelated dimensions)
+  if (!is.null(var_specs$regular_dimensions)) {
+    for (i in seq_along(var_specs$regular_dimensions)) {
+      x <- expr(!!x + (0 + !!var_specs$regular_dimensions[[i]] | !!person_group))
+    }
+  } else {
+    x <- expr(!!x + (1 | !!person_group))
+  }
+
+  return(x)
+}
+
 get_skillintercept <- function(skillintercept = NULL) {
   if (is.null(skillintercept)) {
     x <- expr(1)
   } else {
-    x <- expr(!!skillintercept)
+    x <- expr(!!skillintercept[[1]])
   }
 }
 
@@ -403,7 +411,7 @@ build_formula_nonlinear <- function(var_specs, add_common_dimension = FALSE, ite
     # creating the formula should be the last step,
     # because otherwise adding new terms would require stats::update.formula()
     # due to parenthesis creation / term order issues
-    main_formula <- expr(!!var_specs$response ~ !!x)
+    main_formula <- expr(!!var_specs$response[[1]] ~ !!x)
 
     form <- brms::bf(formula = main_formula, nl = TRUE, flist = nl_formulae, family = brms::brmsfamily("bernoulli", link = "logit"))
 
@@ -411,16 +419,16 @@ build_formula_nonlinear <- function(var_specs, add_common_dimension = FALSE, ite
 
     # sets main formula for 3PL or 4PL
     if (item_parameter_number == 3) {
-      main_formula <- expr(!!var_specs$response ~ gamma + (1 - gamma) * inv_logit(!!x))
+      main_formula <- expr(!!var_specs$response[[1]] ~ gamma + (1 - gamma) * inv_logit(!!x))
     } else {
-      main_formula <- expr(!!var_specs$response ~ gamma + (1 - psi - gamma) * inv_logit(!!x))
+      main_formula <- expr(!!var_specs$response[[1]] ~ gamma + (1 - psi - gamma) * inv_logit(!!x))
     }
 
     # sets the group for which the pseudo guessing parameter should vary (e. g. a one parameter for each item, each testlet or a single one for the whole test)
     if (is.null(var_specs$pseudo_guess_dimension)) {
       pseudo_guess_grouping <- 1
     } else if (length(var_specs$pseudo_guess_dimension) == 1) {
-      pseudo_guess_grouping <- expr(1 + (1 | !!var_specs$pseudo_guess_dimension))
+      pseudo_guess_grouping <- expr(1 + (1 | !!var_specs$pseudo_guess_dimension[[1]]))
     } else stop(glue('Only one dimension is allowed for the pseudo guess parameter. You specified:\n{glue::glue_collapse(var_specs$pseudo_guess_dimension, sep = ", ")}'))
 
     form <- brms::bf(formula = main_formula, nl = TRUE, flist = nl_formulae, family = brms::brmsfamily("bernoulli", link = "identity")) +
@@ -432,7 +440,7 @@ build_formula_nonlinear <- function(var_specs, add_common_dimension = FALSE, ite
       if (is.null(var_specs$careless_error_dimension)) {
         careless_error_grouping <- 1
       } else if (length(var_specs$careless_error_dimension) == 1) {
-        careless_error_grouping <- expr(1 + (1 | !!var_specs$careless_error_dimension))
+        careless_error_grouping <- expr(1 + (1 | !!var_specs$careless_error_dimension[[1]]))
       } else stop(glue('Only one dimension is allowed for the pseudo guess parameter. You specified:\n{glue::glue_collapse(var_specs$careless_error_dimension, sep = ", ")}'))
 
       form <- form + brms::lf(expr(logitpsi ~ !!careless_error_grouping)) + brms::nlf(psi ~ inv_logit(logitpsi))
@@ -464,27 +472,8 @@ build_formula_linear <- function(var_specs, add_common_dimension = FALSE) {
   # Attention!: different intercepts for different dimensions would model a difference in the mean skill value but seems to lead to big uncertainty
   x <- get_skillintercept(var_specs$skillintercept)
 
-  # sets person grouping term
-  person_group <- set_person_grouping(var_specs)
-
-  # adds a common dimension estimator (needed for e. g. testlet models)
-  if(add_common_dimension && !is.null(var_specs$regular_dimensions)) {
-    x <- expr(!!x + (1 | !!person_group))
-  }
-
-  # set skill estimator for each group of regular ordered dimensions
-  # a set of regular ordered dimensions assigns one dimension to each item
-  # multiple regular ordered dimensions are possible as long as the mapping of the dimensions doesn't overlap
-  # @2PL: estimations with regular dimension sets seem to underestimate the underlying alpha SD (uncorrelated dimensions)
-  if (length(var_specs$regular_dimensions) == 1) {
-    x <- expr(!!x + (0 + !!var_specs$regular_dimensions | !!person_group))
-  } else if (length(var_specs$regular_dimensions) > 1) {
-    for (i in seq_along(var_specs$regular_dimensions)) {
-      x <- expr(!!x + (0 + !!var_specs$regular_dimensions[[i]] | !!person_group))
-    }
-  } else {
-    x <- expr(!!x + (1 | !!person_group))
-  }
+  # adds person skill related terms
+  x <- add_skill_terms_linear(x, var_specs, add_common_dimension)
 
   # sets item grouping term
   item_group <- set_item_grouping(var_specs)
@@ -515,7 +504,7 @@ build_formula_linear <- function(var_specs, add_common_dimension = FALSE) {
   # creating the formula should be the last step,
   # because otherwise adding new terms would require stats::update.formula()
   # due to parenthesis creation / term order issues
-  main_formula <- expr(!!var_specs$response ~ !!x)
+  main_formula <- expr(!!var_specs$response[[1]] ~ !!x)
 
   form <- brms::bf(formula = main_formula, nl = FALSE, family = brms::brmsfamily("bernoulli", link = "logit"))
   return(form)
@@ -537,6 +526,15 @@ ensym_list <- function(string_list) {
     } else {
       sym_list[[i]] <- ensym_list(as.list(sym_list[[i]])) # as.list allows to pass vectors or lists of parameters (e. g. for covariables)
     }
+  }
+
+  return(sym_list)
+}
+
+enlist_syms <- function(sym_list) {
+  # necessary so later no if-else if for term specification is needed so just a single for-loop can be specified
+  for (i in seq_along(sym_list)) {
+    if (length(sym_list[[i]]) == 1) sym_list[[i]] <- c(sym_list[[i]])
   }
 
   return(sym_list)
