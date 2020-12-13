@@ -194,20 +194,6 @@ test_that("unregular dimensions are specified correctly", {
   )
   expect_equal_bf(build_formula(variable_specs, model_specs), form_1PL)
 
-  # if there is no regular dimension and only 1 unregular dimension not all
-  # items are linked to a skill dimension or the unregular mapping vector is the
-  # unity vector and the model could be specified linear so commontheta is added
-  variable_specs <- rlang::list2(unregular_dimensions = c('eins'),
-  )
-  form_1PL <- brms::bf(response ~ skillintercept + commontheta + eins * theta1 + beta,
-                       skillintercept ~ 1,
-                       commontheta ~ 0 + (1 | person),
-                       theta1 ~ 0 + (1 | person),
-                       beta ~ 0 + (1 | item),
-                       nl = TRUE, family = brms::brmsfamily("bernoulli", link = "logit")
-  )
-  expect_equal_bf(build_formula(variable_specs, model_specs), form_1PL)
-
   # 2 PL
   variable_specs <- rlang::list2(unregular_dimensions = c('eins', 'zwei'),
   )
@@ -223,11 +209,57 @@ test_that("unregular dimensions are specified correctly", {
                        nl = TRUE, family = brms::brmsfamily("bernoulli", link = "logit")
   )
   expect_equal_bf(build_formula(variable_specs, model_specs), form_2PL)
+})
 
+test_that("commontheta is not added to one dimensional model due to user misspecification", {
+
+  # 1PL
+  model_specs <- rlang::list2(item_parameter_number = 1,
+                              add_common_dimension = TRUE,
+  )
+  form_1PL <- brms::bf(response ~ 1 + (1 | person) + (1 | item),
+                       nl = FALSE, family = brms::brmsfamily("bernoulli", link = "logit")
+  )
+  expect_equal_bf(build_formula(), form_1PL)
+  expect_equal_bf(build_formula(model_specifications = model_specs), form_1PL)
+
+  # 2PL
+  model_specs <- rlang::list2(item_parameter_number = 2,
+                              add_common_dimension = TRUE,
+  )
+  form_2PL <- brms::bf(response ~ skillintercept + exp(logalpha) * theta + beta,
+                       skillintercept ~ 1,
+                       theta ~ 0 + (1 | person),
+                       logalpha ~ 1 + (1 | item),
+                       beta ~ 0 + (1 | item),
+                       nl = TRUE, family = brms::brmsfamily("bernoulli", link = "logit")
+  )
+  expect_equal_bf(build_formula(model_specifications = model_specs), form_2PL)
+})
+
+test_that("commontheta is added automatically when needed", {
   # if there is no regular dimension and only 1 unregular dimension not all
   # items are linked to a skill dimension or the unregular mapping vector is the
   # unity vector and the model could be specified linear so commontheta is added
+
+  # 1 PL
   variable_specs <- rlang::list2(unregular_dimensions = c('eins'),
+  )
+  model_specs <- rlang::list2(item_parameter_number = 1,
+  )
+  form_1PL <- brms::bf(response ~ skillintercept + commontheta + eins * theta1 + beta,
+                       skillintercept ~ 1,
+                       commontheta ~ 0 + (1 | person),
+                       theta1 ~ 0 + (1 | person),
+                       beta ~ 0 + (1 | item),
+                       nl = TRUE, family = brms::brmsfamily("bernoulli", link = "logit")
+  )
+  expect_equal_bf(build_formula(variable_specs, model_specs), form_1PL)
+
+  # 2 PL
+  variable_specs <- rlang::list2(unregular_dimensions = c('eins'),
+  )
+  model_specs <- rlang::list2(item_parameter_number = 2,
   )
   form_2PL <- brms::bf(response ~ skillintercept + exp(commonlogalpha) * commontheta + eins * exp(logalpha1) * theta1 + beta,
                        skillintercept ~ 1,
@@ -241,18 +273,124 @@ test_that("unregular dimensions are specified correctly", {
   expect_equal_bf(build_formula(variable_specs, model_specs), form_2PL)
 })
 
-test_that("commontheta is not added to one dimensional model due to user misspecification", {
+test_that("commontheta is added when specified by user (and approriate)", {
+  # 1PL regular
+  variable_specs <- rlang::list2(regular_dimensions = c('knowledge', 'scientific_inquiry'),
+  )
+  model_specs <- rlang::list2(item_parameter_number = 1,
+                              add_common_dimension = TRUE,
+  )
+  form_1PL <- brms::bf(response ~ 1 + (1 | person) + (0 + knowledge | person) + (0 + scientific_inquiry | person) + (1 | item),
+                       nl = FALSE, family = brms::brmsfamily("bernoulli", link = "logit")
+  )
+  expect_equal_bf(build_formula(variable_specs, model_specs), form_1PL)
 
-})
+  # 1PL unregular
+  variable_specs <- rlang::list2(regular_dimensions = c('knowledge', 'scientific_inquiry'),
+                                 unregular_dimensions = c('eins', 'zwei'),
+  )
+  model_specs <- rlang::list2(item_parameter_number = 1,
+                              add_common_dimension = TRUE,
+  )
+  form_1PL <- brms::bf(response ~ skillintercept + commontheta + theta1 + theta2 + eins * theta3 + zwei * theta4 + beta,
+                       skillintercept ~ 1,
+                       commontheta ~ 0 + (1 | person),
+                       theta1 ~ 0 + (0 + knowledge | person),
+                       theta2 ~ 0 + (0 + scientific_inquiry | person),
+                       theta3 ~ 0 + (1 | person),
+                       theta4 ~ 0 + (1 | person),
+                       beta ~ 0 + (1 | item),
+                       nl = TRUE, family = brms::brmsfamily("bernoulli", link = "logit")
+  )
+  expect_equal_bf(build_formula(variable_specs, model_specs), form_1PL)
 
-test_that("person covariates are specified correctly", {
+  # 2PL
+  model_specs <- rlang::list2(item_parameter_number = 2,
+                              add_common_dimension = TRUE,
+  )
+  variable_specs <- rlang::list2(regular_dimensions = c('testlet'),
+  )
+  form_2PL <- brms::bf(response ~ skillintercept + exp(commonlogalpha) * commontheta + exp(logalpha1) * theta1 + beta,
+                       skillintercept ~ 1,
+                       commontheta ~ 0 + (1 | person),
+                       theta1 ~ 0 + (0 + testlet | person),
+                       commonlogalpha ~ 1 + (1 | item),
+                       logalpha1 ~ 1 + (1 | item),
+                       beta ~ 0 + (1 | item),
+                       nl = TRUE, family = brms::brmsfamily("bernoulli", link = "logit")
+  )
+  expect_equal_bf(build_formula(variable_specs, model_specs), form_2PL)
 
 })
 
 test_that("person grouping is specified correctly", {
+  # 1PL regular
+  variable_specs <- rlang::list2(regular_dimensions = c('knowledge', 'scientific_inquiry'),
+                                 person_grouping = c('class'),
+  )
+  model_specs <- rlang::list2(item_parameter_number = 1,
+                              add_common_dimension = TRUE,
+  )
+  form_1PL <- brms::bf(response ~ 1 + (1 | class/person) + (0 + knowledge | class/person) + (0 + scientific_inquiry | class/person) + (1 | item),
+                       nl = FALSE, family = brms::brmsfamily("bernoulli", link = "logit")
+  )
+  expect_equal_bf(build_formula(variable_specs, model_specs), form_1PL)
 
+  # 2 PL
+  # tests multiple groups as well
+  variable_specs <- rlang::list2(unregular_dimensions = c('eins', 'zwei'),
+                                 person_grouping = c('class', 'school'),
+  )
+  model_specs <- rlang::list2(item_parameter_number = 2,
+  )
+  # stan_code for theta1 ~ 0 + (1 | school/(class/person)) is equal to stan_code
+  # for theta1 ~ 0 + (1 | school/class/person)
+  form_2PL <- brms::bf(response ~ skillintercept + eins * exp(logalpha1) * theta1 + zwei * exp(logalpha2) * theta2 + beta,
+                       skillintercept ~ 1,
+                       theta1 ~ 0 + (1 | school/(class/person)),
+                       theta2 ~ 0 + (1 | school/(class/person)),
+                       logalpha1 ~ 1 + (1 | item),
+                       logalpha2 ~ 1 + (1 | item),
+                       beta ~ 0 + (1 | item),
+                       nl = TRUE, family = brms::brmsfamily("bernoulli", link = "logit")
+  )
+  expect_equal_deparsing(build_formula(variable_specs, model_specs), form_2PL)
 })
 
 test_that("item grouping is specified correctly", {
+  variable_specs <- rlang::list2(regular_dimensions = c('knowledge', 'scientific_inquiry'),
+                                 item_grouping = c('testlet'),
+  )
+  model_specs <- rlang::list2(item_parameter_number = 1,
+                              add_common_dimension = TRUE,
+  )
+  form_1PL <- brms::bf(response ~ 1 + (1 | person) + (0 + knowledge | person) + (0 + scientific_inquiry | person) + (1 | testlet/item),
+                       nl = FALSE, family = brms::brmsfamily("bernoulli", link = "logit")
+  )
+  expect_equal_bf(suppressMessages(build_formula(variable_specs, model_specs)), form_1PL)
+  expect_message(build_formula(variable_specs, model_specs), 'Please consider if pooling on item groups')
+
+  # 2 PL
+  # tests multiple groups as well
+  variable_specs <- rlang::list2(unregular_dimensions = c('eins', 'zwei'),
+                                 item_grouping = c('x', 'y'),
+  )
+  model_specs <- rlang::list2(item_parameter_number = 2,
+  )
+  # stan_code for beta ~ 0 + (1 | y/(x/item)) is equal to stan_code
+  # for beta ~ 0 + (1 | y/x/item)
+  form_2PL <- brms::bf(response ~ skillintercept + eins * exp(logalpha1) * theta1 + zwei * exp(logalpha2) * theta2 + beta,
+                       skillintercept ~ 1,
+                       theta1 ~ 0 + (1 | person),
+                       theta2 ~ 0 + (1 | person),
+                       logalpha1 ~ 1 + (1 | y/(x/item)),
+                       logalpha2 ~ 1 + (1 | y/(x/item)),
+                       beta ~ 0 + (1 | y/(x/item)),
+                       nl = TRUE, family = brms::brmsfamily("bernoulli", link = "logit")
+  )
+  expect_equal_deparsing(suppressMessages(build_formula(variable_specs, model_specs)), form_2PL)
+})
+
+test_that("person covariates are specified correctly", {
 
 })

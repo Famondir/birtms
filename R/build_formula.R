@@ -351,7 +351,7 @@ add_skill_terms_linear <- function(x, var_specs, add_common_dimension) {
   return(x)
 }
 
-get_skillintercept <- function(skillintercept = NULL) {
+add_skillintercept <- function(skillintercept = NULL) {
   if (is.null(skillintercept)) {
     x <- expr(1)
   } else {
@@ -374,7 +374,7 @@ build_formula_nonlinear <- function(var_specs, add_common_dimension = FALSE, ite
   # common intercept helps to reduce SD for all variables
   # Attention!: different intercepts for different dimensions would model a difference in the mean skill value but seems to lead to big uncertainty
   x <- expr(skillintercept)
-  nl_formulae <- list(expr(skillintercept ~ !!get_skillintercept(var_specs$skillintercept)))
+  nl_formulae <- list(expr(skillintercept ~ !!add_skillintercept(var_specs$skillintercept)))
 
   # adds person skill related terms (theta and possibly alpha)
   if (item_parameter_number == 1) {
@@ -470,7 +470,7 @@ build_formula_linear <- function(var_specs, add_common_dimension = FALSE) {
   # in a basic model (without regression coefficients etc.) the intercept can be interpreted as the item's mean difficulty
   # e. g. if set describes content knowledge and contains (chemistry, physics, biology) than there mustn't be 'chemistry' in a second set as well
   # Attention!: different intercepts for different dimensions would model a difference in the mean skill value but seems to lead to big uncertainty
-  x <- get_skillintercept(var_specs$skillintercept)
+  x <- add_skillintercept(var_specs$skillintercept)
 
   # adds person skill related terms
   x <- add_skill_terms_linear(x, var_specs, add_common_dimension)
