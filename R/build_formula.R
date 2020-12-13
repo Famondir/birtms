@@ -68,7 +68,8 @@ check_and_set_specifications <- function(specifications) {
 
   # defines valid specification names
   valid_names_variable <- c('response', 'item', 'person', 'regular_dimensions', 'unregular_dimensions',
-                            'person_covariables', 'item_covariables', 'situation_covariables', 'uniform_dif',
+                            'person_covariables_main_effect', 'person_covariables_all_dimensions',
+                            'item_intercept_covariables', 'situation_covariables', 'uniform_dif',
                             'person_grouping', 'item_grouping', 'skillintercept',
                             'pseudo_guess_dimension', 'careless_error_dimension')
   valid_names_model <- c('response_type', 'item_parameter_number', 'dimensionality_type', 'add_common_dimension')
@@ -218,6 +219,15 @@ add_covars_nonlinear <- function(x, nl_formulae, specifications) {
   return(list(x, nl_formulae))
 }
 
+add_person_covars <- function(person_group, var_specs) {
+  x <- expr(0 + (1 | !!person_group))
+  if (!is.null(var_specs$person_covariables_all_dimensions)) {
+    x <- add_covars_linear(x, var_specs$person_covariables_all_dimensions)
+  }
+
+  return(x)
+}
+
 #' Title
 #'
 #' @param x an expression
@@ -240,7 +250,7 @@ add_skill_terms_1PL <- function(x, nl_formulae, var_specs, add_common_dimension)
   # adds a common dimension estimator (needed for e. g. testlet models)
   if(add_common_dimension || (is.null(var_specs$regular_dimensions) && length(var_specs$unregular_dimensions) == 1)) {
     x <- expr(!!x + commontheta)
-    nl_formulae <- c(nl_formulae, expr(commontheta ~ 0 + (1 | !!person_group)))
+    nl_formulae <- c(nl_formulae, expr(commontheta ~ !!add_person_covars(person_group, var_specs)))
   }
 
   # set skill estimator for each group of regular ordered dimensions (c. f. build_formula_linear)
@@ -259,7 +269,7 @@ add_skill_terms_1PL <- function(x, nl_formulae, var_specs, add_common_dimension)
   if (!is.null(var_specs$unregular_dimensions)) {
     for (i in seq_along(var_specs$unregular_dimensions)) {
       x <- expr(!!x + !!var_specs$unregular_dimensions[[i]] * !!sym(glue("theta{counter_dimension}")))
-      nl_formulae <- c(nl_formulae, expr(!!sym(glue("theta{counter_dimension}")) ~ 0 + (1 | !!person_group)))
+      nl_formulae <- c(nl_formulae, expr(!!sym(glue("theta{counter_dimension}")) ~ !!add_person_covars(person_group, var_specs)))
 
       counter_dimension <- counter_dimension + 1
     }
@@ -290,11 +300,11 @@ add_skill_terms_2PL <- function(x, nl_formulae, var_specs, add_common_dimension)
   # adds a common dimension estimator (needed for e. g. testlet models)
   if (is.null(var_specs$regular_dimensions) && is.null(var_specs$unregular_dimensions)) {
     x <- expr(!!x + exp(logalpha) * theta)
-    nl_formulae <- c(nl_formulae, expr(theta ~ 0 + (1 | !!person_group)))
+    nl_formulae <- c(nl_formulae, expr(theta ~ !!add_person_covars(person_group, var_specs)))
     alpha_formulae <- c(alpha_formulae, expr(logalpha ~ 1 + (1 | !!item_group)))
   } else if(add_common_dimension || (is.null(var_specs$regular_dimensions) && length(var_specs$unregular_dimensions) == 1)) {
     x <- expr(!!x + exp(commonlogalpha) * commontheta)
-    nl_formulae <- c(nl_formulae, expr(commontheta ~ 0 + (1 | !!person_group)))
+    nl_formulae <- c(nl_formulae, expr(commontheta ~ !!add_person_covars(person_group, var_specs)))
     alpha_formulae <- c(alpha_formulae, expr(commonlogalpha ~ 1 + (1 | !!item_group)))
   }
 
@@ -305,7 +315,7 @@ add_skill_terms_2PL <- function(x, nl_formulae, var_specs, add_common_dimension)
     for (i in seq_along(var_specs$regular_dimensions)) {
       x <- expr(!!x + exp(!!sym(glue("logalpha{counter_dimension}"))) * !!sym(glue("theta{counter_dimension}")))
       nl_formulae <- c(nl_formulae, expr(!!sym(glue("theta{counter_dimension}")) ~ 0 + (0 + !!var_specs$regular_dimensions[[i]] | !!person_group)))
-      alpha_formulae <- c(alpha_formulae, expr(!!sym(glue("logalpha{counter_dimension}")) ~ 1 + (1 | !!item_group)))
+      alpha_formulae <- c(alpha_formulae, expr(!!sym(glue("logalpha{counter_dimension}")) ~ 1 + (1 | !!var_specs$regular_dimensions[[i]]/!!item_group)))
 
       counter_dimension <- counter_dimension + 1
     }
@@ -315,7 +325,7 @@ add_skill_terms_2PL <- function(x, nl_formulae, var_specs, add_common_dimension)
   if (!is.null(var_specs$unregular_dimensions) > 1) {
     for (i in seq_along(var_specs$unregular_dimensions)) {
       x <- expr(!!x + !!var_specs$unregular_dimensions[[i]] * exp(!!sym(glue("logalpha{counter_dimension}"))) * !!sym(glue("theta{counter_dimension}")))
-      nl_formulae <- c(nl_formulae, expr(!!sym(glue("theta{counter_dimension}")) ~ 0 + (1 | !!person_group)))
+      nl_formulae <- c(nl_formulae, expr(!!sym(glue("theta{counter_dimension}")) ~ !!add_person_covars(person_group, var_specs)))
       alpha_formulae <- c(alpha_formulae, expr(!!sym(glue("logalpha{counter_dimension}")) ~ 1 + (1 | !!item_group)))
 
       counter_dimension <- counter_dimension + 1
@@ -355,7 +365,7 @@ add_skillintercept <- function(skillintercept = NULL) {
   if (is.null(skillintercept)) {
     x <- expr(1)
   } else {
-    x <- expr(!!skillintercept[[1]])
+    x <- expr(0 + !!skillintercept[[1]])
   }
 }
 
@@ -396,12 +406,12 @@ build_formula_nonlinear <- function(var_specs, add_common_dimension = FALSE, ite
   }
 
   # sets terms for person covariables
-  person_covariables <- var_specs$person_covariables
+  person_covariables <- var_specs$person_covariables_main_effect
   c(x, nl_formulae) %<-% add_covars_nonlinear(x, nl_formulae, person_covariables)
 
   # sets terms for item covariables
-  item_covariables <- var_specs$item_covariables
-  c(x, nl_formulae) %<-% add_covars_nonlinear(x, nl_formulae, item_covariables)
+  item_intercept_covariables <- var_specs$item_intercept_covariables
+  c(x, nl_formulae) %<-% add_covars_nonlinear(x, nl_formulae, item_intercept_covariables)
 
   # sets terms for situation covariables
   situation_covariables <- var_specs$situation_covariables
@@ -488,13 +498,13 @@ build_formula_linear <- function(var_specs, add_common_dimension = FALSE) {
   }
 
   # sets terms for person covariables
-  x <- add_covars_linear(x, var_specs$person_covariables)
+  x <- add_covars_linear(x, var_specs$person_covariables_main_effect)
 
   # sets terms for item covariables / characteristics
   # e. g. a word count (numeric) or something catergorial (factors/strings) which gets dummy coded ("Did the item included a picture or video?")
   # technically these are modeled not different from person covariables but it might be beneficial to think about the type of predictors included
   # anyway, this distinction might be necessary for the model inspection in the upcoming Shiny app
-  x <- add_covars_linear(x, var_specs$item_covariables)
+  x <- add_covars_linear(x, var_specs$item_intercept_covariables)
 
   # sets terms for situation covariables / characteristics / description
   # e. g. day time of test taking, time since last break, teacher in class

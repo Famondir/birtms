@@ -12,7 +12,7 @@ expect_equal_deparsing <- function(object, expected) {
     # formulas create the same stan_code (and get deparsed equally) but diffent in
     # their lobstr::ast()s
     expect_equal_bf(object$formula, expected$formula)
-    for (i in seq_along(form_2PL$pforms)) {
+    for (i in seq_along(expected$pforms)) {
       expect_equal_bf(deparse(object$pforms[[i]]), deparse(expected$pforms[[i]]))
     }
 
