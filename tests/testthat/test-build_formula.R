@@ -493,6 +493,21 @@ test_that("moderated person covariates are specified correctly for unregular dim
   )
   expect_equal_bf(build_formula(variable_specs, model_specs), form_1PL)
 
+  variable_specs <- rlang::list2(unregular_dimensions = c('eins', 'zwei'),
+                                 person_covariables_eins = c('intelligence', 'anger'),
+  )
+  form_1PL <- brms::bf(response ~ skillintercept + eins * theta1 + zwei * theta2 + beta,
+                       skillintercept ~ 1,
+                       theta1 ~ 0 + (1 | person) + intelligence + anger,
+                       theta2 ~ 0 + (1 | person),
+                       beta ~ 0 + (1 | item),
+                       nl = TRUE, family = brms::brmsfamily("bernoulli", link = "logit")
+  )
+  expect_equal_bf(build_formula(variable_specs, model_specs), form_1PL)
+
+  variable_specs <- rlang::list2(unregular_dimensions = c('eins', 'zwei'),
+                                 person_covariables_all_dimensions = c('intelligence', 'anger'),
+  )
   model_specs <- rlang::list2(item_parameter_number = 1,
                               add_common_dimension = TRUE,
   )

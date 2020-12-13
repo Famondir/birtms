@@ -68,11 +68,16 @@ check_and_set_specifications <- function(specifications) {
 
   # defines valid specification names
   valid_names_variable <- c('response', 'item', 'person', 'regular_dimensions', 'unregular_dimensions',
-                            'person_covariables_main_effect', 'person_covariables_all_dimensions',
+                            'person_covariables_main_effect', 'person_covariables_all_dimensions', 'person_covariables_common',
                             'item_intercept_covariables', 'situation_covariables', 'uniform_dif',
                             'person_grouping', 'item_grouping', 'skillintercept',
                             'pseudo_guess_dimension', 'careless_error_dimension')
   valid_names_model <- c('response_type', 'item_parameter_number', 'dimensionality_type', 'add_common_dimension')
+
+  # adds valid specification names based on defined dimensions
+  for (i in c(specifications$regular_dimensions, specifications$unregular_dimensions)) {
+    valid_names_variable <- c(valid_names_variable, glue('person_covariables_{i}'))
+  }
 
   # checks if all names in the specification vector are valid
   reference_names <- eval(sym(glue("valid_names_{type}")))
@@ -219,10 +224,14 @@ add_covars_nonlinear <- function(x, nl_formulae, specifications) {
   return(list(x, nl_formulae))
 }
 
-add_person_covars <- function(person_group, var_specs) {
+add_person_covars <- function(person_group, var_specs, dimension = NULL) {
   x <- expr(0 + (1 | !!person_group))
   if (!is.null(var_specs$person_covariables_all_dimensions)) {
     x <- add_covars_linear(x, var_specs$person_covariables_all_dimensions)
+  }
+
+  if (!is.null(eval(expr(`$`(var_specs, !!glue::glue('person_covariables_{dimension}')))))) {
+    x <- add_covars_linear(x, eval(expr(`$`(var_specs, !!glue::glue('person_covariables_{dimension}')))))
   }
 
   return(x)
@@ -250,7 +259,7 @@ add_skill_terms_1PL <- function(x, nl_formulae, var_specs, add_common_dimension)
   # adds a common dimension estimator (needed for e. g. testlet models)
   if(add_common_dimension || (is.null(var_specs$regular_dimensions) && length(var_specs$unregular_dimensions) == 1)) {
     x <- expr(!!x + commontheta)
-    nl_formulae <- c(nl_formulae, expr(commontheta ~ !!add_person_covars(person_group, var_specs)))
+    nl_formulae <- c(nl_formulae, expr(commontheta ~ !!add_person_covars(person_group, var_specs, 'common')))
   }
 
   # set skill estimator for each group of regular ordered dimensions (c. f. build_formula_linear)
@@ -269,7 +278,7 @@ add_skill_terms_1PL <- function(x, nl_formulae, var_specs, add_common_dimension)
   if (!is.null(var_specs$unregular_dimensions)) {
     for (i in seq_along(var_specs$unregular_dimensions)) {
       x <- expr(!!x + !!var_specs$unregular_dimensions[[i]] * !!sym(glue("theta{counter_dimension}")))
-      nl_formulae <- c(nl_formulae, expr(!!sym(glue("theta{counter_dimension}")) ~ !!add_person_covars(person_group, var_specs)))
+      nl_formulae <- c(nl_formulae, expr(!!sym(glue("theta{counter_dimension}")) ~ !!add_person_covars(person_group, var_specs, var_specs$unregular_dimensions[[i]])))
 
       counter_dimension <- counter_dimension + 1
     }
@@ -300,11 +309,11 @@ add_skill_terms_2PL <- function(x, nl_formulae, var_specs, add_common_dimension)
   # adds a common dimension estimator (needed for e. g. testlet models)
   if (is.null(var_specs$regular_dimensions) && is.null(var_specs$unregular_dimensions)) {
     x <- expr(!!x + exp(logalpha) * theta)
-    nl_formulae <- c(nl_formulae, expr(theta ~ !!add_person_covars(person_group, var_specs)))
+    nl_formulae <- c(nl_formulae, expr(theta ~ !!add_person_covars(person_group, var_specs, 'common')))
     alpha_formulae <- c(alpha_formulae, expr(logalpha ~ 1 + (1 | !!item_group)))
   } else if(add_common_dimension || (is.null(var_specs$regular_dimensions) && length(var_specs$unregular_dimensions) == 1)) {
     x <- expr(!!x + exp(commonlogalpha) * commontheta)
-    nl_formulae <- c(nl_formulae, expr(commontheta ~ !!add_person_covars(person_group, var_specs)))
+    nl_formulae <- c(nl_formulae, expr(commontheta ~ !!add_person_covars(person_group, var_specs, 'common')))
     alpha_formulae <- c(alpha_formulae, expr(commonlogalpha ~ 1 + (1 | !!item_group)))
   }
 
@@ -325,7 +334,7 @@ add_skill_terms_2PL <- function(x, nl_formulae, var_specs, add_common_dimension)
   if (!is.null(var_specs$unregular_dimensions) > 1) {
     for (i in seq_along(var_specs$unregular_dimensions)) {
       x <- expr(!!x + !!var_specs$unregular_dimensions[[i]] * exp(!!sym(glue("logalpha{counter_dimension}"))) * !!sym(glue("theta{counter_dimension}")))
-      nl_formulae <- c(nl_formulae, expr(!!sym(glue("theta{counter_dimension}")) ~ !!add_person_covars(person_group, var_specs)))
+      nl_formulae <- c(nl_formulae, expr(!!sym(glue("theta{counter_dimension}")) ~ !!add_person_covars(person_group, var_specs, var_specs$unregular_dimensions[[i]])))
       alpha_formulae <- c(alpha_formulae, expr(!!sym(glue("logalpha{counter_dimension}")) ~ 1 + (1 | !!item_group)))
 
       counter_dimension <- counter_dimension + 1
