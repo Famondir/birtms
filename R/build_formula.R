@@ -60,6 +60,7 @@ build_formula <- function(variable_specifications = NULL, model_specifications =
 #'
 #' @return a list
 #' @importFrom glue glue
+#' @importFrom zeallot %<-%
 check_and_set_specifications <- function(specifications) {
   # extracts the first part (using prefix notation `[[`(x,i)) of the passed variable name (cuts at "_").
   type <- rlang::enexpr(specifications) %>% rlang::as_string() %>% strsplit(split = "_") %>% `[[`(1) %>% `[[`(1)
@@ -74,9 +75,28 @@ check_and_set_specifications <- function(specifications) {
                             'pseudo_guess_dimension', 'careless_error_dimension')
   valid_names_model <- c('response_type', 'item_parameter_number', 'dimensionality_type', 'add_common_dimension')
 
-  # adds valid specification names based on defined dimensions
-  for (i in c(specifications$regular_dimensions, specifications$unregular_dimensions)) {
+  # checks if dimension names are unique and not equal to 'common'
+  if ((length(unique(specifications$regular_dimensions)) != length(specifications$regular_dimensions)) ||
+      (length(unique(specifications$unregular_dimensions)) != length(specifications$unregular_dimensions))) {
+        stop('Dimension names have to be unique! Dimension name was used twice in either regular_dimensions or unregular_dimensions.')
+      }
+  if (length(intersect(specifications$regular_dimensions, specifications$unregular_dimensions)) > 0) {
+    stop('Dimension names have to be unique! Compare regular and unregular dimensions.')
+  }
+  if ('common' %in% specifications$regular_dimensions || 'common' %in% specifications$unregular_dimensions) {
+    stop('Dimension name "common" is reserved!')
+  }
+
+  # adds valid specification names based on defined dimensions and create lists
+  # about which covariables should be dropped in specific dimensions compared to
+  # the overall definition (person_covariables_all_dimensions)
+  for (i in c(specifications$regular_dimensions, specifications$unregular_dimensions, 'common')) {
     valid_names_variable <- c(valid_names_variable, glue('person_covariables_{i}'))
+    valid_names_variable <- c(valid_names_variable, glue('drop_person_covariables_{i}'))
+
+    c(keep, drop) %<-% create_droplist(eval(expr(`$`(specifications, !!glue::glue('person_covariables_{i}')))))
+    eval(expr(`<-`(`$`(specifications, !!glue::glue('drop_person_covariables_{i}')),!!drop)))
+    eval(expr(`<-`(`$`(specifications, !!glue::glue('person_covariables_{i}')),!!keep)))
   }
 
   # checks if all names in the specification vector are valid
@@ -89,6 +109,20 @@ check_and_set_specifications <- function(specifications) {
   }
 
   invisible(specifications)
+}
+
+create_droplist <- function(person_covariable_list) {
+  droplist <- c()
+  if(!is.null(person_covariable_list)) {
+    for (i in seq_along(person_covariable_list)) {
+      if (stringr::str_sub(person_covariable_list[[i]], 1, 1) == '-') {
+        droplist <- c(droplist, stringr::str_sub(person_covariable_list[[i]], 2, -1))
+        person_covariable_list[i] <- stringr::str_sub(person_covariable_list[[i]], 2, -1)
+      }
+    }
+  }
+
+  return(list(person_covariable_list, droplist))
 }
 
 #' Augmants the standard specifications with user specifications
@@ -230,12 +264,11 @@ add_covars_nonlinear <- function(x, nl_formulae, specifications) {
 
 add_person_covars_unregular <- function(person_group, var_specs, dimension = NULL) {
   x <- expr(0 + (1 | !!person_group))
-  if (!is.null(var_specs$person_covariables_all_dimensions)) {
-    x <- add_covars_linear(x, var_specs$person_covariables_all_dimensions)
-  }
+  covars <- union(var_specs$person_covariables_all_dimensions, eval(expr(`$`(var_specs, !!glue::glue('person_covariables_{dimension}'))))) %>%
+    setdiff(eval(expr(`$`(var_specs, !!glue::glue('drop_person_covariables_{dimension}')))))
 
-  if (!is.null(eval(expr(`$`(var_specs, !!glue::glue('person_covariables_{dimension}')))))) {
-    x <- add_covars_linear(x, eval(expr(`$`(var_specs, !!glue::glue('person_covariables_{dimension}')))))
+  if (!is.null(covars)) {
+    x <- add_covars_linear(x, covars)
   }
 
   return(x)
@@ -243,13 +276,11 @@ add_person_covars_unregular <- function(person_group, var_specs, dimension = NUL
 
 add_person_covars_regular <- function(skillterm, person_group, var_specs, dimension = NULL) {
   x <- skillterm
-  covars <- union(var_specs$person_covariables_all_dimensions, eval(expr(`$`(var_specs, !!glue::glue('person_covariables_{dimension}')))))
-  if (!is.null(var_specs$person_covariables_all_dimensions)) {
-    x <- add_covars_interaction(x, var_specs$person_covariables_all_dimensions, dimension)
-  }
+  covars <- union(var_specs$person_covariables_all_dimensions, eval(expr(`$`(var_specs, !!glue::glue('person_covariables_{dimension}'))))) %>%
+    setdiff(eval(expr(`$`(var_specs, !!glue::glue('drop_person_covariables_{dimension}')))))
 
-  if (!is.null(eval(expr(`$`(var_specs, !!glue::glue('person_covariables_{dimension}')))))) {
-    x <- add_covars_interaction(x, eval(expr(`$`(var_specs, !!glue::glue('person_covariables_{dimension}')))), dimension)
+  if (!is.null(covars)) {
+    x <- add_covars_interaction(x, covars, dimension)
   }
 
   return(x)

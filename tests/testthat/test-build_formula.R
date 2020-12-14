@@ -108,6 +108,23 @@ test_that("skill intercept is specified correctly", {
   expect_equal_bf(build_formula(variable_specs, model_specs), form_2PL)
 })
 
+test_that("dimensions names are unique and do not are equal to: common", {
+  variable_specs <- rlang::list2(regular_dimensions = c('knowledge', 'scientific_inquiry'),
+                                 unregular_dimensions = c('knowledge', 'scientific_inquiry'),
+  )
+  model_specs <- rlang::list2(item_parameter_number = 1,
+  )
+  expect_error(build_formula(variable_specs, model_specs), 'Compare regular and unregular dimensions.')
+
+  variable_specs <- rlang::list2(regular_dimensions = c('knowledge', 'knowledge'),
+  )
+  expect_error(build_formula(variable_specs, model_specs), 'Dimension name was used twice')
+
+  variable_specs <- rlang::list2(regular_dimensions = c('common', 'knowledge'),
+  )
+  expect_error(build_formula(variable_specs, model_specs), 'is reserved!')
+})
+
 test_that("regular dimensions are specified correctly", {
   # 1PL regular
   variable_specs <- rlang::list2(regular_dimensions = c('knowledge', 'scientific_inquiry'),
@@ -476,11 +493,12 @@ test_that("item intercept covariates are specified correctly", {
 test_that("moderated person covariates are specified correctly for regular dimensions", {
   # # 1PL regular
   # variable_specs <- rlang::list2(regular_dimensions = c('knowledge', 'scientific_inquiry'),
-  #                                person_covariables_all_dimensions = c('intelligence', 'anger'),
+  #                                person_covariables_all_common = c('intelligence', 'anger'),
   # )
   # model_specs <- rlang::list2(item_parameter_number = 1,
+  #                             add_common_dimension = TRUE,
   # )
-  # form_1PL <- brms::bf(response ~ 1 + (0 + knowledge | person) + (0 + scientific_inquiry | person) + (1 | item),
+  # form_1PL <- brms::bf(response ~ 1 + (1 | person) + (0 + knowledge | person) + (0 + scientific_inquiry | person) + (1 | item) + intelligence + anger,
   #                      nl = FALSE, family = brms::brmsfamily("bernoulli", link = "logit")
   # )
   # expect_equal_bf(build_formula(variable_specs, model_specs), form_1PL)
@@ -518,21 +536,8 @@ test_that("moderated person covariates are specified correctly for regular dimen
   )
   expect_equal_bf(build_formula(variable_specs, model_specs), form_1PL)
 
-  variable_specs <- rlang::list2(unregular_dimensions = c('eins', 'zwei'),
-                                 regular_dimensions = c('knowledge', 'scientific_inquiry'),
-                                 person_covariables_all_dimensions = c('intelligence', 'anger'),
-                                 person_covariables_knowledge = c('intelligence', 'anger'),
-  )
-  # form_1PL <- brms::bf(response ~ skillintercept + theta1 + theta2 + eins * theta3 + zwei * theta4 + beta,
-  #                      skillintercept ~ 1,
-  #                      theta1 ~ 0 + (0 + knowledge | person) + knowledge:intelligence + knowledge:anger,
-  #                      theta2 ~ 0 + (0 + scientific_inquiry | person) + scientific_inquiry:intelligence + scientific_inquiry:anger,
-  #                      theta3 ~ 0 + (1 | person) + intelligence + anger,
-  #                      theta4 ~ 0 + (1 | person) + intelligence + anger,
-  #                      beta ~ 0 + (1 | item),
-  #                      nl = TRUE, family = brms::brmsfamily("bernoulli", link = "logit")
-  # )
-  # expect_equal_bf(build_formula(variable_specs, model_specs), form_1PL)
+  # 2PL
+
 })
 
 test_that("moderated person covariates are specified correctly for unregular dimensions", {
@@ -630,3 +635,67 @@ test_that("moderated person covariates are specified correctly for unregular dim
   )
   expect_equal_bf(build_formula(variable_specs, model_specs), form_2PL)
 })
+
+test_that("person covariates can be added and dropped for single dimensions and are not added multiple times", {
+  #1 PL unregular
+  # covariables are not added twice due to missspecification
+  model_specs <- rlang::list2(item_parameter_number = 1,
+  )
+  variable_specs <- rlang::list2(unregular_dimensions = c('eins', 'zwei'),
+                                 regular_dimensions = c('knowledge', 'scientific_inquiry'),
+                                 person_covariables_all_dimensions = c('intelligence', 'anger'),
+                                 person_covariables_knowledge = c('intelligence', 'anger'),
+  )
+  form_1PL <- brms::bf(response ~ skillintercept + theta1 + theta2 + eins * theta3 + zwei * theta4 + beta,
+                       skillintercept ~ 1,
+                       theta1 ~ 0 + (0 + knowledge | person) + knowledge:intelligence + knowledge:anger,
+                       theta2 ~ 0 + (0 + scientific_inquiry | person) + scientific_inquiry:intelligence + scientific_inquiry:anger,
+                       theta3 ~ 0 + (1 | person) + intelligence + anger,
+                       theta4 ~ 0 + (1 | person) + intelligence + anger,
+                       beta ~ 0 + (1 | item),
+                       nl = TRUE, family = brms::brmsfamily("bernoulli", link = "logit")
+  )
+  expect_equal_bf(build_formula(variable_specs, model_specs), form_1PL)
+
+  # you can remove covars that are set with person_covariables_all_dimensions by
+  # adding a - to the term in the dimension spoecific term, e.g.
+  # person_covariables_zwei =  c('-anger')
+  variable_specs <- rlang::list2(unregular_dimensions = c('eins', 'zwei'),
+                                 regular_dimensions = c('knowledge', 'scientific_inquiry'),
+                                 person_covariables_all_dimensions = c('intelligence', 'anger'),
+                                 person_covariables_knowledge = c('-intelligence'),
+                                 person_covariables_zwei = c('-anger'),
+  )
+  form_1PL <- brms::bf(response ~ skillintercept + theta1 + theta2 + eins * theta3 + zwei * theta4 + beta,
+                       skillintercept ~ 1,
+                       theta1 ~ 0 + (0 + knowledge | person) + knowledge:anger,
+                       theta2 ~ 0 + (0 + scientific_inquiry | person) + scientific_inquiry:intelligence + scientific_inquiry:anger,
+                       theta3 ~ 0 + (1 | person) + intelligence + anger,
+                       theta4 ~ 0 + (1 | person) + intelligence,
+                       beta ~ 0 + (1 | item),
+                       nl = TRUE, family = brms::brmsfamily("bernoulli", link = "logit")
+  )
+  expect_equal_bf(build_formula(variable_specs, model_specs), form_1PL)
+
+  # works also for common dimension
+  variable_specs <- rlang::list2(unregular_dimensions = c('eins', 'zwei'),
+                                 regular_dimensions = c('knowledge', 'scientific_inquiry'),
+                                 person_covariables_all_dimensions = c('intelligence', 'anger'),
+                                 person_covariables_common = c('-intelligence', 'taste'),
+  )
+  model_specs <- rlang::list2(item_parameter_number = 1,
+                              add_common_dimension = TRUE,
+  )
+  form_1PL <- brms::bf(response ~ skillintercept + commontheta + theta1 + theta2 + eins * theta3 + zwei * theta4 + beta,
+                       skillintercept ~ 1,
+                       commontheta ~ 0 + (1 | person) + anger + taste,
+                       theta1 ~ 0 + (0 + knowledge | person) + knowledge:intelligence + knowledge:anger,
+                       theta2 ~ 0 + (0 + scientific_inquiry | person) + scientific_inquiry:intelligence + scientific_inquiry:anger,
+                       theta3 ~ 0 + (1 | person) + intelligence + anger,
+                       theta4 ~ 0 + (1 | person) + intelligence + anger,
+                       beta ~ 0 + (1 | item),
+                       nl = TRUE, family = brms::brmsfamily("bernoulli", link = "logit")
+  )
+  expect_equal_bf(build_formula(variable_specs, model_specs), form_1PL)
+})
+
