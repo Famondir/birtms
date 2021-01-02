@@ -18,7 +18,11 @@ Imports:
     brms,
     glue,
     zeallot,
-    magrittr
+    magrittr,
+    stringr,
+    purrr,
+    tidyr,
+    tibble
 RoxygenNote: 7.1.1
 VignetteBuilder: knitr
 Config/testthat/edition: 3

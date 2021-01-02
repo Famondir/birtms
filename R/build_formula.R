@@ -67,40 +67,22 @@ check_and_set_specifications <- function(specifications) {
 
   specifications <- override_standard_specifications(specifications, type)
 
-  # defines valid specification names
-  valid_names_variable <- c('response', 'item', 'person', 'regular_dimensions', 'unregular_dimensions',
-                            'person_covariables_main_effect', 'person_covariables_all_dimensions', 'person_covariables_common',
-                            'item_intercept_covariables', 'situation_covariables', 'uniform_dif',
-                            'person_grouping', 'item_grouping', 'skillintercept',
-                            'pseudo_guess_dimension', 'careless_error_dimension')
-  valid_names_model <- c('response_type', 'item_parameter_number', 'dimensionality_type', 'add_common_dimension')
+  check_dimension_specification(specifications)
 
-  # checks if dimension names are unique and not equal to 'common'
-  if ((length(unique(specifications$regular_dimensions)) != length(specifications$regular_dimensions)) ||
-      (length(unique(specifications$unregular_dimensions)) != length(specifications$unregular_dimensions))) {
-        stop('Dimension names have to be unique! Dimension name was used twice in either regular_dimensions or unregular_dimensions.')
-      }
-  if (length(intersect(specifications$regular_dimensions, specifications$unregular_dimensions)) > 0) {
-    stop('Dimension names have to be unique! Compare regular and unregular dimensions.')
-  }
-  if ('common' %in% specifications$regular_dimensions || 'common' %in% specifications$unregular_dimensions) {
-    stop('Dimension name "common" is reserved!')
-  }
-
-  # adds valid specification names based on defined dimensions and create lists
-  # about which covariables should be dropped in specific dimensions compared to
-  # the overall definition (person_covariables_all_dimensions)
-  for (i in c(specifications$regular_dimensions, specifications$unregular_dimensions, 'common')) {
-    valid_names_variable <- c(valid_names_variable, glue('person_covariables_{i}'))
-    valid_names_variable <- c(valid_names_variable, glue('drop_person_covariables_{i}'))
-
-    c(keep, drop) %<-% create_droplist(eval(expr(`$`(specifications, !!glue::glue('person_covariables_{i}')))))
-    eval(expr(`<-`(`$`(specifications, !!glue::glue('drop_person_covariables_{i}')),!!drop)))
-    eval(expr(`<-`(`$`(specifications, !!glue::glue('person_covariables_{i}')),!!keep)))
+  # creates lists about which covariables should be dropped in specific
+  # dimensions compared to the overall definition
+  # (person_covariables_all_dimensions)
+  if (type == 'variable') {
+    for (i in c(specifications$regular_dimensions, specifications$unregular_dimensions, 'common')) {
+      keep <- drop <- NULL
+      c(keep, drop) %<-% create_droplist(eval(expr(`$`(specifications, !!glue::glue('person_covariables_{i}')))))
+      eval(expr(`<-`(`$`(specifications, !!glue::glue('drop_person_covariables_{i}')),!!drop)))
+      eval(expr(`<-`(`$`(specifications, !!glue::glue('person_covariables_{i}')),!!keep)))
+    }
   }
 
   # checks if all names in the specification vector are valid
-  reference_names <- eval(sym(glue("valid_names_{type}")))
+  reference_names <- get_reference_names(specifications, type)
   if (!all(names(specifications) %in% reference_names)) {
     reference_names <- glue::glue_collapse(reference_names, sep = ", ")
     stop(glue('The {type} specifications contain an invalid name. Check for typos!\n
@@ -109,6 +91,39 @@ check_and_set_specifications <- function(specifications) {
   }
 
   invisible(specifications)
+}
+
+get_reference_names <- function(specifications, type) {
+  # defines valid specification names
+  valid_names_variable <- c('response', 'item', 'person', 'regular_dimensions', 'unregular_dimensions',
+                            'person_covariables_main_effect', 'person_covariables_all_dimensions', 'person_covariables_common',
+                            'item_covariables_intercept', 'situation_covariables', 'uniform_dif',
+                            'person_grouping', 'item_grouping', 'skillintercept',
+                            'pseudo_guess_dimension', 'careless_error_dimension')
+  valid_names_model <- c('response_type', 'item_parameter_number', 'dimensionality_type', 'add_common_dimension')
+
+  # adds valid specification names based on defined dimensions
+  for (i in c(specifications$regular_dimensions, specifications$unregular_dimensions, 'common')) {
+    valid_names_variable <- c(valid_names_variable, glue('person_covariables_{i}'))
+    valid_names_variable <- c(valid_names_variable, glue('drop_person_covariables_{i}'))
+  }
+
+  reference_names <- eval(sym(glue("valid_names_{type}")))
+  return(reference_names)
+}
+
+check_dimension_specification <- function(specifications) {
+  # checks if dimension names are unique and not equal to 'common'
+  if ((length(unique(specifications$regular_dimensions)) != length(specifications$regular_dimensions)) ||
+      (length(unique(specifications$unregular_dimensions)) != length(specifications$unregular_dimensions))) {
+    stop('Dimension names have to be unique! Dimension name was used twice in either regular_dimensions or unregular_dimensions.')
+  }
+  if (length(intersect(specifications$regular_dimensions, specifications$unregular_dimensions)) > 0) {
+    stop('Dimension names have to be unique! Compare regular and unregular dimensions.')
+  }
+  if ('common' %in% specifications$regular_dimensions || 'common' %in% specifications$unregular_dimensions) {
+    stop('Dimension name "common" is reserved!')
+  }
 }
 
 create_droplist <- function(person_covariable_list) {
@@ -469,8 +484,8 @@ build_formula_nonlinear <- function(var_specs, add_common_dimension = FALSE, ite
   c(x, nl_formulae) %<-% add_covars_nonlinear(x, nl_formulae, person_covariables)
 
   # sets terms for item covariables
-  item_intercept_covariables <- var_specs$item_intercept_covariables
-  c(x, nl_formulae) %<-% add_covars_nonlinear(x, nl_formulae, item_intercept_covariables)
+  item_covariables_intercept <- var_specs$item_covariables_intercept
+  c(x, nl_formulae) %<-% add_covars_nonlinear(x, nl_formulae, item_covariables_intercept)
 
   # sets terms for situation covariables
   situation_covariables <- var_specs$situation_covariables
@@ -563,7 +578,7 @@ build_formula_linear <- function(var_specs, add_common_dimension = FALSE) {
   # e. g. a word count (numeric) or something catergorial (factors/strings) which gets dummy coded ("Did the item included a picture or video?")
   # technically these are modeled not different from person covariables but it might be beneficial to think about the type of predictors included
   # anyway, this distinction might be necessary for the model inspection in the upcoming Shiny app
-  x <- add_covars_linear(x, var_specs$item_intercept_covariables)
+  x <- add_covars_linear(x, var_specs$item_covariables_intercept)
 
   # sets terms for situation covariables / characteristics / description
   # e. g. day time of test taking, time since last break, teacher in class

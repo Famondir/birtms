@@ -451,7 +451,7 @@ test_that("main effect person covariates are specified correctly", {
 
 test_that("item intercept covariates are specified correctly", {
   # 1PL regular
-  variable_specs <- rlang::list2(item_intercept_covariables = c('pictures', 'characters'),
+  variable_specs <- rlang::list2(item_covariables_intercept = c('pictures', 'characters'),
   )
   model_specs <- rlang::list2(item_parameter_number = 1,
   )
@@ -461,7 +461,7 @@ test_that("item intercept covariates are specified correctly", {
   expect_equal_bf(build_formula(variable_specs, model_specs), form_1PL)
 
   # 1PL unregular
-  variable_specs <- rlang::list2(item_intercept_covariables = c('pictures', 'characters'),
+  variable_specs <- rlang::list2(item_covariables_intercept = c('pictures', 'characters'),
                                  unregular_dimensions = c('eins', 'zwei'),
   )
   form_1PL <- brms::bf(response ~ skillintercept + eins * theta1 + zwei * theta2 + beta + itemcovars,
@@ -477,7 +477,7 @@ test_that("item intercept covariates are specified correctly", {
   # 2PL
   model_specs <- rlang::list2(item_parameter_number = 2,
   )
-  variable_specs <- rlang::list2(item_intercept_covariables = c('pictures', 'characters'),
+  variable_specs <- rlang::list2(item_covariables_intercept = c('pictures', 'characters'),
   )
   form_2PL <- brms::bf(response ~ skillintercept + exp(logalpha) * theta + beta + itemcovars,
                        skillintercept ~ 1,

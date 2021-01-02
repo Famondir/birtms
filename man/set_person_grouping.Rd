@@ -2,7 +2,7 @@
 % Please edit documentation in R/build_formula.R
 \name{set_person_grouping}
 \alias{set_person_grouping}
-\title{Title}
+\title{Combines hierarchy and DIF specifications for person variables}
 \usage{
 set_person_grouping(var_specs)
 }
@@ -13,5 +13,5 @@ set_person_grouping(var_specs)
 an expression p
 }
 \description{
-Title
+Combines hierarchy and DIF specifications for person variables
 }
