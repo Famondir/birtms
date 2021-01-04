@@ -3,3 +3,4 @@
 R/build_formula_test.R
 inst/doc
 interactive_scripts/
+models/

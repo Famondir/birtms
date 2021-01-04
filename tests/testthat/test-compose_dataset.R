@@ -46,6 +46,7 @@ test_that("data shifts into long format", {
 
   variable_specs <- list(response = 'response', item ='item', person = 'person')
 
+  expect_equal(compose_dataset(response_data, i1:i2), result)
   expect_equal(compose_dataset(response_data, i1:i2, variable_specs), result)
   expect_equal(compose_dataset(response_data, c(i1:i2), variable_specs), result)
 
@@ -74,7 +75,7 @@ test_that("personcovars are added correctly", {
   response_columns <- names(response_data)[-1]
   expect_equal(compose_dataset(response_data2, response_columns, variable_specs), result)
 
-  variable_specs <- list(response = 'response', item ='item', person = 'person', person_covariables_main_effect = c('cov1', 'cov2'), person_covariables_test = c('cov2'), item_covariables_intercept = 'quak')
+  variable_specs <- list(response = 'response', item ='item', person = 'person', person_covariables_main_effect = c('cov1', 'cov2'), person_covariables_common = c('cov2'), item_covariables_intercept = 'quak')
   expect_equal(compose_dataset(response_data2, i1:i2, variable_specs), result)
   expect_equal(compose_dataset(response_data2, response_columns, variable_specs), result)
 

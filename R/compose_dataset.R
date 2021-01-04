@@ -30,7 +30,10 @@
 #' variable_specs <- list(response = 'response', item ='item', person = 'person')
 #'
 #' compose_dataset(response_data, i1:i2, variable_specs)
-compose_dataset <- function(response_data, response_columns, variable_specifications = NULL, person_data = NULL, item_data = NULL, situation_data = NULL) {
+compose_dataset <- function(response_data, response_columns, variable_specifications = NULL,
+                            person_data = NULL, item_data = NULL, situation_data = NULL) {
+
+  variable_specifications <- check_and_set_specifications(variable_specifications)
 
   if(!is.null(person_data)) {
     response_data <- response_data %>% dplyr::left_join(person_data, by = variable_specifications$person)
