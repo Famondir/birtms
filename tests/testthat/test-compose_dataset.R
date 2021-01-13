@@ -145,3 +145,19 @@ test_that("situationcovars are added correctly", {
   expect_error(compose_dataset(response_data, i1:i2, variable_specs, person_data = person_data, situation_data = item_data), 'exist')
 
 })
+
+test_that("DIF covariables are present in final dataset as well", {
+  result <- tibble::tribble(
+    ~person, ~item, ~response, ~cov1,
+    'a', 'i1', 1, 'm',
+    'a', 'i2', 0, 'm',
+    'b', 'i1', 1, 'f',
+    'b', 'i2', 1, 'f',
+    'c', 'i1', 0, 'd',
+    'c', 'i2', 0, 'd',
+  ) %>% dplyr::relocate(cov1, .before = 2)
+
+  variable_specs <- list(response = 'response', item ='item', person = 'person', uniform_dif = c('cov1'))
+
+  expect_equal(compose_dataset(response_data2, i1:i2, variable_specs), result)
+})

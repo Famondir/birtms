@@ -359,7 +359,7 @@ build_formula_nonlinear <- function(var_specs, add_common_dimension = FALSE, ite
   if (is.null(var_specs$uniform_dif)) {
     nl_formulae <- c(nl_formulae, expr(beta ~ 0 + (1 | !!item_group)))
   } else {
-    nl_formulae <- c(nl_formulae, expr(beta ~ 0 + (0 + !!var_specs$uniform_dif | !!item_group) + !!var_specs$uniform_dif))
+    nl_formulae <- c(nl_formulae, expr(beta ~ 0 + (0 + !!var_specs$uniform_dif[[1]] | !!item_group) + !!var_specs$uniform_dif[[1]]))
   }
 
   # sets terms for person covariables
@@ -386,20 +386,31 @@ build_formula_nonlinear <- function(var_specs, add_common_dimension = FALSE, ite
 
     # sets main formula for 3PL or 4PL
     if (item_parameter_number == 3) {
-      main_formula <- expr(!!var_specs$response[[1]] ~ gamma + (1 - gamma) * inv_logit(!!x))
+      if (is.numeric(var_specs$fixed_pseudo_guess)) {
+        max <- 1.0 - var_specs$fixed_pseudo_guess
+        main_formula <- expr(!!var_specs$response[[1]] ~ !!var_specs$fixed_pseudo_guess + !!max * inv_logit(!!x))
+      } else {
+        main_formula <- expr(!!var_specs$response[[1]] ~ gamma + (1 - gamma) * inv_logit(!!x))
+      }
     } else {
       main_formula <- expr(!!var_specs$response[[1]] ~ gamma + (1 - psi - gamma) * inv_logit(!!x))
     }
 
     # sets the group for which the pseudo guessing parameter should vary (e. g. a one parameter for each item, each testlet or a single one for the whole test)
-    if (is.null(var_specs$pseudo_guess_dimension)) {
-      pseudo_guess_grouping <- 1
-    } else if (length(var_specs$pseudo_guess_dimension) == 1) {
-      pseudo_guess_grouping <- expr(1 + (1 | !!var_specs$pseudo_guess_dimension[[1]]))
-    } else stop(glue('Only one dimension is allowed for the pseudo guess parameter. You specified:\n{glue::glue_collapse(var_specs$pseudo_guess_dimension, sep = ", ")}'))
+    if (!is.null(var_specs$fixed_pseudo_guess)) {
+      form <- brms::bf(formula = main_formula, nl = TRUE, flist = nl_formulae, family = brms::brmsfamily("bernoulli", link = "identity"))
 
-    form <- brms::bf(formula = main_formula, nl = TRUE, flist = nl_formulae, family = brms::brmsfamily("bernoulli", link = "identity")) +
-      brms::lf(expr(logitgamma ~ !!pseudo_guess_grouping)) + brms::nlf(gamma ~ inv_logit(logitgamma))
+      if (!is.numeric(var_specs$fixed_pseudo_guess)) form <- form + brms::nlf(expr(gamma ~ !!var_specs$fixed_pseudo_guess[[1]]))
+    } else {
+      if (is.null(var_specs$pseudo_guess_dimension)) {
+        pseudo_guess_grouping <- 1
+      } else if (length(var_specs$pseudo_guess_dimension) == 1) {
+        pseudo_guess_grouping <- expr(1 + (1 | !!var_specs$pseudo_guess_dimension[[1]]))
+      } else stop(glue('Only one dimension is allowed for the pseudo guess parameter. You specified:\n{glue::glue_collapse(var_specs$pseudo_guess_dimension, sep = ", ")}'))
+
+      form <- brms::bf(formula = main_formula, nl = TRUE, flist = nl_formulae, family = brms::brmsfamily("bernoulli", link = "identity")) +
+        brms::lf(expr(logitgamma ~ !!pseudo_guess_grouping)) + brms::nlf(gamma ~ inv_logit(logitgamma))
+    }
 
     if (item_parameter_number == 4) {
 
@@ -451,7 +462,7 @@ build_formula_linear <- function(var_specs, add_common_dimension = FALSE) {
   if (is.null(var_specs$uniform_dif)) {
     x <- expr(!!x + (1 | !!item_group))
   } else {
-    x <- expr(!!x + (0 + !!var_specs$uniform_dif | !!item_group) + !!var_specs$uniform_dif)
+    x <- expr(!!x + (0 + !!var_specs$uniform_dif[[1]] | !!item_group) + !!var_specs$uniform_dif[[1]])
   }
 
   # sets terms for person covariables

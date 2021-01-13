@@ -1,6 +1,10 @@
 ---
 title: "Model Specification"
+author: Simon Schäfer
+date: '`r Sys.Date()`'
 output: rmarkdown::html_vignette
+bibliography: biblio.bib
+csl: apa.csl
 vignette: >
   %\VignetteIndexEntry{Model Specification}
   %\VignetteEngine{knitr::rmarkdown}
@@ -16,4 +20,389 @@ knitr::opts_chunk$set(
 
 ```{r setup}
 library(birtms)
+library(magrittr)
 ```
+
+# Abstract
+
+This R package **birtms** combines the approach on flexible item response theory (IRT) modeling as seen in **flirt** with the interface provided by **brms** to follow a bayesian modeling approach. In this vignette you will learn how to use the **birtms** package to specify a variety of IRT models. In a following vignette you will be introduced in the possibilities to evaluate your IRT models with **birtms**.
+
+# Introduction
+
+Since this package builds on **brms** as an interface to specify and "fit Bayesian generalized (non-)linear multivariate multilevel models using 'Stan'^[The engine doing the hard work of Bayesian modeling is **Stan** and thus the default sampler is the *no-U-turn sampler* an extension of Hamiltonian Monte Carlo alogirthm. For an overview about differing samplers and some very enlightning animations showing the benefits of the *no-U-turn sampler*  have a look on [McElreath blog entry](https://elevanth.org/blog/2017/11/28/build-a-better-markov-chain/).]" [@R-brms] it is limited to the models you can specify with **brms** and **Stan** itself. Therefore i.e. mixed Rasch models can't be specified right now, since **Stan** can't handle discrete parameters wihtout some tricks.^[Have a look on [McElreath blog entry](https://elevanth.org/blog/2018/01/29/algebra-and-missingness/) about how to use discrete parameters ins **Stan**. Unfortunately this strategy can't be used with **brms** so would have to learn about specifying your model directly e.g. with **rstan** all by yourself.] Nevertheless all models that could be fitted in **flirt** can be fitted via **brms** as well and in the long term they will be available in **birtms**. Note that currently only dichotomous response variables can be modeled. Nevertheless additionally to the models available in **flirt** you can also fit three an four parametric models with **birtms** right now. In the far future there might even be the possibility to specify non-compensatory multidimensional IRT models. I hope to make a contribution to a wider usage of Bayesian IRT modeling among e.g. educational researchers as the package **edstan** [@edstan] did with it preset models for **rstan** and [exhaustive tutorials](https://cran.r-project.org/web/packages/edstan/vignettes/briefmanual.html) for modification and evaluation of these models but in a more flexible and intuitive manner.
+
+Be aware that since a Bayesian model will always give you an answer to your question it will take a lot longer than inference statistical methods (like ML estimators) and the answer might be parameter estimations with huge credibilty intervals. So models with many parameters (e.g. 3 parametric multidimensional testlet model for 100 persons and 270 items in 36 testlets which results in 27000 observations and 4510 parameters) will have a long run time (up two days). And due to the small sample size of 100 persons the resulting slope and pseudo guess parameters will have huge credibility intervals - this means you definitly should not proceed with your analysis just with the median or modal value for these parameters (as you would do in non-bayesian statisics).^[In this case a look on the leave one out cross validation criteria should show you a bunch of high pareto k's giving you a hint that your model probably is overfitting the data.] Also be aware your question could be poorly specified which will result in an useless answer regardless statistical foundation of your method.
+
+# Preparation for fitting IRT models with birtms
+
+The following structure is closely oreintated on the article on the **flirt** package by @Jeon.2016 ([which can be found here](https://link.springer.com/article/10.3758/s13428-015-0606-z)).
+
+## Installation
+
+## Data set-up
+
+```{r echo = FALSE}
+response_data <- tibble::tribble(
+  ~ID, ~i01, ~i02, ~i03, ~gender,
+  'ma01', 1, 0, 1, 'm',
+  'ho02', 1, 1, 0, 'm',
+  'mg04', 1, 1, 0, 'w',
+  'na11', 0, 0, 1, 'm',
+  'ma02', 0, 1, 1, 'w',
+)
+
+person_data <- tibble::tribble(
+  ~ID, ~IQ,
+  'ma01', 100, 
+  'ho02', 115, 
+  'mg04', 130, 
+  'na11', 85, 
+)
+
+item_data <- tibble::tribble(
+  ~item, ~pictures, ~color,
+  'i01', 1, 'blue',
+  'i02', 0, 'red',
+  'i03', 2, 'green',
+)
+
+situation_data <- tibble::tribble(
+     ~ID, ~item, ~color,
+  "ma01", "i01",        'blue',
+  "ma01", "i02",        'red',
+  "ma01", "i03",        'green',
+  "ho02", "i01",        'blue',
+  "ho02", "i02",        'green',
+  "ho02", "i03",        'red',
+  "mg04", "i01",        'red',
+  "mg04", "i02",        'blue',
+  "mg04", "i03",        'green',
+  "na11", "i01",        'green',
+  "na11", "i02",        'red',
+  "na11", "i03",        'blue',
+  "ma02", "i01",        'red',
+  "ma02", "i02",        'green',
+  "ma02", "i03",        'blue'
+  )
+
+```
+
+The data has to be in long format. To get the data from wide into long format and to add covariables (related to persons or items) you can use the `birtms::compose_dataset` function. (If it already is in long format you can skip this part and continue with the chapter about [Model specification](#modelspecification).) The following data is in wide format and contains the response data for five persons identified by their `ID` for three fictive items `i01, i02, i03` and a person specivic covariable `gender`:
+
+```{r}
+response_data
+```
+
+To convert the response data into long format call
+
+```{r}
+var_specs1 = list(person = 'ID', response = 'response')
+response_data_long1 <- birtms::compose_dataset(response_data = response_data,
+                                              response_columns = i01:i03,
+                                              variable_specifications = var_specs1)
+head(response_data_long1)
+```
+
+### Behind the scenes
+
+So far so good. Let's have a look behind the scences. This basic usage or `birtms::compose_dataset` does similiar things as a call to 
+
+```{r}
+tidyr::pivot_longer(data = response_data,
+                    cols = i01:i03,
+                    names_to = 'item',
+                    values_to = var_specs1$response) %>% head()
+```
+
+But have you noticed the difference? With our call to `birtms::compose_dataset` the variable `gender` gets dropped. Is this a bug or a feature? In point of view it is a feature that helps you checking your model specification due to the `variable_specifications` argument you will learn about in detail later on. So `birtms::compose_dataset` drops any variable that isn't mentioned in the *list* passed to this argument.
+
+### Include covariables
+
+So to keep the covariable `gender` we have to use it in our model specification. Let's say we want to use it as a predictor term. How can we specifiy this? Just like this:
+
+```{r}
+var_specs2 = list(person = 'ID', response = 'response',
+                 person_covariables_main_effect = 'gender')
+response_data_long2 <- birtms::compose_dataset(response_data = response_data,
+                                              response_columns = i01:i03,
+                                              variable_specifications = var_specs2)
+head(response_data_long2)
+```
+
+### Pitfalls (Behind the scenes, 2nd part)
+
+Well, `person_covariables_main_effect` is a realy long term. Can we just use some abbreviation or dummy term?
+
+```{r error = TRUE}
+var_specs3 = list(person = 'ID', response = 'response',
+                 person_covariables = 'gender')
+response_data_long3 <- birtms::compose_dataset(response_data = response_data,
+                                              response_columns = i01:i03,
+                                              variable_specifications = var_specs3)
+```
+
+No we can't. The function checks our list against a preset of allowed names so you don't suffer from typos.^[These checks are performed for any of these functions: `birtms::compose_dataset, birtms::build_formula, birtms::birtm` and `birtms::birt_aio`] You may also have noted that there are additional terms beginning with `person_covariables_`. You will learn about their different meaning later on.
+
+Okay. But what if we want to rename the column of person identificators just to `person`? Can we just run?:
+
+```{r error = TRUE}
+var_specs4 = list(person = 'person', response = 'response',
+                 person_covariables_main_effect = 'gender')
+response_data_long4 <- birtms::compose_dataset(response_data = response_data,
+                                              response_columns = i01:i03,
+                                              variable_specifications = var_specs4)
+```
+
+Nope. Is there another possibility to convert the names on the flow? No. Come on! Just use the `dplyr::rename` before handing over your dataset. It's not too hard, is it?
+
+### Alter the 'item' column name
+
+What do you get from this example? The function checks for the existence of all columns in your input dataset but for the names `response` and `item`. So what about this names? You can choose them as you wish. (I know it's kinda inconsistent.) But wait! we never told the `birtms::compose_dataset` about the name `item`. Where did it came from? How can we alter is? We can alter it as folows:
+
+```{r}
+var_specs5 = list(person = 'ID', response = 'answer', item = 'task')
+response_data_long5 <- birtms::compose_dataset(response_data = response_data,
+                                              response_columns = i01:i03,
+                                              variable_specifications = var_specs5)
+head(response_data_long5)
+```
+
+Notice that the column names now are `ID, answer, task` instead of `ID, response, item`. But where came the term `item` from in the first place?
+
+### The lazy way
+
+There are some predefinitions for the `variable_specifications` list that get replaced by your arguments. The prespecified list is: `list(response = 'response', item ='item', person = 'person')`. This implies that you can skip these arguments for `response` and `item`. For `person` this is only possible if you have a column named `person` in your dataset that holds unique person identifiers.^[Otherwise your model will do somethind realy odd. Imagine `person` holds (for some reason) their school name. Then your schools will bea treated as subjects that solved all items multiple times. I think this model would crash bacause the generated observations are not unique but even if it won't (let me know if you tried this out): how the fuck should this model tell us something of interest about the persons who took the test?!]
+
+```{r}
+response_data2 <- response_data %>% dplyr::rename(person = ID)
+response_data_long6 <- birtms::compose_dataset(response_data = response_data2,
+                                              response_columns = i01:i03)
+head(response_data_long6)
+```
+
+For you to solve: How can we keep the `gender` column in a lazy way?
+
+### Include covaribles extended
+
+#### person covariables
+
+All right. By now you should be able to shift your response data from wide format into long format and include person specific covariables that were included in the response dataset. But wait? What about item specific covariables? Or covariables that are specific for any person item interaction (which I call situation covariables)? Let's have a look on the three arguments of `birtms::compose_dataset` we haven't touched yet: `person_data = NULL, item_data = NULL, situation_data = NULL`.
+
+First things first. What might this `person_data` argument for? Well, if you have person specific covariables that aren't part of your response dataset yet you can pass them here and the function will use `dplyr::left_join` to stick those two together by the person identifier column. You could do this by yourself of course. It's just implemented for convenience. Have an example before we continue:
+
+```{r}
+person_data
+var_specs7 = list(person = 'ID', response = 'response', item ='item',
+                 person_covariables_main_effect = c('gender', 'IQ'))
+response_data_long7 <- birtms::compose_dataset(response_data = response_data,
+                                              response_columns = i01:i03,
+                                              variable_specifications = var_specs7,
+                                              person_data = person_data)
+response_data_long7
+```
+
+Notice that you have to use `IQ` somewhere in your model. Because we already know the `person_covariables_main_effect` term, we include `IQ` as a second person covariable by assigning a character vector instead of a string (a character vector of lenght one). Notice that you mustn't assign vecors of length greater than one to the other terms we came along so far. So this is a new feature but we will see it again and again later on. Notice also that we find some `NA` entries in the final dataset. This is because there were no `IQ` values present for `ma02`.
+
+**Attention**: This will cause dropping all these observations if we specify a model taht uses `IQ` as a predictor from `ma02` if we don't handle these missing values with `brms::mi()`. This is not possible inside **birtms** right now. But you might be able to customise the model formula by hand fit the model and convert it into a `birtmsfit` object to continue the evaluation with **birtms**. Unfortunately this is not possible in the current version of the package. So maybe you can work around with imputation as explained by Paul Bürkner - author of the **brms** package - [in this vignette](https://cran.r-project.org/web/packages/brms/vignettes/brms_missings.html).
+
+#### item covariables {#itemcovariables}
+
+For item specific covariables you have to add a dataset with a column holding item identifiers that correspond to the former item response column names and further columns holding the covariables. The name of the item identifier column must correspond to the name of the item identifier column you chose in `variable_specifications` (or `item` if you use the default value). In this form you simply pass it to the `item_data` argument. Again: be aware for missing values!
+
+```{r}
+item_data
+var_specs8 = list(person = 'ID', response = 'response', item ='item',
+                 item_covariables_intercept = c('pictures', 'color'))
+response_data_long8 <- birtms::compose_dataset(response_data = response_data,
+                                              response_columns = i01:i03,
+                                              variable_specifications = var_specs8,
+                                              item_data = item_data)
+response_data_long8
+```
+
+For this example we can imagine that the items contained a different number of pictures and the background may have varied as well. Research questions could be related to multi media theory or the psychologic impact of colors on performance. Of course the way it is represented there would be way to less variation in the item properties to call it an experiment. Imagine there is much more data especially more persons working on the items.
+
+#### situation covariables
+
+The last kind of covariables you can specify are situation or person*item covariables. The dataset to pass here is already in pretty long format. Imaginge, we vary the background color by random in an online test.
+
+```{r}
+situation_data
+var_specs9 = list(person = 'ID', response = 'response', item ='item',
+                 situation_covariables = 'color')
+response_data_long9 <- birtms::compose_dataset(response_data = response_data,
+                                              response_columns = i01:i03,
+                                              variable_specifications = var_specs9,
+                                              situation_data = situation_data)
+response_data_long9
+```
+
+Closely compare the columns `color` in `response_data_long8` and `response_data_long9` to see the difference:
+
+```{r}
+response_data_long9 %>% dplyr::rename(color.situation = color) %>% 
+  dplyr::mutate(color.item = response_data_long8$color) %>% 
+  DT::datatable()
+```
+
+Other examples for situation covariables might be: the item ordering in a randomized test or the fact that a special forces team accidently entered the class room (probably influencing the task performance while they are present and even when they are long gone).
+
+This is all about shifting and composing your data into the required data format for usage in **birtms** with `birtms::compose_dataset`. You have learend how all the optional arguments work and how to use them to combine all your data in one dataset. Next we will have a look at the first heart of this package: `birtms::build_formula`.
+
+# Model specification {#modelspecification}
+
+This package uses an approch to specify IRT models that tries to avoid either the specifications of design matrixes (see **TAM** [@TAM_3.5-19] for an inference statistical R package), some kind of generalized (non-)linear formuale (see **brms** [@R-brms], **rethinking** [@rethinking]) or build a model up from scratch (see **rstan** [@rstan]) but with a list of key words. I hope this helps people to specify their models more easily even if they don't get all the math behind generalised (non-)linear models (further *gnlms*) or programming skills . Compared to the **edstan** approach using basic but ready **rstan** models I hope this approach to be more flexible and intuitive.
+
+On the other hand I am aware that it might get a bit messy to specify a realy complex model in the key word way because you have to get to know the right key words instead of understanding some basic principles. Therefore I hope to make this vignette as easy to understand and comprehensive as possible to guide you to the model you have in mind. Also I recommend to make a step further and have a look at the *gnlms* generated by `birtms::build_formula` to get in touch with this approach accompaning the great vignetts of Paul Bürkner [i.e. regarding IRT modeling, @burkner2020bayesian] and @McElreath.2020 (for a in depth introduction to Bayesian modeling using gerneralized linera models). The latter got a portation from the accompaning package **rethinking** to **brms** by [@kurzStatisticalRethinkingSecondEd2020]. The next step would be to specify models directly in **rstan**. The function `brms::make_stancode` can generate the **rstan** model from a formula attained by `birtms::build_formula` or written by yourself via `brms::bf` (lazy version of `brms::brmsformula`). 
+
+## 1PL model
+
+To get the formula for the simplest IRT model (a one-dimensional one-parametric model without any covariables or hierarchies for dichotomous data) you simply call:
+
+```{r}
+formula_1PL_1dim <- birtms::build_formula()
+formula_1PL_1dim
+```
+
+Notice that this is a linear formula where `1` represents the intercept, `(1 | person)` will give you pooled skill estimators for every person and `(1 | item)` will give you pooled easyness estimators for every item (scince it's linked via `+` and not `-` as you often find it when approaching directly to IRT)^[So to get difficulty estimators you have to multiply the easyness estimators by `-1`.]. Here I follow the recommondation found in Paul Bürkners above mentioned vignette [-@burkner2020bayesian] to pool the item estimators as well as the person estimators since this stabilizes the modeling later. This also punishes very extraordenary items pulling their estimators a bit to the mean. To describe this in depth is out of the scope of this vignette.
+
+Of course the call above was the lazy version. To adjust the term names in the formula use the `variable_specifications` argument:
+
+```{r}
+var_specs5 = list(person = 'ID', response = 'answer', item = 'task')
+birtms::build_formula(variable_specifications = var_specs5)
+```
+
+This formular corresponds to the expression
+
+$$\begin{equation}
+\tag{1}
+P(y_{ik} = 1 | \theta, \beta) = \frac{\exp(\theta_i + \beta_k)}{1 + \exp(\theta_i + \beta_k)}
+\end{equation}$$
+
+where $\theta_i$ is the skill estimator of person $i$, $\beta_k$ is the easyness estimator of item $k$ and $y_{ik}$ is the answser given by person $i$ on item $k$. This is equivalent to
+
+$$\begin{equation}
+\tag{2}
+\mathrm{logit}(P(y_{ik} = 1 | \theta, \beta)) = \theta_i + \beta_k
+\end{equation}$$
+
+So $\theta$ is related to `person` or `ID` and $\beta$ is related to `item` or `task` in our formulae above. I think it is important to note that these $\beta$ here neither represent regression coefficents (that will be modeled for covariables later on) nor slope parameters.^[In [@McElreath.2020] the $\beta$s are used for regression coefficents and in some IRT packages $\beta$ (or just $b$) is used for the slopes parameters instead of $\alpha$ (or $a$) as I will use them later.] Here $\theta$ and $\beta$ (notice that they have no subscript) should represent vectors containing all individual $\theta_i$ / $\beta_k$. I wrote $P(y_{ik} = 1 | \theta, \beta)$ since both - the $\theta$ and the $\beta$ - are modeled here and I don't treat them as something fixed / god given and thus my notation is different from the notation in the article of @Jeon.2016.
+
+## 2PL model
+
+If you wish to model a model with more than one parameter per item the formula becomes nonlinear. This will slow down the process a bit because **Stan** has to do more operations in each iteration. But the main reason it takes longer to fit a model with more item parameters is because there will be more parameter sets that won't be accepted as a next step because there are more possibilities for some parameters to be far of a reasonable value which results in a worse likelihood. Nevertheless generating the corresponding formula is pretty easy and will bring up the second (and last) argument for `birtms::build_formula`:
+
+```{r}
+var_specs10 = list(person = 'ID', response = 'response', item ='item') # this are the preset values and therfore could be left out
+model_specs = list(item_parameter_number = 2)
+formula_2PL_1dim <- birtms::build_formula(variable_specifications = var_specs10,
+                      model_specifications = model_specs)
+formula_2PL_1dim
+```
+
+This corresponds to the following formula
+
+$$\begin{equation}
+\tag{3}
+\mathrm{logit}(P(y_{ik} = 1 | \theta, \beta, \alpha)) = \alpha_k \theta_i + \beta_k
+\end{equation}$$
+
+Here $\alpha_k$ represents the slope or disrimination parameter estimators. Notice that the model draws values for `logalpha ~ 1 + (1 | item)` and not `alpha` directly to help with model identification by restricting all the `alpha = exp(logalpha)` to be positive. Therefore you won't see any negative slopes in your model. Instead you might find more `alpha`s close to zero indicating that the data supposes these items don't fit in the model you want to force them in. Check if you have to revert the evaluation or think about dropping these items from the further evaluation and editing the items before a future usage (if you can find a hint what the problem might be, e.g. misleading item stem or distractors).^[It is possible to draw `alpha` directly if you find a proper (narrow) prior. You will learn a bit on priors at the chapter on [Model fiting](#modelfitting) but as these are so important to Bayesian statistics I recommand have an in depth view into some articles or books about Bayesian statistics before fiddling around blindly. And let me ask you this question: aren't you going to inspect carefully any item with low slope parameter anyway as you would do for negative parameters? So what would be your big gain?]
+
+## 3PL model
+
+We can use the same tool to fit a three parametric model (notice that we left out the `variable_specifications` argument since we are using the preset values in this example):
+
+```{r}
+model_specs = list(item_parameter_number = 3)
+formula_3PL_1dim <- birtms::build_formula(model_specifications = model_specs)
+formula_3PL_1dim
+formula_3PL_1dim$family
+```
+
+This corresponds to the following formula
+
+$$\begin{equation}
+\tag{4}
+P(y_{ik} = 1 | \theta, \beta, \alpha, \gamma)) = \gamma + (1 - \gamma) \frac{\exp(\theta_i + \beta_k)}{1 + \exp(\theta_i + \beta_k)}
+\end{equation}$$
+
+Notice that $\gamma$ has no subscript. This means that a single pseudo guessing parameter is estimated unless something different is specified as you can see below. I believe this is a good default behavior because this way all items can be compared regarding their easyness and slope parameters [@Han.2012] and a common estimator probably fits better than a common value of zero (even this common estimator is not the 'real' value). Also this way there is more data the estimation is based on. Be aware that in general the estimation of item specific pseudo guessing parameters needs a lot of data to become precise scince you need many responses from people with very low proficiency.
+
+Notice the inverse logit transformation of the `logitgamma` parameter. Here we follow the approach of @burkner2020bayesian to ensure that the 'gamma' parameter will be between 0 an 1. Additionally the link function chosen in the family argument of the formula will change from `logit` to `identity` because we aready use the `inv_logit` transformation in the main formula part.
+
+To force the model to estimate a pseudo guessing parameter for each item (or some item groups, i.e. for testlets) you have to state this as follows:
+
+```{r}
+model_specs = list(item_parameter_number = 3)
+
+# pseudo guessing parameter per item
+var_specs11 = list(item = 'item', pseudo_guess_dimension = 'item') # item argument could be left out
+formula_3PL_1dim <- birtms::build_formula(variable_specifications = var_specs11, 
+                                          model_specifications = model_specs)
+formula_3PL_1dim
+
+# pseudo guessing parameter per item group (here testlet)
+var_specs12 = list(item = 'item', pseudo_guess_dimension = 'testlet') # item argument could be left out
+formula_3PL_1dim <- birtms::build_formula(variable_specifications = var_specs12, 
+                                          model_specifications = model_specs)
+formula_3PL_1dim
+```
+
+For select 1 from k multiple choice test formats an alternative and common approach is to pass fixed guessing parameters of $\frac{1}{k}$. You can do this by using the argument `fixed_pseudo_guess` instead of `pseudo_guess_dimension`. If you have a single value for all items you can pass it as a single numeric. If you want to use different values for different items (i.e. if you have items with differing numbers of choices to choose from) you can pass the name of a column which holds these values (as probabilities from 0.0 to 1.0). In the latter case you have to pass these values via the `item_data` argument (see [item covariables](#itemcovariables)).
+
+```{r}
+model_specs = list(item_parameter_number = 3)
+
+# common fixed pseudo guessing parameter for all items
+var_specs13 = list(fixed_pseudo_guess = .25)
+formula_3PL_1dim <- birtms::build_formula(variable_specifications = var_specs13, 
+                                          model_specifications = model_specs)
+formula_3PL_1dim
+
+# fixed pseudo guessing parameter per item  or item group (here testlet)
+var_specs14 = list(fixed_pseudo_guess = 'guess')
+formula_3PL_1dim <- birtms::build_formula(variable_specifications = var_specs14, 
+                                          model_specifications = model_specs)
+formula_3PL_1dim
+attributes(formula_3PL_1dim$pforms$gamma)$nl
+```
+
+Notice that in the second model the `nl` attribute for the `gamma` formula was set `TRUE` so these values are taken as they are and no regression weight is estimated here. (In the first model this formula does not exist because the values are plugged into the main formula directly.)
+
+Be aware that using `fixed_pseudo_guess` and `pseudo_guess_dimension` at once does not work. In this case the `pseudo_guess_dimension` will be ignored:
+
+```{r}
+model_specs = list(item_parameter_number = 3)
+
+# common fixed pseudo guessing parameter for all items
+var_specs15 = list(fixed_pseudo_guess = .25, pseudo_guess_dimension = 'item')
+formula_3PL_1dim <- birtms::build_formula(variable_specifications = var_specs15, 
+                                          model_specifications = model_specs)
+formula_3PL_1dim
+
+# fixed pseudo guessing parameter per item  or item group (here testlet)
+var_specs16 = list(fixed_pseudo_guess = 'guess', pseudo_guess_dimension = 'item')
+formula_3PL_1dim <- birtms::build_formula(variable_specifications = var_specs16, 
+                                          model_specifications = model_specs)
+formula_3PL_1dim
+```
+
+## 4PL model
+
+And we can even fit a four parametric model:
+
+```{r}
+model_specs = list(item_parameter_number = 4)
+formula_4PL_1dim <- birtms::build_formula(model_specifications = model_specs)
+formula_4PL_1dim
+```
+
+# Model fitting {#modelfitting}
+
+## Further notes
+
+At some point your models might get rather complex and you might get a warning that there have been divergent chains after warmup or the maximum treedepth was exceeded. In this case you can try to overcome these issus by passing arguments to te `...` argument that will be passed down to the **Stan** engine. For example you can pass `control = list(adapt_delta = 0.90)` reducing the acceptance rate for a new parameter set. This will make the modeling process slower and is not garantuing to solve your problems. So you should not alter the value by default. For further readings [see this](https://mc-stan.org/misc/warnings.html).
+
+# References

@@ -39,6 +39,9 @@ check_and_set_specifications <- function(specifications) {
               {reference_names}'))
   }
 
+  if (is.numeric(specifications$fixed_pseudo_guess)) specifications$fixed_pseudo_guess <- as.character(specifications$fixed_pseudo_guess)
+  if (is.numeric(specifications$fixed_careless_error)) specifications$fixed_careless_error <- as.character(specifications$fixed_careless_error)
+
   invisible(specifications)
 }
 
@@ -48,7 +51,8 @@ get_reference_names <- function(specifications, type) {
                             'person_covariables_main_effect', 'person_covariables_all_dimensions', 'person_covariables_common',
                             'item_covariables_intercept', 'situation_covariables', 'uniform_dif',
                             'person_grouping', 'item_grouping', 'skillintercept',
-                            'pseudo_guess_dimension', 'careless_error_dimension')
+                            'pseudo_guess_dimension', 'careless_error_dimension',
+                            'fixed_pseudo_guess', 'fixed_careless_error')
   valid_names_model <- c('response_type', 'item_parameter_number', 'dimensionality_type', 'add_common_dimension')
 
   # adds valid specification names based on defined dimensions
@@ -128,7 +132,7 @@ ensym_list <- function(string_list) {
   # recursively converts character list into list of symbols to use in expression composition
   for (i in seq_along(sym_list)) {
     if (length(sym_list[[i]]) == 1) {
-      sym_list[[i]] <- sym(sym_list[[i]])
+      sym_list[[i]] <- rlang::parse_expr(sym_list[[i]])
     } else {
       sym_list[[i]] <- ensym_list(as.list(sym_list[[i]])) # as.list allows to pass vectors or lists of parameters (e. g. for covariables)
     }

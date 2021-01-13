@@ -699,3 +699,93 @@ test_that("person covariates can be added and dropped for single dimensions and 
   expect_equal_bf(build_formula(variable_specs, model_specs), form_1PL)
 })
 
+test_that("3PL formulae are specified correct", {
+  variable_specs <- rlang::list2(pseudo_guess_dimension = 'item')
+  model_specs <- rlang::list2(item_parameter_number = 3,
+  )
+  form_3PL <- brms::bf(response ~ gamma + (1 - gamma) * inv_logit(skillintercept + exp(logalpha) * theta + beta),
+                       skillintercept ~ 1,
+                       theta ~ 0 + (1 | person),
+                       logalpha ~ 1 + (1 | item),
+                       beta ~ 0 + (1 | item),
+                       logitgamma ~ 1 + (1 | item),
+                       brms::nlf(gamma ~ inv_logit(logitgamma)),
+                       nl = TRUE, family = brms::brmsfamily("bernoulli", link = "identity")
+  )
+  expect_equal_bf(build_formula(variable_specifications = variable_specs, model_specifications = model_specs), form_3PL)
+
+  variable_specs <- rlang::list2(fixed_pseudo_guess = 'guess')
+  form_3PL <- brms::bf(response ~ gamma + (1 - gamma) * inv_logit(skillintercept + exp(logalpha) * theta + beta),
+                       skillintercept ~ 1,
+                       theta ~ 0 + (1 | person),
+                       logalpha ~ 1 + (1 | item),
+                       beta ~ 0 + (1 | item),
+                       brms::nlf(gamma ~ guess),
+                       nl = TRUE, family = brms::brmsfamily("bernoulli", link = "identity")
+  )
+  expect_equal_bf(build_formula(variable_specifications = variable_specs, model_specifications = model_specs), form_3PL)
+
+  variable_specs <- rlang::list2(fixed_pseudo_guess = .25)
+  form_3PL <- brms::bf(response ~ .25 + .75 * inv_logit(skillintercept + exp(logalpha) * theta + beta),
+                       skillintercept ~ 1,
+                       theta ~ 0 + (1 | person),
+                       logalpha ~ 1 + (1 | item),
+                       beta ~ 0 + (1 | item),
+                       nl = TRUE, family = brms::brmsfamily("bernoulli", link = "identity")
+  )
+  expect_equal_bf(build_formula(variable_specifications = variable_specs, model_specifications = model_specs), form_3PL)
+})
+
+test_that("4PL formulae are specified correct", {
+  variable_specs <- rlang::list2(careless_error_dimension = 'item')
+  model_specs <- rlang::list2(item_parameter_number = 4,
+  )
+  form_4PL <- brms::bf(response ~ gamma + (1 - psi - gamma) * inv_logit(skillintercept + exp(logalpha) * theta + beta),
+                       skillintercept ~ 1,
+                       theta ~ 0 + (1 | person),
+                       logalpha ~ 1 + (1 | item),
+                       beta ~ 0 + (1 | item),
+                       logitgamma ~ 1,
+                       brms::nlf(gamma ~ inv_logit(logitgamma)),
+                       logitpsi ~ 1 + (1 | item),
+                       brms::nlf(psi ~ inv_logit(logitpsi)),
+                       nl = TRUE, family = brms::brmsfamily("bernoulli", link = "identity")
+  )
+  expect_equal_bf(build_formula(variable_specifications = variable_specs, model_specifications = model_specs), form_4PL)
+
+  variable_specs <- rlang::list2(fixed_careless_error = 'error')
+  form_4PL <- brms::bf(response ~ gamma + (1 - psi - gamma) * inv_logit(skillintercept + exp(logalpha) * theta + beta),
+                       skillintercept ~ 1,
+                       theta ~ 0 + (1 | person),
+                       logalpha ~ 1 + (1 | item),
+                       beta ~ 0 + (1 | item),
+                       logitgamma ~ 1,
+                       brms::nlf(gamma ~ inv_logit(logitgamma)),
+                       brms::nlf(psi ~ error),
+                       nl = TRUE, family = brms::brmsfamily("bernoulli", link = "identity")
+  )
+  expect_equal_bf(build_formula(variable_specifications = variable_specs, model_specifications = model_specs), form_4PL)
+
+  variable_specs <- rlang::list2(fixed_careless_error = .25)
+  form_4PL <- brms::bf(response ~ .25 + .75 * inv_logit(skillintercept + exp(logalpha) * theta + beta),
+                       skillintercept ~ 1,
+                       theta ~ 0 + (1 | person),
+                       logalpha ~ 1 + (1 | item),
+                       beta ~ 0 + (1 | item),
+                       nl = TRUE, family = brms::brmsfamily("bernoulli", link = "identity")
+  )
+  expect_equal_bf(build_formula(variable_specifications = variable_specs, model_specifications = model_specs), form_4PL)
+})
+
+test_that("monotonous praedictors can be specified", {
+  # 1PL regular
+  variable_specs <- rlang::list2(person_covariables_main_effect = c('mo(intelligence)', 'inv_logit(anger)'),
+  )
+  model_specs <- rlang::list2(item_parameter_number = 1,
+  )
+  form_1PL <- brms::bf(response ~ 1 + (1 | person) + (1 | item) + mo(intelligence) + inv_logit(anger),
+                       nl = FALSE, family = brms::brmsfamily("bernoulli", link = "logit")
+  )
+  expect_equal_bf(build_formula(variable_specs, model_specs), form_1PL)
+
+})

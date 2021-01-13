@@ -40,7 +40,7 @@ compose_dataset <- function(response_data, response_columns, variable_specificat
   }
 
   person_covariables <- names(variable_specifications) %>% stringr::str_detect('person_covariables') %>% purrr::keep(.x = variable_specifications) %>%
-    unlist(use.names = FALSE) %>% unique()
+    unlist(use.names = FALSE) %>% unique() %>% c(variable_specifications$uniform_dif)
 
   response_columns <- tryCatch(
     error = function(cnd) {

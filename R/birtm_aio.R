@@ -12,6 +12,7 @@ birtm_aio <- function(response_data, response_columns, person_data = NULL, item_
       response_columns <- response_columns
     }
   )
+  test <- NULL
 
   data <- compose_dataset(response_data = response_data, response_columns = !!response_columns,
                           variable_specifications = variable_specifications,
