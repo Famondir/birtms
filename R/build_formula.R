@@ -393,13 +393,26 @@ build_formula_nonlinear <- function(var_specs, add_common_dimension = FALSE, ite
         main_formula <- expr(!!var_specs$response[[1]] ~ gamma + (1 - gamma) * inv_logit(!!x))
       }
     } else {
-      main_formula <- expr(!!var_specs$response[[1]] ~ gamma + (1 - psi - gamma) * inv_logit(!!x))
+      if (is.numeric(var_specs$fixed_pseudo_guess)) {
+        if (is.numeric(var_specs$fixed_careless_error)) {
+          max <- 1.0 - var_specs$fixed_pseudo_guess - var_specs$fixed_careless_error
+          main_formula <- expr(!!var_specs$response[[1]] ~ !!var_specs$fixed_pseudo_guess + !!max * inv_logit(!!x))
+        } else {
+          max <- 1.0 - var_specs$fixed_pseudo_guess
+          main_formula <- expr(!!var_specs$response[[1]] ~ !!var_specs$fixed_pseudo_guess + (!!max - psi) * inv_logit(!!x))
+        }
+      } else if (is.numeric(var_specs$fixed_careless_error)) {
+        max <- 1.0 - var_specs$fixed_careless_error
+        main_formula <- expr(!!var_specs$response[[1]] ~ gamma + (!!max - gamma) * inv_logit(!!x))
+      } else {
+        main_formula <- expr(!!var_specs$response[[1]] ~ gamma + (1 - psi - gamma) * inv_logit(!!x))
+      }
     }
 
     # sets the group for which the pseudo guessing parameter should vary (e. g. a one parameter for each item, each testlet or a single one for the whole test)
-    if (!is.null(var_specs$fixed_pseudo_guess)) {
-      form <- brms::bf(formula = main_formula, nl = TRUE, flist = nl_formulae, family = brms::brmsfamily("bernoulli", link = "identity"))
+    form <- brms::bf(formula = main_formula, nl = TRUE, flist = nl_formulae, family = brms::brmsfamily("bernoulli", link = "identity"))
 
+    if (!is.null(var_specs$fixed_pseudo_guess)) {
       if (!is.numeric(var_specs$fixed_pseudo_guess)) form <- form + brms::nlf(expr(gamma ~ !!var_specs$fixed_pseudo_guess[[1]]))
     } else {
       if (is.null(var_specs$pseudo_guess_dimension)) {
@@ -408,20 +421,24 @@ build_formula_nonlinear <- function(var_specs, add_common_dimension = FALSE, ite
         pseudo_guess_grouping <- expr(1 + (1 | !!var_specs$pseudo_guess_dimension[[1]]))
       } else stop(glue('Only one dimension is allowed for the pseudo guess parameter. You specified:\n{glue::glue_collapse(var_specs$pseudo_guess_dimension, sep = ", ")}'))
 
-      form <- brms::bf(formula = main_formula, nl = TRUE, flist = nl_formulae, family = brms::brmsfamily("bernoulli", link = "identity")) +
-        brms::lf(expr(logitgamma ~ !!pseudo_guess_grouping)) + brms::nlf(gamma ~ inv_logit(logitgamma))
+       form <- form + brms::lf(expr(logitgamma ~ !!pseudo_guess_grouping)) + brms::nlf(gamma ~ inv_logit(logitgamma))
     }
 
     if (item_parameter_number == 4) {
 
       # sets the group for which the careless error parameter should vary (e. g. a one parameter for each item, each testlet or a single one for the whole test)
-      if (is.null(var_specs$careless_error_dimension)) {
-        careless_error_grouping <- 1
-      } else if (length(var_specs$careless_error_dimension) == 1) {
-        careless_error_grouping <- expr(1 + (1 | !!var_specs$careless_error_dimension[[1]]))
-      } else stop(glue('Only one dimension is allowed for the pseudo guess parameter. You specified:\n{glue::glue_collapse(var_specs$careless_error_dimension, sep = ", ")}'))
 
-      form <- form + brms::lf(expr(logitpsi ~ !!careless_error_grouping)) + brms::nlf(psi ~ inv_logit(logitpsi))
+      if (!is.null(var_specs$fixed_careless_error)) {
+        if (!is.numeric(var_specs$fixed_careless_error)) form <- form + brms::nlf(expr(psi ~ !!var_specs$fixed_careless_error[[1]]))
+      } else {
+        if (is.null(var_specs$careless_error_dimension)) {
+          careless_error_grouping <- 1
+        } else if (length(var_specs$careless_error_dimension) == 1) {
+          careless_error_grouping <- expr(1 + (1 | !!var_specs$careless_error_dimension[[1]]))
+        } else stop(glue('Only one dimension is allowed for the pseudo guess parameter. You specified:\n{glue::glue_collapse(var_specs$careless_error_dimension, sep = ", ")}'))
+
+        form <- form + brms::lf(expr(logitpsi ~ !!careless_error_grouping)) + brms::nlf(psi ~ inv_logit(logitpsi))
+      }
     }
   }
 

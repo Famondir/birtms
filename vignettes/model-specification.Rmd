@@ -2,7 +2,9 @@
 title: "Model Specification"
 author: Simon Schäfer
 date: '`r Sys.Date()`'
-output: rmarkdown::html_vignette
+output: 
+        rmarkdown::html_vignette
+        # pdf_document
 bibliography: biblio.bib
 csl: apa.csl
 vignette: >
@@ -350,7 +352,16 @@ formula_3PL_1dim <- birtms::build_formula(variable_specifications = var_specs12,
 formula_3PL_1dim
 ```
 
-For select 1 from k multiple choice test formats an alternative and common approach is to pass fixed guessing parameters of $\frac{1}{k}$. You can do this by using the argument `fixed_pseudo_guess` instead of `pseudo_guess_dimension`. If you have a single value for all items you can pass it as a single numeric. If you want to use different values for different items (i.e. if you have items with differing numbers of choices to choose from) you can pass the name of a column which holds these values (as probabilities from 0.0 to 1.0). In the latter case you have to pass these values via the `item_data` argument (see [item covariables](#itemcovariables)).
+This corresponds to following fomulae:
+
+$$\begin{align}
+\tag{5.a}
+P(y_{ik} = 1 | \theta, \beta, \alpha, \gamma)) &= \gamma_k + (1 - \gamma_k) \frac{\exp(\theta_i + \beta_k)}{1 + \exp(\theta_i + \beta_k)} \\
+\tag{5.b}
+P(y_{ik} = 1 | \theta, \beta, \alpha, \gamma)) &= \gamma_{testlet} + (1 - \gamma_{testlet}) \frac{\exp(\theta_i + \beta_k)}{1 + \exp(\theta_i + \beta_k)}
+\end{align}$$
+
+For select-1-from-k multiple choice test formats an alternative and common approach is to pass fixed guessing parameters of $\frac{1}{k}$. You can do this by using the argument `fixed_pseudo_guess` instead of `pseudo_guess_dimension`. If you have a single value for all items you can pass it as a single numeric. If you want to use different values for different items (i.e. if you have items with differing numbers of choices to choose from) you can pass the name of a column which holds these values (as probabilities from 0.0 to 1.0). In the latter case you have to pass these values via the `item_data` argument (see [item covariables](#itemcovariables)).
 
 ```{r}
 model_specs = list(item_parameter_number = 3)
@@ -361,7 +372,7 @@ formula_3PL_1dim <- birtms::build_formula(variable_specifications = var_specs13,
                                           model_specifications = model_specs)
 formula_3PL_1dim
 
-# fixed pseudo guessing parameter per item  or item group (here testlet)
+# fixed pseudo guessing parameter per item
 var_specs14 = list(fixed_pseudo_guess = 'guess')
 formula_3PL_1dim <- birtms::build_formula(variable_specifications = var_specs14, 
                                           model_specifications = model_specs)
@@ -382,7 +393,7 @@ formula_3PL_1dim <- birtms::build_formula(variable_specifications = var_specs15,
                                           model_specifications = model_specs)
 formula_3PL_1dim
 
-# fixed pseudo guessing parameter per item  or item group (here testlet)
+# fixed pseudo guessing parameter per item
 var_specs16 = list(fixed_pseudo_guess = 'guess', pseudo_guess_dimension = 'item')
 formula_3PL_1dim <- birtms::build_formula(variable_specifications = var_specs16, 
                                           model_specifications = model_specs)
@@ -391,11 +402,50 @@ formula_3PL_1dim
 
 ## 4PL model
 
-And we can even fit a four parametric model:
+We can even fit a four parametric model:
 
 ```{r}
 model_specs = list(item_parameter_number = 4)
 formula_4PL_1dim <- birtms::build_formula(model_specifications = model_specs)
+formula_4PL_1dim
+```
+
+This corresponds to following fomula:
+
+$$\begin{equation}
+\tag{6}
+P(y_{ik} = 1 | \theta, \beta, \alpha, \gamma, \psi)) = \gamma + (1 - \psi - \gamma) \frac{\exp(\theta_i + \beta_k)}{1 + \exp(\theta_i + \beta_k)}
+\end{equation}$$
+
+Notice that in many texts you might find that the fourth parameter is the upper asymptote parameter (lets call this $\Psi$) in the form $\Psi =  1 - \psi$. Honestly I don't know if this will make some difference in the modeling approach beyond the need to adjust the priors mean. I just followed the model specification shown in @Burkner.2020. Again this parameter has to be between 0 and 1 so we use a `inv_logit` transformation here.
+
+The arguments used to specify the 4PL parameters work analogous to those of the 3PL models. Just replace `pseudo_guess` by `careless_error`. Be aware that a 4PL model can have severe identification issues to overcome with narrow priors or a huge amount of data per item. Following are some examples how to use the 4PL arguments along with the 3PL arguments:
+
+```{r}
+model_specs = list(item_parameter_number = 4)
+
+# careless error parameter per item
+var_specs16 = list(careless_error_dimension = 'item')
+formula_4PL_1dim <- birtms::build_formula(variable_specifications = var_specs16,
+                                          model_specifications = model_specs)
+formula_4PL_1dim
+
+# common fixed careless error parameter for all items
+var_specs17 = list(fixed_careless_error = .05)
+formula_4PL_1dim <- birtms::build_formula(variable_specifications = var_specs17,
+                                          model_specifications = model_specs)
+formula_4PL_1dim
+
+# fixed careless error parameters per item
+var_specs18 = list(fixed_careless_error = 'error')
+formula_4PL_1dim <- birtms::build_formula(variable_specifications = var_specs18,
+                                          model_specifications = model_specs)
+formula_4PL_1dim
+
+# common fixed pseudo guess and careless error parameter for all items
+var_specs19 = list(fixed_pseudo_guess = .25, fixed_careless_error = .05)
+formula_4PL_1dim <- birtms::build_formula(variable_specifications = var_specs19,
+                                          model_specifications = model_specs)
 formula_4PL_1dim
 ```
 
