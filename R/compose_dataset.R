@@ -36,6 +36,7 @@ compose_dataset <- function(response_data, response_columns, variable_specificat
   variable_specifications <- check_and_set_specifications(variable_specifications)
 
   if(!is.null(person_data)) {
+    if (length(intersect(names(person_data), names(response_data))) > 1) stop(glue::glue('There are columns with the same name in response_data and person_data!\nThe colliding names are: {glue::glue_collapse(setdiff(intersect(names(person_data), names(response_data)),variable_specifications$person), sep = ", ")}'))
     response_data <- response_data %>% dplyr::left_join(person_data, by = variable_specifications$person)
   }
 
@@ -62,6 +63,8 @@ compose_dataset <- function(response_data, response_columns, variable_specificat
       unlist(use.names = FALSE) %>% unique()
     item_data <- item_data %>% dplyr::select(variable_specifications$item, item_covariables)
 
+    if (length(intersect(names(item_data), names(dataset))) > 1) stop(glue::glue('There are columns with the same name in response_data or person_data and item_data!\nThe colliding names are: {glue::glue_collapse(setdiff(intersect(names(item_data), names(dataset)),variable_specifications$item), sep = ", ")}'))
+
     dataset <- dataset %>% dplyr::left_join(item_data, by = variable_specifications$item)
   }
 
@@ -71,12 +74,14 @@ compose_dataset <- function(response_data, response_columns, variable_specificat
       unlist(use.names = FALSE) %>% unique()
     situation_data <- situation_data %>% dplyr::select(variable_specifications$item, variable_specifications$person, situation_covariables)
 
+    if (length(intersect(names(situation_data), names(dataset))) > 2) stop(glue::glue('There are columns with the same name in response_data or person_data or item_data and situation_data!\nThe colliding names are: {glue::glue_collapse(setdiff(intersect(names(situation_data), names(dataset)), c(variable_specifications$person, variable_specifications$item)), sep = ", ")}'))
+
     dataset <- dataset %>% dplyr::left_join(situation_data, by = c(variable_specifications$person, variable_specifications$item))
   }
 
-  correct_names <- c(variable_specifications$item, variable_specifications$response, variable_specifications$person,
-                     person_covariables, item_covariables, situation_covariables)
-  if(!identical(sort(names(dataset)), sort(correct_names))) stop(glue::glue('Unspecified columns found: {glue::glue_collapse(setdiff(names(dataset), correct_names), sep = ", ")}\nThere might be a name conflict during dataset composition. Are all covariable names unique?'))
+  # correct_names <- c(variable_specifications$item, variable_specifications$response, variable_specifications$person,
+  #                    person_covariables, item_covariables, situation_covariables)
+  # if(!identical(sort(names(dataset)), sort(correct_names))) stop(glue::glue('Unspecified columns found: {glue::glue_collapse(setdiff(names(dataset), correct_names), sep = ", ")}\nThere might be a name conflict during dataset composition. Are all covariable names unique?'))
 
   return(dataset)
 }

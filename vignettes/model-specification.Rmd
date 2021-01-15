@@ -449,6 +449,14 @@ formula_4PL_1dim <- birtms::build_formula(variable_specifications = var_specs19,
 formula_4PL_1dim
 ```
 
+## Multidimensional models
+
+With **birtms** you can specify multidimensional IRT models. There are two approaches to specify a multidimensional model in **birtms** you can comebine flexible as it pleases you. The two approaches are called [regular dimensions](#regulardimensions) and [unregular dimensions](#unregulardimensions) in this package and are described below.
+
+### Regular Dimensions {#regulardimensions}
+
+### Unregular Dimensions {#unregulardimensions}
+
 # Model fitting {#modelfitting}
 
 ## Further notes

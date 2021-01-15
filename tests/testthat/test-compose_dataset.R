@@ -118,12 +118,6 @@ test_that("itemcovars are added correctly", {
                          item_covariables_intercept = 'icov1')
 
   expect_equal(compose_dataset(response_data, i1:i2, variable_specs, person_data = person_data, item_data = item_data), result)
-
-  variable_specs <- list(response = 'response', item ='item', person = 'person',
-                         person_covariables_main_effect = c('cov1', 'cov2'),
-                         item_covariables_intercept = 'cov1')
-
-  expect_error(compose_dataset(response_data, i1:i2, variable_specs, person_data = person_data, item_data = item_data), 'Unspecified columns found')
 })
 
 test_that("situationcovars are added correctly", {
@@ -160,4 +154,20 @@ test_that("DIF covariables are present in final dataset as well", {
   variable_specs <- list(response = 'response', item ='item', person = 'person', uniform_dif = c('cov1'))
 
   expect_equal(compose_dataset(response_data2, i1:i2, variable_specs), result)
+})
+
+test_that("Double colums throw an informative error.", {
+  variable_specs <- list(response = 'response', item ='item', person = 'person', uniform_dif = c('cov1'))
+  expect_error(compose_dataset(response_data2, i1:i2, variable_specs, person_data = person_data), 'columns with the same name in response_data and person_data')
+
+  variable_specs <- list(response = 'response', item ='item', person = 'person',
+                         person_covariables_main_effect = c('cov1', 'cov2'),
+                         item_covariables_intercept = 'cov1')
+  expect_error(compose_dataset(response_data, i1:i2, variable_specs, person_data = person_data, item_data = item_data), 'columns with the same name in response_data or person_data and item_data')
+
+  variable_specs <- list(response = 'response', item ='item', person = 'person',
+                         person_covariables_main_effect = c('cov1', 'cov2'),
+                         situation_covariables = 'cov1')
+  situation_data2 <- situation_data %>% dplyr::rename(cov1 = scov1)
+  expect_error(compose_dataset(response_data, i1:i2, variable_specs, person_data = person_data, situation_data = situation_data2), 'columns with the same name in response_data or person_data or item_data and situation_data')
 })
