@@ -4,3 +4,5 @@ R/build_formula_test.R
 inst/doc
 interactive_scripts/
 models/
+data/fit_1d_1pl_spm.rds
+*.rds

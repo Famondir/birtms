@@ -459,6 +459,79 @@ With **birtms** you can specify multidimensional IRT models. There are two appro
 
 # Model fitting {#modelfitting}
 
+Now that you learned how to set up a dataset for usage with **birtms** and how to get the formula that describes your model in mind we come to the step you probably hungered for all the time; fitting the model. Here the `birtms::birtm` functions comes into play^[The messengers behind the scenes are `brms::brm` `rstan::stan` who transform the formula and data into proper **Stan** code (which will be C++ code for best performance).]. It takes your data and formula and passes all along the long road to the modeling algorithms implemented in **Stan**. It also lures for the `variable_specifications` and `model_specifications` you used to generate the formula so it can save these parameters for usage by all the evaluation functions coming with this package^[It actually was one of my main reasons to create this framework so my evaluation functions can handle all the parameters the right way and show us the outputs in the right format.]. `birtms::birt` has the following arguments we will discuss below.
+
+```{r eval = FALSE}
+birtm(data, formula,
+      variable_specifications = NULL, model_specifications = NULL,
+      prior = NULL, cores = 4, file = NULL, refit = FALSE,
+      check_prior_influence = FALSE, preparing_bf = FALSE,
+      add_waic = TRUE, add_loo = TRUE, ...)
+```
+
+The `data` argument expects you to pass a dataset in long format (i.e. composed via `birtms::compose_dataset`). Analogly the `formula` argument expects a formula of your model (i.e. build via `birtms::build_formula`). You fin the details about those two functions above. The arguments `cores, file` and `prior` are passed to `brms::brm`. The `file` argument states where the model should be saved on your hard disk (so you don't have to fit it again next session). If you want to replace this file with a new model fit you can delete the old file manually or set the `refit` argument `TRUE`. The `core` argument sets on how mny cores the MCMC chains are running parallel. Default are 4 chains so more than 4 cores don't make sense in this case. So decreasing the core number will increase the run time but decrease the performance drain on your system. But most important is the argument `prior` since the specification of prior beliefs strikes the heart of Bayesian modeling. Unfortuanetly it's out of this articles scope to cover this topic^[Have a look at the **brms** documentation on how to specify priors. Have a look at @burkner2020bayesian for some first examples for light informative priors to use for the partly pooled item and person estimators. Have a deeper look at @McElreath.2020  or @Kruschke.2014 to get a feeling what priors could be placed on linear predictors and how to state them approriate to your prior beliefs strength.]. But let me give you this rule of thumb: Never  Addionally arguments can be passed to `brms::brm` via the `...` argument. For details see the **brms** documentation [@R-brms].
+
+The `check_prior_influence` argument has to be boolean and will be used to specify if the specified priors are sampled as well^[It set the `sample_prior` argument in `brms::brm`.]. This can be used to check how strong the influence of your priors is compared to the influence of the provided data via a graphical comparism afterwards. Setting this argument to `TRUE` will increase the size of the fitted model object slightly (generally under a few percent). Analogly the `preparing_bf` argument is a boolean that is related to the `save_pars` argument of `brms::brm`. If you want to persorm tests based on the Bayes factor afterwards you have to set this `TRUE`. Be aware that this will double the size of the model fit! Therefore arguments `sample_prior` and `save_pars` should not be passed to the `...` argument.
+
+The last arguments to cover are `add_waic` and `add_loo` which are boolean and will effect if these criteria for model comparism and identification of overfitting issues will be calculated. Their defaul value is `TRUE` since they are computed relatively fast (compared to the modeling time) and their results are realy informative and don't need much disk space. Be aware: Since IRT models are always hierarchical regarding the observations (there are multiple answers related to each person since they answer multiple items) it might be more appropriate to use a grouped k-fold cross-validation criteria instead of PSIS-LOO^[The computation of a 10-fold grouped (by person) LOO will take about ten times to model the full dataset. If you want to just leave out one persons responses at a time you fast get to a computation time multiplied by 100 or 1000 (depending on your sample size). You can do this with `brms::kfold` using the `group` and `folds` argument [@R-brms].The only study exploring how big the differences between PSIS-LOO (or exact LOO) and grouped k-fold LOOs might be is this [case study by Vehtari](https://avehtari.github.io/modelselection/rats_kcv.html#53_grouped_k-fold_for_leave-one-group-out). It finds, that the elpd vales may differ quite a lot between the methods but that the order of the compared models seems to be the same. So to just compare which model fits better PSIS-LOO seems to give us the same answers. But keep in mind that this study is not IRT specific. In my work I found that high pareto k values (which indicate some overfitting issues) mostly are aggregated around specific items not for persons. Notice further that the computation of exact LOO probably will take forever since we often have so many observations (persons times items) and might want to model complex models that take more than an hour to run a single time. So exact LOO seems to be undesireable for two reasons: its computation takes very very long and it does not reflect the hierarchical structure of our datasets.]. But most of the times these criteria will give us reliable information about which of our models^[There might be better models we have not modeled yet and there probably is no "right" model.] fits the data best and signaling possible over fitting issues to us.
+
+Done. We covered all the arguments of `birtms::birtm`. So finally we can see it in action. We will use the dataset on the SPM-LS dataset from @Myszkowski.2018 as did @Burkner.2020 but for a faster model fitting we will only take the responses of the first 100 persons. Below you will see the whole process of fitting a model with **birtms**. First we willshift the response data from wide into long. Second we will get a forumal for a one-dimensional one-parametric IRT model (the easiest one). Finally we will fit the model and inspect its summary.
+
+```{r}
+testdata <- birtms::compose_dataset(response_data = data_spm[1:100,], response_columns = i1:i12)
+formula_1d_1pl <- birtms::build_formula()
+fit_1d_1pl_spm1 <- birtms::birtm(data = testdata, formula = formula_1d_1pl, 
+                                 file = '../inst/extdata/fit_1d_1pl_spm1')
+fit_1d_1pl_spm1
+```
+
+Notice that we took advantage of the lazy specification form since the person identifier column already was names `person` and we did not altered any of the presetting. Notice further that the summary above differs somewhat from the summary of `fit_1d_1pl_spm2` [(see below)](#aio) even both models use the same data and same formula. The difference here is a result of the fact that the MCMC chains in both calculations don't take the same path. The pathes are prety similar and converge to very similar values. Hence the difference is much smaller than the estimation error we can't realy say that the parameter distributions are different. Increasing the iteration number probably would decrease any differences.
+
+Next you will see another example to show a more complex model:
+
+```{r}
+var_specs <- list(person_covariables_main_effect = 'gender')
+model_specs <- list(item_parameter_number = 2)
+person_data <- tibble::tibble(person = 1:100, gender = rbinom(n = 100, size = 1, prob = .5) %>% factor(labels = c('male', 'female')))
+testdata <- birtms::compose_dataset(response_data = data_spm[1:100,], response_columns = i1:i12, person_data = person_data, variable_specifications = var_specs)
+formula_1d_2pl <- birtms::build_formula(variable_specifications = var_specs, model_specifications = model_specs)
+prior_2pl_minimal <- brms::prior("normal(0, 2)", class = "b", nlpar = "skillintercept") +
+   brms::prior("constant(0)", class = "b", nlpar = "personcovars", coef = "gendermale") +
+  brms::prior("normal(0, 1)", class = "b", nlpar = "logalpha") +
+  brms::prior("constant(1)", class = "sd", group = "person", nlpar = "theta")
+fit_1d_2pl_spm <- birtms::birtm(data = testdata, formula = formula_1d_2pl, prior = prior_2pl_minimal,
+                                variable_specifications = var_specs, model_specifications = model_specs,
+                                 file = '../inst/extdata/fit_1d_2pl_spm')
+summary(fit_1d_2pl_spm, priors = TRUE)
+```
+
+Notice: since we randomly added the gender variable we don't find any effect from gender on their skill. This totally fits our expectations. Lets finish this section with some notes on the minimal priors: You can't drop one of these without getting corrupted estimators. If you drop the `constant(1)` on theta there will be a big estimation error on `theta_Intercept` and `logalpha_intercept`. SSZ? Dropping the `normal(0, 1)` on `logalpha` will result in a mess as well. But you could narrow or widen the prior by decreasing or increasing the SD so it reflects your prior believes strength. Without priors on `skillintercept` and `personcovars` you can't start modeling at all. Since `gender` is a categorial predictor (and since represented by a factor or charachter variable) you have to set one of its levels to `constant(0)` manually. You don't have to do this for continuous predictors (represented by numeric variables). But you'ld still have to specify a prior for these (e.g. `brms::prior("normal(0, 1)", class = "b", nlpar = "personcovars", coef = "gender"`).
+
+## All in one command {#aio}
+
+If you are used to the formulation of IRT models with **birtms** or when you're going to fit some simple models the only fuction to use might be `birtm_aio`. It's a wrapper funtion for the former three functions. This way you can fit a model with just one command. Therefore it has the union of all the arguments the former functions had (see below). Again the `...` get passed to `brms::brm` and some presettings for the fitting process differ from those of the `brms::brm` setting (i.e. the `cores = 4`). Also notice that adding the WAIC and LOO model fit criteria are enabled by default. Notice that your `response_data` has to be in wide format if you use `birtm_aio`.
+
+```{r eval = FALSE}
+birtm_aio(response_data, response_columns, 
+          person_data = NULL, item_data = NULL, situation_data = NULL,
+          variable_specifications = NULL, model_specifications = NULL,
+          prior = NULL, cores = 4, file = NULL, refit = FALSE,
+          check_prior_influence = FALSE, preparing_bf = FALSE,
+          add_waic = TRUE, add_loo = TRUE, ...)
+```
+
+In an easy example you would use it as this:
+
+```{r}
+testdata <- data_spm[1:100,] # take only 1/5th of the data to speed up the examplary model fitting
+fit_1d_1pl_spm2 <- birtms::birtm_aio(response_data = testdata, response_columns = i1:i12, 
+                                    file = '../inst/extdata/fit_1d_1pl_spm2')
+fit_1d_1pl_spm2
+```
+Fitting the model the first time might take around one minute. After that time you see the summary of the model created by `brms::summary`. The `file` argument saves the model at the specified path. In this case you will find it in the data folder (`../` was needed to jump one level up from the vignettes folder) as `fit_1d_1pl_spm.rds`. Notice that we didn't used any prior specifications here. Again: **you should not do this** for your own models!
+
+Nevertheless if you run into some errors you can't solve right away it is recommanded to take a step back and follow the three steps of model fitting described before one at a time to locate at which point the error occurs.
+
 ## Further notes
 
 At some point your models might get rather complex and you might get a warning that there have been divergent chains after warmup or the maximum treedepth was exceeded. In this case you can try to overcome these issus by passing arguments to te `...` argument that will be passed down to the **Stan** engine. For example you can pass `control = list(adapt_delta = 0.90)` reducing the acceptance rate for a new parameter set. This will make the modeling process slower and is not garantuing to solve your problems. So you should not alter the value by default. For further readings [see this](https://mc-stan.org/misc/warnings.html).
