@@ -922,4 +922,11 @@ test_that("monotonous praedictors can be specified", {
   )
   expect_equal_bf(build_formula(variable_specs, model_specs), form_1PL)
 
+  variable_specs <- rlang::list2(person_covariables_main_effect = 'mo(intelligence)',
+  )
+  form_1PL <- brms::bf(response ~ 1 + (1 | person) + (1 | item) + mo(intelligence),
+                       nl = FALSE, family = brms::brmsfamily("bernoulli", link = "logit")
+  )
+  expect_equal_bf(build_formula(variable_specs, model_specs), form_1PL)
+
 })

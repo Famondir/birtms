@@ -144,7 +144,10 @@ ensym_list <- function(string_list) {
 enlist_syms <- function(sym_list) {
   # necessary so later no if-else if for term specification is needed so just a single for-loop can be specified
   for (i in seq_along(sym_list)) {
-    if (length(sym_list[[i]]) == 1) sym_list[[i]] <- c(sym_list[[i]])
+    if (is.language(sym_list[[i]])) {
+      print(str(sym_list[[i]]))
+      sym_list[[i]] <- c(sym_list[[i]])
+    }
   }
 
   return(sym_list)
