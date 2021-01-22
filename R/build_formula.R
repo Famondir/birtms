@@ -483,7 +483,16 @@ build_formula_linear <- function(var_specs, add_common_dimension = FALSE) {
   }
 
   # sets terms for person covariables
-  x <- add_covars_linear(x, var_specs$person_covariables_main_effect)
+  if (add_common_dimension) {
+    x <- add_covars_linear(x, union(var_specs$person_covariables_main_effect, var_specs$person_covariables_common))
+  } else {
+    x <- add_covars_linear(x, var_specs$person_covariables_main_effect)
+  }
+  if (!is.null(var_specs$regular_dimensions)) {
+    for (i in seq_along(var_specs$regular_dimensions)) {
+      x <- add_person_covars_regular(x, person_group, var_specs, var_specs$regular_dimensions[[i]])
+    }
+  }
 
   # sets terms for item covariables / characteristics
   # e. g. a word count (numeric) or something catergorial (factors/strings) which gets dummy coded ("Did the item included a picture or video?")

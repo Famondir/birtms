@@ -48,8 +48,21 @@ birtm <- function(data, formula, prior = NULL, cores = 4, file = NULL,
   end <- Sys.time()
   fit$model_time <- end-start
 
-  if (add_loo) fit <- brms::add_criterion(fit, 'loo')
-  if (add_waic) fit <- brms::add_criterion(fit, 'waic')
+  message('Finished sampling')
+
+  if(add_loo || add_waic) {
+    start <- Sys.time()
+    if (add_loo) {
+      message('Adding loo')
+      fit <- brms::add_criterion(fit, 'loo')
+    }
+    if (add_waic) {
+      message('Adding waic')
+      fit <- brms::add_criterion(fit, 'waic')
+    }
+    end <- Sys.time()
+    fit$fitcriteria_time <- end-start
+  }
 
   # fit$var_specs <- variable_specifications
   # fit$model_specs <-  model_specifications

@@ -61,7 +61,7 @@ compose_dataset <- function(response_data, response_columns, variable_specificat
   if (!is.null(item_data)) {
     item_covariables <- names(variable_specifications) %>% stringr::str_detect('item_covariables') %>% purrr::keep(.x = variable_specifications) %>%
       unlist(use.names = FALSE) %>% unique()
-    item_data <- item_data %>% dplyr::select(variable_specifications$item, item_covariables)
+    item_data <- item_data %>% dplyr::select(variable_specifications$item, item_covariables, variable_specifications$regular_dimensions, variable_specifications$unregular_dimensions)
 
     if (length(intersect(names(item_data), names(dataset))) > 1) stop(glue::glue('There are columns with the same name in response_data or person_data and item_data!\nThe colliding names are: {glue::glue_collapse(setdiff(intersect(names(item_data), names(dataset)),variable_specifications$item), sep = ", ")}'))
 

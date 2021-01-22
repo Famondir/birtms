@@ -120,6 +120,26 @@ test_that("itemcovars are added correctly", {
   expect_equal(compose_dataset(response_data, i1:i2, variable_specs, person_data = person_data, item_data = item_data), result)
 })
 
+test_that("dimension identifier columns are added", {
+  result <- tibble::tribble(
+    ~person, ~item, ~response, ~cov1, ~icov1,
+    'a', 'i1', 1, 10,  'blue',
+    'a', 'i2', 0, 13,  'red',
+    'b', 'i1', 1, 10,  'blue',
+    'b', 'i2', 1, 13,  'red',
+    'c', 'i1', 0, 10,  'blue',
+    'c', 'i2', 0, 13,  'red',
+  )
+
+  variable_specs <- list(response = 'response', item ='item', person = 'person',
+                         regular_dimensions = c('cov1', 'icov1'))
+  expect_equal(compose_dataset(response_data, i1:i2, variable_specs, person_data = person_data, item_data = item_data), result)
+
+  variable_specs <- list(response = 'response', item ='item', person = 'person',
+                         unregular_dimensions = c('cov1', 'icov1'))
+  expect_equal(compose_dataset(response_data, i1:i2, variable_specs, person_data = person_data, item_data = item_data), result)
+})
+
 test_that("situationcovars are added correctly", {
   result <- tibble::tribble(
     ~person, ~item, ~response, ~cov1, ~cov2, ~scov1,
