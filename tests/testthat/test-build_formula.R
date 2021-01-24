@@ -499,7 +499,7 @@ test_that("moderated person covariates are specified correctly for regular dimen
                               add_common_dimension = FALSE,
   )
   form_1PL <- brms::bf(response ~ 1 + (0 + knowledge | person) + (0 + scientific_inquiry | person) + (1 | item) +
-                         knowledge:intelligence + knowledge:anger + scientific_inquiry:intelligence + scientific_inquiry:anger,
+                         knowledge*intelligence + knowledge*anger + scientific_inquiry*intelligence + scientific_inquiry*anger,
                        nl = FALSE, family = brms::brmsfamily("bernoulli", link = "logit")
   )
   expect_equal_bf(build_formula(variable_specs, model_specs), form_1PL)
@@ -508,7 +508,7 @@ test_that("moderated person covariates are specified correctly for regular dimen
                                  person_covariables_knowledge = c('intelligence', 'anger'),
   )
   form_1PL <- brms::bf(response ~ 1 + (0 + knowledge | person) + (0 + scientific_inquiry | person) + (1 | item) +
-                         knowledge:intelligence + knowledge:anger,
+                         knowledge*intelligence + knowledge*anger,
                        nl = FALSE, family = brms::brmsfamily("bernoulli", link = "logit")
   )
   expect_equal_bf(build_formula(variable_specs, model_specs), form_1PL)
@@ -523,7 +523,7 @@ test_that("moderated person covariates are specified correctly for regular dimen
                               add_common_dimension = TRUE,
   )
   form_1PL <- brms::bf(response ~ 1 + (1 | person) + (0 + knowledge | person) + (1 | item) +
-                         intelligence + anger + knowledge:intelligence + knowledge:anger,
+                         intelligence + anger + knowledge*intelligence + knowledge*anger,
                        nl = FALSE, family = brms::brmsfamily("bernoulli", link = "logit")
   )
   expect_equal_bf(build_formula(variable_specs, model_specs), form_1PL)
@@ -534,7 +534,7 @@ test_that("moderated person covariates are specified correctly for regular dimen
                                  person_covariables_main_effect = 'intelligence'
   )
   form_1PL <- brms::bf(response ~ 1 + (1 | person) + (0 + knowledge | person) + (1 | item) +
-                         intelligence + anger + knowledge:intelligence + knowledge:anger,
+                         intelligence + anger + knowledge*intelligence + knowledge*anger,
                        nl = FALSE, family = brms::brmsfamily("bernoulli", link = "logit")
   )
   expect_equal_bf(build_formula(variable_specs, model_specs), form_1PL)
@@ -548,8 +548,8 @@ test_that("moderated person covariates are specified correctly for regular dimen
   )
   form_1PL <- brms::bf(response ~ skillintercept + theta1 + theta2 + eins * theta3 + zwei * theta4 + beta,
                        skillintercept ~ 1,
-                       theta1 ~ 0 + (0 + knowledge | person) + knowledge:intelligence + knowledge:anger,
-                       theta2 ~ 0 + (0 + scientific_inquiry | person) + scientific_inquiry:intelligence + scientific_inquiry:anger,
+                       theta1 ~ 0 + (0 + knowledge | person) + knowledge*intelligence + knowledge*anger,
+                       theta2 ~ 0 + (0 + scientific_inquiry | person) + scientific_inquiry*intelligence + scientific_inquiry*anger,
                        theta3 ~ 0 + (1 | person) + intelligence + anger,
                        theta4 ~ 0 + (1 | person) + intelligence + anger,
                        beta ~ 0 + (1 | item),
@@ -563,7 +563,7 @@ test_that("moderated person covariates are specified correctly for regular dimen
   )
   form_1PL <- brms::bf(response ~ skillintercept + theta1 + theta2 + eins * theta3 + zwei * theta4 + beta,
                        skillintercept ~ 1,
-                       theta1 ~ 0 + (0 + knowledge | person) + knowledge:intelligence + knowledge:anger,
+                       theta1 ~ 0 + (0 + knowledge | person) + knowledge*intelligence + knowledge*anger,
                        theta2 ~ 0 + (0 + scientific_inquiry | person),
                        theta3 ~ 0 + (1 | person),
                        theta4 ~ 0 + (1 | person),
@@ -682,7 +682,7 @@ test_that("person covariates can be added and dropped for single dimensions and 
                               add_common_dimension = FALSE,
   )
   form_1PL <- brms::bf(response ~ 1 + (0 + knowledge | person) + (0 + scientific_inquiry | person) + (1 | item) +
-                         knowledge:intelligence + scientific_inquiry:intelligence + scientific_inquiry:anger,
+                         knowledge*intelligence + scientific_inquiry*intelligence + scientific_inquiry*anger,
                        nl = FALSE, family = brms::brmsfamily("bernoulli", link = "logit")
   )
   expect_equal_bf(build_formula(variable_specs, model_specs), form_1PL)
@@ -698,8 +698,8 @@ test_that("person covariates can be added and dropped for single dimensions and 
   )
   form_1PL <- brms::bf(response ~ skillintercept + theta1 + theta2 + eins * theta3 + zwei * theta4 + beta,
                        skillintercept ~ 1,
-                       theta1 ~ 0 + (0 + knowledge | person) + knowledge:intelligence + knowledge:anger,
-                       theta2 ~ 0 + (0 + scientific_inquiry | person) + scientific_inquiry:intelligence + scientific_inquiry:anger,
+                       theta1 ~ 0 + (0 + knowledge | person) + knowledge*intelligence + knowledge*anger,
+                       theta2 ~ 0 + (0 + scientific_inquiry | person) + scientific_inquiry*intelligence + scientific_inquiry*anger,
                        theta3 ~ 0 + (1 | person) + intelligence + anger,
                        theta4 ~ 0 + (1 | person) + intelligence + anger,
                        beta ~ 0 + (1 | item),
@@ -718,8 +718,8 @@ test_that("person covariates can be added and dropped for single dimensions and 
   )
   form_1PL <- brms::bf(response ~ skillintercept + theta1 + theta2 + eins * theta3 + zwei * theta4 + beta,
                        skillintercept ~ 1,
-                       theta1 ~ 0 + (0 + knowledge | person) + knowledge:anger,
-                       theta2 ~ 0 + (0 + scientific_inquiry | person) + scientific_inquiry:intelligence + scientific_inquiry:anger,
+                       theta1 ~ 0 + (0 + knowledge | person) + knowledge*anger,
+                       theta2 ~ 0 + (0 + scientific_inquiry | person) + scientific_inquiry*intelligence + scientific_inquiry*anger,
                        theta3 ~ 0 + (1 | person) + intelligence + anger,
                        theta4 ~ 0 + (1 | person) + intelligence,
                        beta ~ 0 + (1 | item),
@@ -739,8 +739,8 @@ test_that("person covariates can be added and dropped for single dimensions and 
   form_1PL <- brms::bf(response ~ skillintercept + commontheta + theta1 + theta2 + eins * theta3 + zwei * theta4 + beta,
                        skillintercept ~ 1,
                        commontheta ~ 0 + (1 | person) + anger + taste,
-                       theta1 ~ 0 + (0 + knowledge | person) + knowledge:intelligence + knowledge:anger,
-                       theta2 ~ 0 + (0 + scientific_inquiry | person) + scientific_inquiry:intelligence + scientific_inquiry:anger,
+                       theta1 ~ 0 + (0 + knowledge | person) + knowledge*intelligence + knowledge*anger,
+                       theta2 ~ 0 + (0 + scientific_inquiry | person) + scientific_inquiry*intelligence + scientific_inquiry*anger,
                        theta3 ~ 0 + (1 | person) + intelligence + anger,
                        theta4 ~ 0 + (1 | person) + intelligence + anger,
                        beta ~ 0 + (1 | item),

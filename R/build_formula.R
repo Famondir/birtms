@@ -114,7 +114,7 @@ add_covars_linear <- function(x, specifications) {
 
 add_covars_interaction <- function(x, specifications, dimension) {
   for (i in seq_along(specifications)) {
-    x <- expr(!!x + !!dimension:!!specifications[[i]])
+    x <- expr(!!x + !!dimension*!!specifications[[i]])
   }
 
   return(x)
