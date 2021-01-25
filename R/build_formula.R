@@ -490,7 +490,7 @@ build_formula_linear <- function(var_specs, add_common_dimension = FALSE) {
   }
   if (!is.null(var_specs$regular_dimensions)) {
     for (i in seq_along(var_specs$regular_dimensions)) {
-      x <- add_person_covars_regular(x, person_group, var_specs, var_specs$regular_dimensions[[i]])
+      x <- add_person_covars_regular(x, set_person_grouping(var_specs), var_specs, var_specs$regular_dimensions[[i]])
     }
   }
 

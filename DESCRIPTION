@@ -23,7 +23,9 @@ Imports:
     stringr,
     purrr,
     tidyr,
-    tibble
+    tibble,
+    tidybayes,
+    tidyselect
 RoxygenNote: 7.1.1
 VignetteBuilder: knitr
 Config/testthat/edition: 3

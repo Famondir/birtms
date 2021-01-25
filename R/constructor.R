@@ -12,3 +12,5 @@ new_birtms <- function(fit, variable_specifications = NULL, model_specifications
 
   invisible(fit)
 }
+
+is.birtmsfit <- function(fit) inherits(fit, "birtmsfit")
