@@ -451,11 +451,58 @@ formula_4PL_1dim
 
 ## Multidimensional models
 
-With **birtms** you can specify multidimensional IRT models. There are two approaches to specify a multidimensional model in **birtms** you can comebine flexible as it pleases you. The two approaches are called [regular dimensions](#regulardimensions) and [unregular dimensions](#unregulardimensions) in this package and are described below.
+With **birtms** you can specify multidimensional IRT models. There are two approaches to specify a multidimensional model in **birtms** you can comebine flexible as it pleases you. The two approaches are called [regular dimensions](#regulardimensions) and [unregular dimensions](#unregulardimensions) in this package and are described below. Within a multidimensional model you specify multiple (related) latent traits that are needed to solve the presented items. Therefore there will be multiple estimates for the persons abilities $\theta_{di}$ and eventually also multiple itemslopes $\alpha_{dk}$ where $d$ is the number of dimensions. The formula for the two parametric model therefore becomes:
+
+$$\begin{equation}
+\tag{7}
+\mathrm{logit}(P(y_{ik} = 1 | \theta, \beta, \alpha)) = \sum{\alpha_{dk} \theta_{di}} + \beta_k
+\end{equation}$$
+
+To choose if you should specify the item-ability-structure with a regular or unreagular dimension approach you have to look at what is might be called a loading matrix (and corresponds to the Q matrix in **TAM**). If you assume that there are two (or more) abilities that are related to the items so that any item only relates to a single ability and that any item relates to one of these abilities (e.g. in formula 8.a) you can use the `regular_dimensions` argmuent to model this. You can use the `unregular_dimensions` argmuent as well if you prefer this approach.
+
+$$\begin{align}
+\tag{8.a}
+Q_1 & = \left(\begin{array}{ccc}
+\alpha_{11} & 0 \\
+\alpha_{12} & 0 \\
+0 & \alpha_{23} \\
+0 & \alpha_{24}
+\end{array} \right)
+\end{align}$$
+
+If you assume that there are some items that are related to a set of abilities a way that the intersect of the loading vectors is not empty (in formula 8.b you find item 3 related to dimension 1 and 2) you have to use the `unregular_dimensions` argmuent. You can't use the `regular_dimensions` argmuent to model the whole structure in this case.
+
+$$\begin{align}
+\tag{8.b}
+Q_2 & = \left(\begin{array}{ccc}
+\alpha_{11} & 0 \\
+\alpha_{12} & 0 \\
+\alpha_{13} & \alpha_{23} \\
+0 & \alpha_{24}
+\end{array} \right)\\
+\end{align}$$
+
+However if you find a subset of dimensions suiting the approach in formula 8.a you can use the `regular_dimensions` argmuent for these and use the `unregular_dimensions` argmuent to add the other item-ability-terms. In formula 8.c you could model the first two loading vectors with the regular approach and add the last vector using the unregular approach.
+
+$$\begin{align}
+\tag{8.c}
+Q_1 & = \left(\begin{array}{ccc}
+\alpha_{11} & 0 & \alpha_{31} \\
+\alpha_{12} & 0 & 0 \\
+0 & \alpha_{23} & 0 \\
+0 & \alpha_{24} & \alpha_{34}
+\end{array} \right)\\
+\end{align}$$
+
+From a modeling efficiency view point there are no big difference between these two approaches^[However a one parametric model will be faster if there are no unregular terms because it can be specified a a linear model and hence there will be less operations to be performed by the algorithm. If you specify a higher-parametric model by yourself you might find the regular approach to be faster as well. If you do check if you model a single distribution for the item slopes or if you model a distribution for any dimension. If you use a single distribution the model will befaster but your model can't reflect differences in the itemslopes variances. Therefore **birtms** does account for different itemslope distributions per dimension so it aligns with the unregular approach. Have a look at my post at the [Stan forum](https://discourse.mc-stan.org/t/multidimensional-irt-in-brms/13075/14?u=famondir)]. But the regular approach can be expressed in a single column in the `item_data` dataframe and I find the estimated parameters (as presented via `brms::summary`) can be interpreted more intuitively. On the othe hand the unregular approch can be used to model any item-ability-structure and if you are used to the loading matrices from **TAM** you might prefer this way. Be aware that this way there will be estimators for all item slopes even those that have a 0 in the laoding matrix. You can identify them by being equivalent to the prior distribution you specified for them and hence should have a bigger sd and a mean that is equal to your priors mean (e.g. zero when you assumed to find item slopes around one (remeber the `exp()` transformation)).
 
 ### Regular Dimensions {#regulardimensions}
 
+
+
 ### Unregular Dimensions {#unregulardimensions}
+
+### Common Dimension and Bifactor models
 
 # Model fitting {#modelfitting}
 

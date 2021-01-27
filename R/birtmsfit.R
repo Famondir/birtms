@@ -1,4 +1,4 @@
-new_birtms <- function(fit, variable_specifications = NULL, model_specifications = NULL, file = NULL) {
+new_birtmsfit <- function(fit, variable_specifications = NULL, model_specifications = NULL, file = NULL) {
   stopifnot(brms::is.brmsfit(fit))
 
   variable_specifications <- check_and_set_specifications(variable_specifications)
