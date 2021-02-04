@@ -498,9 +498,67 @@ From a modeling efficiency view point there are no big difference between these 
 
 ### Regular Dimensions {#regulardimensions}
 
+```{r echo = FALSE}
 
+item_data_dimensions <- tibble::tribble(
+  ~item, ~inquiry, ~math, ~mentalrotation, ~hypothesis, ~experiment,
+  'i01', 'Hypothesis', 1, 0, 1, 0,
+  'i02', 'Hypothesis', 1, 1, 1, 0,
+  'i03', 'Experiment', 0, 1, 0, 1,
+  'i04', 'Experiment', 1, 0, 0, 1
+)
+
+```
+
+Let's assume you have created a science test and your items differ in the abilities needed to solve them. For example some of these items could ask for the formulation of a hypothesis and some require to come up with a experimental design (but never both at the same time and at least one of these things). You can find an example how to set up the corresponding `item_data` below:
+
+```{r echo = FALSE}
+item_data_dimensions %>% dplyr::select(item, inquiry)
+```
+
+Colmuntype: Integer?, Character, Factor
+
+You get the formula for a model that estimates an ability for each of those two task with the following call:
+
+```{r}
+var_specs20 = list(regular_dimensions = 'inquiry')
+model_specs1pl = list(item_parameter_number = 1)
+build_formula(variable_specifications = var_specs20, model_specifications = model_specs1pl)
+```
+
+The corresponding formula for a two-parametric model would be:
+
+```{r}
+model_specs2pl = list(item_parameter_number = 2)
+build_formula(variable_specifications = var_specs20, model_specifications = model_specs2pl)
+```
+
+Notice the `logalpha1 ~ 1 + (1 | inquiry/item)` term that
 
 ### Unregular Dimensions {#unregulardimensions}
+
+You could fit the same structure as shown in the part about regular dimensions with unregular dimensions as well. But be aware that you have to use a differing presentation of your structur in `item_data`. Instead of using a single column that names the corresponding dimension you have to create a single column per dimension and fill it with `1` if the item is related to that dimension and `0` otherwise:
+
+```{r echo = FALSE}
+item_data_dimensions %>% dplyr::select(item, inquiry, hypothesis, experiment)
+```
+
+With these new columns you can get a one-parametric formula via:
+
+```{r}
+var_specs21 = list(unregular_dimensions = c('hypothesis', 'experiment'))
+build_formula(variable_specifications = var_specs21, model_specifications = model_specs1pl)
+```
+
+Notice that this formula isn't linear anymore since the columns `hypothesis` and `experiment` are used as mapping vectores. Their values (0 or 1) will be multiplied as they are (without getting an additional regression coefficient) by the ability estimates (`theta1` and `theta2`) because this multiplication is stated in a non-linear formula^[In a linear formula we would get estimated an interaction effect and hence regression coefficients.]. Notice that these mapping vectors are standing in the same spot as the item slopes do in the two-parametric formulae we have seen so far. But they are no latent variables that get estimated by the model but predictors with fixed (by yourself) values. To stress this difference let's have al look at a formula for a two-parametric model:
+
+```{r}
+build_formula(variable_specifications = var_specs21, model_specifications = model_specs2pl)
+```
+
+The mapping vectors are indeed multiplied addionally to the slope estimates not instead of.
+
+Worse elpd because more parameter are estimated than used later on
 
 ### Common Dimension and Bifactor models
 

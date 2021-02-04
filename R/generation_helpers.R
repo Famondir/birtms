@@ -53,7 +53,8 @@ get_reference_names <- function(specifications, type) {
                             'person_grouping', 'item_grouping', 'skillintercept',
                             'pseudo_guess_dimension', 'careless_error_dimension',
                             'fixed_pseudo_guess', 'fixed_careless_error')
-  valid_names_model <- c('response_type', 'item_parameter_number', 'dimensionality_type', 'add_common_dimension')
+  valid_names_model <- c('response_type', 'item_parameter_number', 'dimensionality_type', 'add_common_dimension',
+                         'model_unique_alpha_groups_on_regular_dimensions')
 
   # adds valid specification names based on defined dimensions
   for (i in c(specifications$regular_dimensions, specifications$unregular_dimensions, 'common')) {
@@ -106,7 +107,7 @@ override_standard_specifications <- function(specifications, type) {
   # defines the reference specifications for model and variable specifications
   variable_specs <- list(response = 'response', item ='item', person = 'person')
   model_specs <- list(response_type = 'dichotom', item_parameter_number = 1, dimensionality_type = 'unidimensional',
-                      add_common_dimension = FALSE)
+                      add_common_dimension = FALSE, model_unique_alpha_groups_on_regular_dimensions = TRUE)
 
   # sets the specification list to compare with depending on input for type
   # ("variable" or "model")

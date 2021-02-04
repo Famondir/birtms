@@ -170,6 +170,7 @@ test_that("regular dimensions are specified correctly", {
 
   # 2PL
   model_specs <- rlang::list2(item_parameter_number = 2,
+                              # model_unique_alpha_groups_on_regular_dimensions = TRUE
   )
   variable_specs <- rlang::list2(regular_dimensions = c('knowledge', 'scientific_inquiry'),
   )
@@ -190,6 +191,23 @@ test_that("regular dimensions are specified correctly", {
                        skillintercept ~ 1,
                        theta1 ~ 0 + (0 + testlet | person),
                        logalpha1 ~ 1 + (1 | testlet/item),
+                       beta ~ 0 + (1 | item),
+                       nl = TRUE, family = brms::brmsfamily("bernoulli", link = "logit")
+  )
+  expect_equal_bf(build_formula(variable_specs, model_specs), form_2PL)
+
+  # don't model unique alpha groups
+  model_specs <- rlang::list2(item_parameter_number = 2,
+                              model_unique_alpha_groups_on_regular_dimensions = FALSE
+  )
+  variable_specs <- rlang::list2(regular_dimensions = c('knowledge', 'scientific_inquiry'),
+  )
+  form_2PL <- brms::bf(response ~ skillintercept + exp(logalpha1) * theta1 + exp(logalpha2) * theta2 + beta,
+                       skillintercept ~ 1,
+                       theta1 ~ 0 + (0 + knowledge | person),
+                       theta2 ~ 0 + (0 + scientific_inquiry | person),
+                       logalpha1 ~ 1 + (1 | item),
+                       logalpha2 ~ 1 + (1 | item),
                        beta ~ 0 + (1 | item),
                        nl = TRUE, family = brms::brmsfamily("bernoulli", link = "logit")
   )
@@ -324,6 +342,7 @@ test_that("commontheta is added when specified by user (and approriate)", {
   # 2PL
   model_specs <- rlang::list2(item_parameter_number = 2,
                               add_common_dimension = TRUE,
+                              # model_unique_alpha_groups_on_regular_dimensions = TRUE
   )
   variable_specs <- rlang::list2(regular_dimensions = c('testlet'),
   )

@@ -69,7 +69,7 @@ birtm <- function(data, formula, prior = NULL, cores = 4, file = NULL,
   # class(fit) <- c('birtmsfit', 'brmsfit')
   # if (!is.null(file)) saveRDS(fit, file = glue::glue('{file}.rds'))
 
-  fit <- new_birtms(fit = fit, variable_specifications = variable_specifications, model_specifications = model_specifications, file = file)
+  fit <- new_birtmsfit(fit = fit, variable_specifications = variable_specifications, model_specifications = model_specifications, file = file)
 
   return(fit)
 }

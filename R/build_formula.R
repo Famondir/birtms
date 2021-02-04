@@ -42,7 +42,7 @@ build_formula <- function(variable_specifications = NULL, model_specifications =
     }
 
     # specifies a nonlinear formula otherwise
-    form <- build_formula_nonlinear(var_specs, mod_specs$add_common_dimension, mod_specs$item_parameter_number)
+    form <- build_formula_nonlinear(var_specs, mod_specs)
   } else {
     stop('At the moment only models for dichotomous response is implemented.')
   }
@@ -240,13 +240,15 @@ add_skill_terms_1PL <- function(x, nl_formulae, var_specs, add_common_dimension)
 #' @param x an expression
 #' @param nl_formulae a list of expressions
 #' @param var_specs a named list of symbols
-#' @param add_common_dimension boolean
+#' @param mod_specs Named list of strings and numerics.
 #'
 #' @return list of expressions
 #' @importFrom glue glue
 #' @importFrom rlang expr
 #' @importFrom rlang sym
-add_skill_terms_2PL <- function(x, nl_formulae, var_specs, add_common_dimension) {
+add_skill_terms_2PL <- function(x, nl_formulae, var_specs, mod_specs) {
+  add_common_dimension <- mod_specs$add_common_dimension
+
   # sets person grouping term
   person_group <- set_person_grouping(var_specs)
 
@@ -272,7 +274,12 @@ add_skill_terms_2PL <- function(x, nl_formulae, var_specs, add_common_dimension)
     for (i in seq_along(var_specs$regular_dimensions)) {
       x <- expr(!!x + exp(!!sym(glue("logalpha{counter_dimension}"))) * !!sym(glue("theta{counter_dimension}")))
       nl_formulae <- c(nl_formulae, expr(!!sym(glue("theta{counter_dimension}")) ~ 0 + (0 + !!var_specs$regular_dimensions[[i]] | !!person_group)))
-      alpha_formulae <- c(alpha_formulae, expr(!!sym(glue("logalpha{counter_dimension}")) ~ 1 + (1 | !!var_specs$regular_dimensions[[i]]/!!item_group)))
+      if (mod_specs$model_unique_alpha_groups_on_regular_dimensions) {
+        alpha_formulae <- c(alpha_formulae, expr(!!sym(glue("logalpha{counter_dimension}")) ~ 1 + (1 | !!var_specs$regular_dimensions[[i]]/!!item_group)))
+      } else {
+        alpha_formulae <- c(alpha_formulae, expr(!!sym(glue("logalpha{counter_dimension}")) ~ 1 + (1 | !!item_group)))
+      }
+
 
       counter_dimension <- counter_dimension + 1
     }
@@ -329,14 +336,14 @@ add_skillintercept <- function(skillintercept = NULL) {
 #' Title
 #'
 #' @param var_specs a named list of symbols
-#' @param add_common_dimension boolean
-#' @param item_parameter_number numeric (more precise integer)
+#' @param mod_specs Named list of strings and numerics.
 #'
 #' @return brmsformula
 #' @importFrom glue glue
 #' @importFrom rlang expr
 #' @importFrom zeallot %<-%
-build_formula_nonlinear <- function(var_specs, add_common_dimension = FALSE, item_parameter_number) {
+build_formula_nonlinear <- function(var_specs, mod_specs) {
+  item_parameter_number <- mod_specs$item_parameter_number
 
   # common intercept helps to reduce SD for all variables
   # Attention!: different intercepts for different dimensions would model a difference in the mean skill value but seems to lead to big uncertainty
@@ -344,10 +351,10 @@ build_formula_nonlinear <- function(var_specs, add_common_dimension = FALSE, ite
   nl_formulae <- list(expr(skillintercept ~ !!add_skillintercept(var_specs$skillintercept)))
 
   # adds person skill related terms (theta and possibly alpha)
-  if (item_parameter_number == 1) {
-    c(x, nl_formulae) %<-% add_skill_terms_1PL(x, nl_formulae, var_specs, add_common_dimension)
+  if (mod_specs$item_parameter_number == 1) {
+    c(x, nl_formulae) %<-% add_skill_terms_1PL(x, nl_formulae, var_specs, mod_specs$add_common_dimension)
   } else if (item_parameter_number %in% c(2, 3, 4)) {
-    c(x, nl_formulae) %<-% add_skill_terms_2PL(x, nl_formulae, var_specs, add_common_dimension)
+    c(x, nl_formulae) %<-% add_skill_terms_2PL(x, nl_formulae, var_specs, mod_specs)
   }
 
   # sets item grouping term
