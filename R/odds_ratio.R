@@ -86,6 +86,9 @@ calculate_odds_ratio <- function(y_rep = NULL, y = NULL) {
 #' @importFrom dplyr left_join
 #'
 #' @examples
+#' \dontrun{
+#' get_or(fit, n_samples = 500)
+#' }
 get_or <- function(model, n_samples = NULL, hdi_width = .89) {
   seperate_itempairs <- function(x) {
     x <- x %>% mutate(itempair = stringr::str_remove(itempair, 'ItemPair')) %>% tidyr::separate(itempair, into = c('item1', 'item2'), convert = TRUE)
@@ -138,7 +141,10 @@ get_or <- function(model, n_samples = NULL, hdi_width = .89) {
     left_join(or_rep, by = c('item1', 'item2')) %>%
     left_join(or_dif_hdi, by = c('item1', 'item2')) %>%
     left_join(or_ppp, by = c('item1', 'item2')) %>%
-    dplyr::relocate(dplyr::any_of(c('or_act', 'or_rep')), .after = item2)
+    dplyr::relocate(dplyr::any_of(c('or_act', 'or_rep')), .after = item2) %>%
+    ungroup()
+
+  attr(or, 'rope_width') <- rope
 
   return(or)
 }
