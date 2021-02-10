@@ -77,9 +77,9 @@ posterior_predictive_values_long <- function(model, n_samples = NULL, f) {
 
   message('Converting responses to long format')
   ppv <- ppv %>% t() %>% as.data.frame()
-  if (!is.null(draws)) ppv <- ppv %>% setNames(paste0('V', draws))
+  if (!is.null(draws)) ppv <- ppv %>% stats::setNames(paste0('V', draws))
   ppv <- ppv  %>% cbind(model$data) %>%
-    tidyr::pivot_longer(names_to = ".draw", names_prefix = 'V', names_transform = as.numeric(), values_to = 'ppv', cols = starts_with("V"))
+    tidyr::pivot_longer(names_to = ".draw", names_prefix = 'V', names_transform = as.numeric(), values_to = 'ppv', cols = dplyr::starts_with("V"))
 
   return(ppv)
 }
@@ -98,4 +98,22 @@ posterior_predictive_values_long <- function(model, n_samples = NULL, f) {
 #' @examples
 rep_dataframe <-  function(x, ...) {
   as.data.frame(lapply(x, rep, ...))
+}
+
+#' Make response data wider
+#' Transforms dataset from a brmsfit from long into wide format
+#'
+#' @param model brmsfit object
+#'
+#' @return tibble
+#' @export
+#'
+#' @examples
+make_data_wider <- function(model) {
+  item <- model$var_specs$item
+  response <- model$var_specs$response
+
+  data_wide <- model$data %>% tidyr::pivot_wider(names_from = {{item}}, values_from = {{response}})
+
+  return(data_wide)
 }
