@@ -1313,95 +1313,6 @@ discrepancy_measures$or <- matrix(data = 0, nrow = rep, ncol = (J^2 - J)/2) %>% 
 
 or_pre <- calculate_odds_ratio(data_kft)
 
-dat.ary2 <- list2array(kft_list)  # convert to array
-
-# y_rep <- fit_kft_1pl %>% posterior_predict(nsamples = 500) %>% make_post_longer(fit_kft_1pl, ., 'y_rep')
-#
-# make_post_longer <- function(model, postdata, name) {
-#   message('Some datawrangling')
-#
-#   postdata <- postdata %>% t() %>%
-#     as.data.frame() %>%
-#     cbind(model$data) %>%
-#     pivot_longer(names_to = ".draw", names_prefix = 'V', names_transform = as.numeric(), values_to = name, cols = starts_with("V"))
-#
-#   return(postdata)
-# }
-
-# # fertig
-# posterior_predict_long <- function(model, n_samples = NULL) {
-#   draws <- NULL
-#   if (!is.null(n_samples)) draws <- sample(1:nsamples(model), size = n_samples, replace = FALSE) %>% sort()
-#
-#   message('Extracting predicted responses')
-#   y_rep <- posterior_predict(model, subset = draws)
-#
-#   message('Converting responses to long format')
-#   y_rep <- y_rep %>% t() %>% as.data.frame()
-#   if (!is.null(draws)) y_rep <- y_rep %>% setNames(paste0('V', draws))
-#   y_rep <- y_rep  %>% cbind(model$data) %>%
-#     pivot_longer(names_to = ".draw", names_prefix = 'V', names_transform = as.numeric(), values_to = 'y_rep', cols = starts_with("V"))
-#
-#   return(y_rep)
-# }
-
-# get_or <- function(model, n_samples, hdi_width = .89) {
-#   seperate_itempairs <- function(x) {
-#     x <- x %>% mutate(itempair = str_remove(itempair, 'ItemPair')) %>% separate(itempair, into = c('item1', 'item2'), convert = TRUE)
-#
-#     return(x)
-#   }
-#
-#   gather_or <- function(x, name) {
-#     x <- x %>% tidyr::pivot_longer(names_to = 'itempair', values_to = {{name}}, cols = -.draw) %>%
-#       seperate_itempairs()
-#
-#     return(x)
-#   }
-#
-#   item <- model$var_specs$item
-#   person <- model$var_specs$person
-#
-#   yrep <- posterior_predict_long(model, n_samples) %>%
-#     dplyr::select({{person}}, {{item}}, .draw, yrep) %>%
-#     tidyr::pivot_wider(names_from = {{item}}, values_from = 'yrep') %>%
-#     dplyr::select(-{{person}})%>% mutate(.draw = as.numeric(.draw)) %>%
-#     dplyr::group_by(.draw) %>% dplyr::group_split(.keep = TRUE) %>%
-#     list2array()
-#
-#   message('Calculating posterior odds ratio')
-#   or_rep <- calculate_odds_ratio(yrep) # calculates odds ratio for posterior samples
-#
-#   y <- make_data_wider(model) %>% dplyr::select(-dplyr::any_of(unlist(model$var_specs)))
-#   or_act <- calculate_odds_ratio(y) %>% # calculates odds ratio for actual sample/data
-#     mutate(.draw = 0, .before = 1)
-#
-#   or_act_dat <- rep_dataframe(or_act, nrow(or_rep))
-#   or_dif <- or_rep - or_act_dat
-#
-#   or <- or_dif %>% gather_or('or_dif') %>%
-#     dplyr::group_by(item1, item2) %>% tidyr::nest(or_dif_samples = c(.draw, or_dif))
-#
-#   or_act <- or_act %>% gather_or('or_act') %>% select(-.draw)
-#   or_rep <- or_rep %>% gather_or('or_rep') %>% tidyr::nest(or_rep_samples = c(.draw, or_rep))
-#   or_ppp <- colMeans(or_dif %>% select(-.draw) > 0) %>% as_tibble(rownames = "itempair") %>% seperate_itempairs() %>%
-#     rename(or_ppp = value)
-#
-#   rope <- sd(or_act$or_act)/10
-#   message(paste0('ROPE is set to sd(or_act)/10: ', round(rope,2)))
-#   or_dif_hdi <- or %>% unnest() %>% tidybayes::mode_hdi(or_dif, .width = hdi_width) %>% rename(or_dif_mode = or_dif) %>%
-#     mutate(above_zero = .lower > 0, beneath_zero = .upper < 0,
-#            above_rope = .lower > 0 + rope, beneath_rope = .upper < 0 - rope)
-#
-#   or <- or %>% left_join(or_act, by = c('item1', 'item2')) %>%
-#     left_join(or_rep, by = c('item1', 'item2')) %>%
-#     left_join(or_dif_hdi, by = c('item1', 'item2')) %>%
-#     left_join(or_ppp, by = c('item1', 'item2')) %>%
-#     relocate(any_of(c('or_act', 'or_rep')), .after = item2)
-#
-#   return(or)
-# }
-
 y_rep <- posterior_predict_long(fit_kft_1pl, n_samples = 500)
 ppe <- posterior_epred_long(fit_kft_1pl, n_samples = 500)
 data_rep <- y_rep %>% select(-response) %>% pivot_wider(names_from = 'item', values_from = 'yrep') %>% select(-person) %>%
@@ -1508,3 +1419,12 @@ ggplot(or_data, aes(i1, i2, fill = or_pre, label = or_pre)) +
   # geom_text(aes(item_i, item_j, fill = PPP), color = "black", size = 3) +
   theme(panel.grid.major = element_blank(), panel.border= element_rect(size=2,color="black", fill=NA), axis.ticks = element_blank()) +
   coord_fixed()
+
+tibble::tribble(
+  ~x, ~y,
+  0, 1,
+  1, 0,
+  1, 1,
+  0, 0,
+  1, 0
+) %>% calculate_odds_ratio()

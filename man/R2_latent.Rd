@@ -9,11 +9,11 @@ R2_latent(birtms_fit, fast = TRUE)
 \arguments{
 \item{birtms_fit}{Object of type birtmsfit.}
 
-\item{fast}{Boolean. If true observations get summarised by persons or items. Attention: It's not tested if the results are the same for datasets with missings or when situationcovars are added!}
+\item{fast}{Boolean. If true observations get summarised by persons or items. Should work also for datasets with missings and different observation numbers per person. Attention: It's not tested if the results are the same for datasets when situationcovars are added!}
 }
 \value{
 List with R.squared and sd value for each dimension for persons and items.
 }
 \description{
-Computes R.squared for 1PL models with item and person covariates. (Hierarchical or higher parametric models not tested right now.)
+Computes R.squared for non hierarchical models with item and person covariates. (Hierarchical models not tested right now.)
 }

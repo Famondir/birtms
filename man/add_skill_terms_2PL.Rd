@@ -4,7 +4,7 @@
 \alias{add_skill_terms_2PL}
 \title{Title}
 \usage{
-add_skill_terms_2PL(x, nl_formulae, var_specs, add_common_dimension)
+add_skill_terms_2PL(x, nl_formulae, var_specs, mod_specs)
 }
 \arguments{
 \item{x}{an expression}
@@ -13,7 +13,7 @@ add_skill_terms_2PL(x, nl_formulae, var_specs, add_common_dimension)
 
 \item{var_specs}{a named list of symbols}
 
-\item{add_common_dimension}{boolean}
+\item{mod_specs}{Named list of strings and numerics.}
 }
 \value{
 list of expressions

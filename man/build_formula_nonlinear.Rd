@@ -4,18 +4,12 @@
 \alias{build_formula_nonlinear}
 \title{Title}
 \usage{
-build_formula_nonlinear(
-  var_specs,
-  add_common_dimension = FALSE,
-  item_parameter_number
-)
+build_formula_nonlinear(var_specs, mod_specs)
 }
 \arguments{
 \item{var_specs}{a named list of symbols}
 
-\item{add_common_dimension}{boolean}
-
-\item{item_parameter_number}{numeric (more precise integer)}
+\item{mod_specs}{Named list of strings and numerics.}
 }
 \value{
 brmsformula
