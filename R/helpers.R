@@ -130,3 +130,31 @@ make_responsedata_wider <- function(model) {
 
   return(data_wide)
 }
+
+#' Unnesting conserving outer attributes
+#'
+#' @param ... see tidyr::unnest()
+#'
+#' @return tibble
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' data <- get_or(fit, n_samples = 500)
+#' unnest_keep_attr(data) %>% attr('rope_width') # conserves rope_width attribute
+#' unnest(data) %>% attr('rope_width') # drops attribute
+#' }
+unnest_keep_attr <- function(...) {
+  dots <- rlang::enquos(...)
+
+  attr_old <- attributes(rlang::eval_tidy(dots[[1]]))
+  attr_old['names'] <- NULL
+  attr_old['row.names'] <- NULL
+  attr_old['class'] <- NULL
+
+  data <- tidyr::unnest(...)
+
+  attributes(data) <- c(attributes(data), attr_old)
+
+  return(data)
+}
