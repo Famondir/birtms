@@ -16,8 +16,17 @@
 #' @param model_specifications A named list
 #' @param ... Arguments passed to brms::brm
 #'
-#' @return
+#' @return birtsmsfit object
 #' @export
+#'
+#' @examples
+#' \dontrun{
+#' testdata <- birtms::compose_dataset(response_data = data_spm[1:100,], response_columns = i1:i12)
+#' formula_1d_1pl <- birtms::build_formula()
+#' fit_1d_1pl_spm1 <- birtms::birtm(data = testdata, formula = formula_1d_1pl,
+#' file = '../inst/extdata/fit_1d_1pl_spm1')
+#' fit_1d_1pl_spm1
+#' }
 birtm <- function(data, formula, prior = NULL, cores = 4, file = NULL,
                   check_prior_influence = FALSE, preparing_bf = FALSE,
                   add_waic = TRUE, add_loo = TRUE, refit = FALSE,

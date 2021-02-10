@@ -14,7 +14,7 @@ calculate_odds_ratio(y_rep = NULL, y = NULL)
 \item{y}{(pers) x (item) dataframe; response data}
 }
 \value{
-
+tibble
 }
 \description{
 Odds ratio

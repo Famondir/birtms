@@ -17,3 +17,8 @@ tibble
 Make response data wider
 Transforms dataset from a brmsfit from long into wide format
 }
+\examples{
+\dontrun{
+make_responsedata_wider(fit)
+}
+}

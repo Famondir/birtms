@@ -18,3 +18,8 @@ Additionally yrep (predicted answers) and .draw (which MCMC draw comes the answe
 \description{
 Samples from the Posterior Predictive Distribution in long format
 }
+\examples{
+\dontrun{
+posterior_predict_long(fit, n_samples = 500)
+}
+}

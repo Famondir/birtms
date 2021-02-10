@@ -35,6 +35,9 @@ list2array = function(input.list){  #input a list of dataframes
 #' @export
 #'
 #' @examples
+#' \dontrun{
+#' posterior_predict_long(fit, n_samples = 500)
+#' }
 posterior_predict_long <- function(model, n_samples = NULL) {
   yrep <- posterior_predictive_values_long(model, n_samples, brms::posterior_predict) %>%
     dplyr::rename(yrep = ppv)
@@ -52,6 +55,9 @@ posterior_predict_long <- function(model, n_samples = NULL) {
 #' @export
 #'
 #' @examples
+#' \dontrun{
+#' posterior_epred_long(fit, n_samples = 500)
+#' }
 posterior_epred_long <- function(model, n_samples = NULL) {
 ppe <- posterior_predictive_values_long(model, n_samples, brms::posterior_epred) %>%
   dplyr::rename(ppe = ppv)
@@ -66,8 +72,6 @@ ppe <- posterior_predictive_values_long(model, n_samples, brms::posterior_epred)
 #'
 #' @return tibble with columns from brmsfit$data (at least original responses, person and item identifier).
 #' Additionally y_rep (predicted answers) or ppe (posterior predictive estimate) and .draw (which MCMC draw comes the answer from).
-#'
-#' @examples
 posterior_predictive_values_long <- function(model, n_samples = NULL, f) {
   draws <- NULL
   if (!is.null(n_samples)) draws <- sample(1:brms::nsamples(model), size = n_samples, replace = FALSE) %>% sort()
@@ -92,10 +96,16 @@ posterior_predictive_values_long <- function(model, n_samples = NULL, f) {
 #' @param x a matrix or data frame, but can be a vector.
 #' @param ... arguments passed to the function rep, i.e. times, length.out and each (see explanation there).
 #'
-#' @return
+#' @return tibble
 #' @export
 #'
 #' @examples
+#'   t <- tibble::tribble(
+#'   ~x, ~y, ~z,
+#'   1, 1, 1,
+#'   0, 0, 1,
+#'   )
+#'   result <- t %>% rep_dataframe(20)
 rep_dataframe <-  function(x, ...) {
   tibble::as_tibble(lapply(x, rep, ...))
 }
@@ -109,6 +119,9 @@ rep_dataframe <-  function(x, ...) {
 #' @export
 #'
 #' @examples
+#' \dontrun{
+#' make_responsedata_wider(fit)
+#' }
 make_responsedata_wider <- function(model) {
   item <- model$var_specs$item
   response <- model$var_specs$response

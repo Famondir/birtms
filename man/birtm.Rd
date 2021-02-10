@@ -48,8 +48,17 @@ birtm(
 \item{...}{Arguments passed to brms::brm}
 }
 \value{
-
+birtsmsfit object
 }
 \description{
 Fits a bayesian IRT model.
+}
+\examples{
+\dontrun{
+testdata <- birtms::compose_dataset(response_data = data_spm[1:100,], response_columns = i1:i12)
+formula_1d_1pl <- birtms::build_formula()
+fit_1d_1pl_spm1 <- birtms::birtm(data = testdata, formula = formula_1d_1pl,
+file = '../inst/extdata/fit_1d_1pl_spm1')
+fit_1d_1pl_spm1
+}
 }

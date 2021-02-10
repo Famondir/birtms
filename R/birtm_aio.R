@@ -19,8 +19,16 @@
 #' @param refit Boolean
 #' @param ... Arguments passed to brms::brm
 #'
-#' @return
+#' @return birtsmsfit object
 #' @export
+#'
+#' @examples
+#' \dontrun{
+#' testdata <- data_spm[1:100,] # take only 1/5th of the data to speed up the examplary model fitting
+#' fit_1d_1pl_spm2 <- birtms::birtm_aio(response_data = testdata, response_columns = i1:i12,
+#' file = '../inst/extdata/fit_1d_1pl_spm2')
+#' fit_1d_1pl_spm2
+#' }
 birtm_aio <- function(response_data, response_columns, person_data = NULL, item_data = NULL, situation_data = NULL,
                       variable_specifications = NULL, model_specifications = NULL,
                       prior = NULL, cores = 4, file = NULL,

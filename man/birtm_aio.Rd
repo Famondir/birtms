@@ -57,8 +57,16 @@ birtm_aio(
 \item{...}{Arguments passed to brms::brm}
 }
 \value{
-
+birtsmsfit object
 }
 \description{
 A wrapper function to fit a bayesian IRT model with one command.
+}
+\examples{
+\dontrun{
+testdata <- data_spm[1:100,] # take only 1/5th of the data to speed up the examplary model fitting
+fit_1d_1pl_spm2 <- birtms::birtm_aio(response_data = testdata, response_columns = i1:i12,
+file = '../inst/extdata/fit_1d_1pl_spm2')
+fit_1d_1pl_spm2
+}
 }

@@ -34,4 +34,13 @@ test_that("rep_dataframe works", {
   result <- t %>% rep_dataframe(2)
 
   expect_equal(result, rbind(t,t))
+
+  t <- tibble::tribble(
+    ~x, ~y, ~z,
+    1, 2, 'x',
+  )
+
+  result <- t %>% rep_dataframe(2)
+
+  expect_equal(result, rbind(t,t))
 })

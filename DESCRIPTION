@@ -25,7 +25,10 @@ Imports:
     tidyr,
     tibble,
     tidybayes,
-    tidyselect
+    tidyselect,
+    ggtext,
+    scales,
+    ggplot2
 RoxygenNote: 7.1.1
 VignetteBuilder: knitr
 Config/testthat/edition: 3

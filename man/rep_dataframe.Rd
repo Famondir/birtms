@@ -15,11 +15,19 @@ rep_dataframe(x, ...)
 \item{...}{arguments passed to the function rep, i.e. times, length.out and each (see explanation there).}
 }
 \value{
-
+tibble
 }
 \description{
 Repeat dataframe
 Repeats rows in dataframe n times (where n is specified in a vector with equal entries).
 Used to lengthen out odds ratio from original responses to match with or dataframe from post for faster substraction.
 from Peter Solymos (mefa-package: https://www.rdocumentation.org/packages/mefa/versions/3.2-7/topics/rep.data.frame)
+}
+\examples{
+  t <- tibble::tribble(
+  ~x, ~y, ~z,
+  1, 1, 1,
+  0, 0, 1,
+  )
+  result <- t \%>\% rep_dataframe(20)
 }

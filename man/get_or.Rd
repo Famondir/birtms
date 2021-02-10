@@ -23,3 +23,8 @@ Summarises Odds Ratio statistic
 Returns odds ratio values for actual dataset and posterior predictions.
 Summarises the mode and hdi of their difference and returns the ppp-value.
 }
+\examples{
+\dontrun{
+get_or(fit, n_samples = 500)
+}
+}

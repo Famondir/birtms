@@ -18,3 +18,8 @@ Additionally ppe (posterior predictive estimate) and .draw (which MCMC draw come
 \description{
 Expected Values of the Posterior Predictive Distribution in long format
 }
+\examples{
+\dontrun{
+posterior_epred_long(fit, n_samples = 500)
+}
+}
