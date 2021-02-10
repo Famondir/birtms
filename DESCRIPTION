@@ -28,7 +28,9 @@ Imports:
     tidyselect,
     ggtext,
     scales,
-    ggplot2
+    ggplot2,
+    HDInterval,
+    ggridges
 RoxygenNote: 7.1.1
 VignetteBuilder: knitr
 Config/testthat/edition: 3
