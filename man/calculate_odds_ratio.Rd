@@ -9,7 +9,7 @@ adjusted from Anna Scharl and Timo Gnambs (https://www.tqmp.org/RegularArticles/
 calculate_odds_ratio(y_rep = NULL, y = NULL)
 }
 \arguments{
-\item{y_rep}{(pers) x (item) x (rep) array; replicated data (can handle response data as well)}
+\item{y_rep}{(pers) x (item) x (rep) array; replicated data (can handle response data as dataframe or lists of dataframes as well)}
 
 \item{y}{(pers) x (item) dataframe; response data}
 }

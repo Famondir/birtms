@@ -97,7 +97,7 @@ posterior_predictive_values_long <- function(model, n_samples = NULL, f) {
 #'
 #' @examples
 rep_dataframe <-  function(x, ...) {
-  as.data.frame(lapply(x, rep, ...))
+  tibble::as_tibble(lapply(x, rep, ...))
 }
 
 #' Make response data wider
@@ -109,7 +109,7 @@ rep_dataframe <-  function(x, ...) {
 #' @export
 #'
 #' @examples
-make_data_wider <- function(model) {
+make_responsedata_wider <- function(model) {
   item <- model$var_specs$item
   response <- model$var_specs$response
 

@@ -113,7 +113,7 @@ get_or <- function(model, n_samples = NULL, hdi_width = .89) {
   message('Calculating posterior odds ratio')
   or_rep <- calculate_odds_ratio(yrep) # calculates odds ratio for posterior samples
 
-  y <- make_data_wider(model) %>% select(-dplyr::any_of(unlist(model$var_specs)))
+  y <- make_responsedata_wider(model) %>% select(-dplyr::any_of(unlist(model$var_specs)))
   or_act <- calculate_odds_ratio(y) %>% # calculates odds ratio for actual sample/data
     mutate(.draw = 0, .before = 1)
 
