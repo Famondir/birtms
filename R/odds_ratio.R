@@ -10,6 +10,7 @@ if(getRversion() >= "2.15.1")  utils::globalVariables(c('itempair', '.draw', 'it
 #'
 #' @param y_rep (pers) x (item) x (rep) array; replicated data (can handle response data as dataframe or lists of dataframes as well)
 #' @param y (pers) x (item) dataframe; response data
+#' @param zero_correction boolean; should Haldane zero-correction be used? (Add 0.5 to all cells?)
 #'
 #' @return tibble
 #' @export
@@ -23,7 +24,7 @@ if(getRversion() >= "2.15.1")  utils::globalVariables(c('itempair', '.draw', 'it
 #' 0, 0,
 #' 1, 0
 #' ) %>% calculate_odds_ratio() # equals 0.5
-calculate_odds_ratio <- function(y_rep = NULL, y = NULL) {
+calculate_odds_ratio <- function(y_rep = NULL, y = NULL, zero_correction = FALSE) {
   if(is.null(y_rep) & is.null(y)) stop('Missing data argument! Use either y_rep or y.')
   if(!is.null(y_rep) & !is.null(y)) stop('Too many data arguments! Use either y_rep or y.')
 
@@ -57,6 +58,9 @@ calculate_odds_ratio <- function(y_rep = NULL, y = NULL) {
       n[2,] <- sum_fct(y_rep[, i, ] == 0 & y_rep[, j, ] == 0)
       n[3,] <- sum_fct(y_rep[, i, ] == 1 & y_rep[, j, ] == 0)
       n[4,] <- sum_fct(y_rep[, i, ] == 0 & y_rep[, j, ] == 1)
+
+      if (zero_correction) n <- n + 0.5
+
       or[, count] <- (n[1,]*n[2,])/(n[3,]*n[4,])
       or <- as.data.frame(or)
       colnames(or)[count] <- paste0('ItemPair', i, '_', j)
@@ -79,7 +83,8 @@ calculate_odds_ratio <- function(y_rep = NULL, y = NULL) {
 #' @param model birtmsfit
 #' @param n_samples int - Number of posterior smaples to use
 #' @param hdi_width double
-#' @param drop_inf_nan boolean; should NaN and Inf values get dropped from ppmc odds ratio samples?
+#' @param zero_correction boolean; should Haldane zero-correction be used? (Add 0.5 to all cells?)
+#' @param use_hdci boolean; should be returned a single credibility interval (without gap)?
 #'
 #' @return birtmsdata; tibble with additinal attributes
 #' @export
@@ -91,7 +96,7 @@ calculate_odds_ratio <- function(y_rep = NULL, y = NULL) {
 #' \dontrun{
 #' get_or(fit, n_samples = 500)
 #' }
-get_or <- function(model, n_samples = NULL, hdi_width = .89, drop_inf_nan = FALSE) {
+get_or <- function(model, n_samples = NULL, hdi_width = .89, zero_correction = FALSE, use_hdci = FALSE) {
   seperate_itempairs <- function(x) {
     x <- x %>% mutate(itempair = stringr::str_remove(itempair, 'ItemPair')) %>% tidyr::separate(itempair, into = c('item1', 'item2'), convert = TRUE)
 
@@ -116,10 +121,10 @@ get_or <- function(model, n_samples = NULL, hdi_width = .89, drop_inf_nan = FALS
     list2array()
 
   message('Calculating posterior odds ratio')
-  or_rep <- calculate_odds_ratio(yrep) # calculates odds ratio for posterior samples
+  or_rep <- calculate_odds_ratio(yrep, zero_correction = zero_correction) # calculates odds ratio for posterior samples
 
   y <- make_responsedata_wider(model) %>% select(-dplyr::any_of(unlist(model$var_specs)))
-  or_act <- calculate_odds_ratio(y) %>% # calculates odds ratio for actual sample/data
+  or_act <- calculate_odds_ratio(y, zero_correction = zero_correction) %>% # calculates odds ratio for actual sample/data
     mutate(.draw = 0, .before = 1)
 
   or_act_dat <- rep_dataframe(or_act, nrow(or_rep))
@@ -169,6 +174,8 @@ get_or <- function(model, n_samples = NULL, hdi_width = .89, drop_inf_nan = FALS
 #' }
 plot_ppmc_or_heatmap <- function(or_data, use_rope = FALSE, alternative_color = FALSE) {
   if (use_rope) {
+    if (!is.finite(attr(or_data, 'rope_width'))) stop("rope_width attribute is not finite!")
+
     above <- or_data$above_rope
     beneath <- or_data$beneath_rope
     cap <- '**Interpretation:** The grey fields represent items for which the HDI does not contain any value inside the ROPE around 0.<br>'
@@ -185,7 +192,8 @@ plot_ppmc_or_heatmap <- function(or_data, use_rope = FALSE, alternative_color = 
   cap2 <- paste0(cap2, '*Blue* fields represent items where predicted odds ratio is lower than actual observed odds ratio.<br>
     *Red* fields represent items where predicted odds ratio is higher than actual observed odds ratio.')
 
-  or_data <- or_data %>% dplyr::mutate(z_or_dif_mode = scale(or_dif_mode), z_or_dif_mode_highlighted = ifelse(above | beneath, NA, z_or_dif_mode))
+  or_data <- or_data %>% dplyr::mutate(z_or_dif_mode = scale(or_dif_mode),
+                                       z_or_dif_mode_highlighted = ifelse(above | beneath, NA, z_or_dif_mode))
 
   g <- ggplot2::ggplot(or_data, ggplot2::aes(item1, item2, fill = z_or_dif_mode_highlighted, label = z_or_dif_mode_highlighted, height = 1, width = 1)) +
     ggplot2::scale_x_continuous("Item A", expand=c(0,0), position = "top", breaks = seq(min(or_data$item1),max(or_data$item1),1)) +
@@ -201,18 +209,29 @@ plot_ppmc_or_heatmap <- function(or_data, use_rope = FALSE, alternative_color = 
 
     g <- g + ggplot2::scale_fill_gradient(low = "white", high = "grey50", limit = c(0, 1), oob = scales::squish,
                                           na.value = '#00ff00', name = "\u007C z(\u0394OR) \u007C") +
-      ggplot2::geom_tile(data = subset(or_data, above), fill = '#ca0020', color="black") +
-      ggplot2::geom_tile(data = subset(or_data, beneath), fill = '#0571b0', color="black") +
       ggplot2::labs(caption = cap2)
+
+    if(sum(above, na.rm = TRUE) > 0) { # otherwise the empty subset throws an error
+      g <- g + ggplot2::geom_tile(data = subset(or_data, above), fill = '#ca0020', color="black")
+    }
+    if(sum(beneath, na.rm = TRUE) > 0) {
+      g <- g + ggplot2::geom_tile(data = subset(or_data, beneath), fill = '#0571b0', color="black")
+    }
+
   } else {
     g <- g + ggplot2::scale_fill_gradient2(low = "#0571b0", high = "#ca0020", mid = "#f7f7f7",
                                   midpoint = 0, limit = c(-1, 1), name = "z(\u0394OR)",
                                   oob = scales::squish, na.value = '#00ff00') +
-      ggplot2::geom_tile(data = subset(or_data, above), fill = 'gray50', color="black") +
-      ggplot2::geom_tile(data = subset(or_data, beneath), fill = 'gray50', color="black") +
-      ggplot2::geom_text(data = subset(or_data, above), ggplot2::aes(label = 'H'), size = 4) +
-      ggplot2::geom_text(data = subset(or_data, beneath), ggplot2::aes(label = 'L'), size = 4) +
       ggplot2::labs(caption = cap)
+
+    if(sum(above, na.rm = TRUE) > 0) { # otherwise the empty subset throws an error
+      g <- g + ggplot2::geom_tile(data = subset(or_data, above), fill = 'gray50', color="black") +
+        ggplot2::geom_text(data = subset(or_data, above), ggplot2::aes(label = 'H'), size = 4)
+    }
+    if(sum(beneath, na.rm = TRUE) > 0) {
+      g <- g + ggplot2::geom_tile(data = subset(or_data, beneath), fill = 'gray50', color="black") +
+        ggplot2::geom_text(data = subset(or_data, beneath), ggplot2::aes(label = 'L'), size = 4)
+    }
   }
 
   return(g)

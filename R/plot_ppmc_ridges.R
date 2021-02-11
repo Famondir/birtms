@@ -30,7 +30,10 @@ plot_ppmc_ridges <- function (data, parameter, group = 0, rope = FALSE, hdi_widt
   hdi_custWidth_internal <- function(...) {
     dots <- list(...)
     hdi_width <- dots[[2]]
-    HDInterval::hdi(dots[[1]], credMass = hdi_width)
+    # hdi <- HDInterval::hdi(dots[[1]], credMass = hdi_width, allowSplit = TRUE) # does not split hdi!?
+    hdi2 <- tidybayes::mode_hdi(dots[[1]], .width = hdi_width) %>% dplyr::select(ymin, ymax) %>% dplyr::rename(lower = ymin, upper = ymax) %>%
+      unlist() %>% sort()
+    return(hdi2)
   }
 
   parameter <- rlang::ensym(parameter)
@@ -40,9 +43,9 @@ plot_ppmc_ridges <- function (data, parameter, group = 0, rope = FALSE, hdi_widt
     data <- data %>% dplyr::mutate({{group}} := as.factor({{group}})) # if group is specified multiple ridges get plotted
   }
 
-  g <- data %>% ggplot2::ggplot(ggplot2::aes(x = {{parameter}}, y = {{group}}, fill = ggplot2::after_stat(quantile))) +
+  g <- data %>% ggplot2::ggplot(ggplot2::aes(x = {{parameter}}, y = {{group}}, fill = ggplot2::after_stat(quantile))) + # ggplot2::after_stat instead of sta
     ggridges::geom_density_ridges_gradient(quantile_lines = TRUE, quantile_fun = hdi_custWidth_internal, quantiles = hdi_width, vline_linetype = 2) +
-    ggplot2::scale_fill_manual(values = c("transparent", color, "transparent"), guide = "none")
+    ggplot2::scale_fill_manual(values = c(rep(c("transparent", color),3), "transparent"), guide = "none")
 
   if (rope) {
     rect <- data.frame(xmin = 0 - attr(data, 'rope_width'), xmax= 0 + attr(data, 'rope_width'), ymin = -Inf, ymax = Inf)

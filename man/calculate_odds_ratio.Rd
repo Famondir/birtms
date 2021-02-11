@@ -6,12 +6,14 @@
 Calculates the odds ratio for the posterior samples or the original responses
 adjusted from Anna Scharl and Timo Gnambs (https://www.tqmp.org/RegularArticles/vol15-2/p075/p075.pdf)}
 \usage{
-calculate_odds_ratio(y_rep = NULL, y = NULL)
+calculate_odds_ratio(y_rep = NULL, y = NULL, zero_correction = FALSE)
 }
 \arguments{
 \item{y_rep}{(pers) x (item) x (rep) array; replicated data (can handle response data as dataframe or lists of dataframes as well)}
 
 \item{y}{(pers) x (item) dataframe; response data}
+
+\item{zero_correction}{boolean; should Haldane zero-correction be used? (Add 0.5 to all cells?)}
 }
 \value{
 tibble

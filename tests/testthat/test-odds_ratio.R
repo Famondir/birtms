@@ -11,6 +11,14 @@ test_that("odds are calculated correctly", {
 
   result <- tibble::tribble(
     ~x, ~y,
+    1, 1,
+    0, 0,
+  ) %>% calculate_odds_ratio(zero_correction = TRUE)
+
+  expect_equal(result[[1,1]], 9)
+
+  result <- tibble::tribble(
+    ~x, ~y,
     0, 1,
     1, 0,
     1, 1,
