@@ -1428,3 +1428,5 @@ tibble::tribble(
   0, 0,
   1, 0
 ) %>% calculate_odds_ratio()
+
+or_data %>% plot_ppmc_or_heatmap()

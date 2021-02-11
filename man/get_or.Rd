@@ -6,7 +6,7 @@
 Returns odds ratio values for actual dataset and posterior predictions.
 Summarises the mode and hdi of their difference and returns the ppp-value.}
 \usage{
-get_or(model, n_samples = NULL, hdi_width = 0.89)
+get_or(model, n_samples = NULL, hdi_width = 0.89, drop_inf_nan = FALSE)
 }
 \arguments{
 \item{model}{birtmsfit}
@@ -14,9 +14,11 @@ get_or(model, n_samples = NULL, hdi_width = 0.89)
 \item{n_samples}{int - Number of posterior smaples to use}
 
 \item{hdi_width}{double}
+
+\item{drop_inf_nan}{boolean; should NaN and Inf values get dropped from ppmc odds ratio samples?}
 }
 \value{
-tibble
+birtmsdata; tibble with additinal attributes
 }
 \description{
 Summarises Odds Ratio statistic

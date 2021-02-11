@@ -79,8 +79,9 @@ calculate_odds_ratio <- function(y_rep = NULL, y = NULL) {
 #' @param model birtmsfit
 #' @param n_samples int - Number of posterior smaples to use
 #' @param hdi_width double
+#' @param drop_inf_nan boolean; should NaN and Inf values get dropped from ppmc odds ratio samples?
 #'
-#' @return tibble
+#' @return birtmsdata; tibble with additinal attributes
 #' @export
 #' @importFrom dplyr mutate
 #' @importFrom dplyr select
@@ -90,7 +91,7 @@ calculate_odds_ratio <- function(y_rep = NULL, y = NULL) {
 #' \dontrun{
 #' get_or(fit, n_samples = 500)
 #' }
-get_or <- function(model, n_samples = NULL, hdi_width = .89) {
+get_or <- function(model, n_samples = NULL, hdi_width = .89, drop_inf_nan = FALSE) {
   seperate_itempairs <- function(x) {
     x <- x %>% mutate(itempair = stringr::str_remove(itempair, 'ItemPair')) %>% tidyr::separate(itempair, into = c('item1', 'item2'), convert = TRUE)
 
@@ -145,7 +146,7 @@ get_or <- function(model, n_samples = NULL, hdi_width = .89) {
     dplyr::relocate(dplyr::any_of(c('or_act', 'or_rep')), .after = item2) %>%
     dplyr::ungroup()
 
-  attr(or, 'rope_width') <- rope
+  or <- or %>% new_birtmsdata(list(rope_width = rope))
 
   return(or)
 }
@@ -199,14 +200,16 @@ plot_ppmc_or_heatmap <- function(or_data, use_rope = FALSE, alternative_color = 
     or_data <- or_data %>% dplyr::mutate(z_or_dif_mode = scale(or_dif_mode), z_or_dif_mode_highlighted = ifelse(above | beneath, NA, abs(z_or_dif_mode)))
 
     g <- g + ggplot2::scale_fill_gradient(low = "white", high = "grey50", limit = c(0, 1), oob = scales::squish,
-                                          na.value = '#ff0000', name = "\u007C z(\u0394OR) \u007C") +
+                                          na.value = '#00ff00', name = "\u007C z(\u0394OR) \u007C") +
       ggplot2::geom_tile(data = subset(or_data, above), fill = '#ca0020', color="black") +
       ggplot2::geom_tile(data = subset(or_data, beneath), fill = '#0571b0', color="black") +
       ggplot2::labs(caption = cap2)
   } else {
     g <- g + ggplot2::scale_fill_gradient2(low = "#0571b0", high = "#ca0020", mid = "#f7f7f7",
                                   midpoint = 0, limit = c(-1, 1), name = "z(\u0394OR)",
-                                  oob = scales::squish, na.value = 'gray50') +
+                                  oob = scales::squish, na.value = '#00ff00') +
+      ggplot2::geom_tile(data = subset(or_data, above), fill = 'gray50', color="black") +
+      ggplot2::geom_tile(data = subset(or_data, beneath), fill = 'gray50', color="black") +
       ggplot2::geom_text(data = subset(or_data, above), ggplot2::aes(label = 'H'), size = 4) +
       ggplot2::geom_text(data = subset(or_data, beneath), ggplot2::aes(label = 'L'), size = 4) +
       ggplot2::labs(caption = cap)
@@ -214,3 +217,5 @@ plot_ppmc_or_heatmap <- function(or_data, use_rope = FALSE, alternative_color = 
 
   return(g)
 }
+
+

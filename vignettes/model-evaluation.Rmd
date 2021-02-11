@@ -1,0 +1,39 @@
+---
+title: "Model Evaluation"
+author: Simon Schäfer
+date: '`r Sys.Date()`'
+output: 
+        # pdf_document
+        rmarkdown::html_vignette
+bibliography: biblio.bib
+csl: apa.csl
+vignette: >
+  %\VignetteIndexEntry{Model Evaluation}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(birtms)
+library(magrittr)
+```
+
+# Post predictive model checks
+
+## Odds ratio
+
+```{r}
+fit_1d_1pl_spm1 <- readRDS('../inst/extdata/fit_1d_1pl_spm1.rds')
+
+or_data <- birtms::get_or(fit_1d_1pl_spm1)
+or_data %>% birtms::plot_ppmc_or_heatmap()
+```

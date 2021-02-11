@@ -40,7 +40,7 @@ plot_ppmc_ridges <- function (data, parameter, group = 0, rope = FALSE, hdi_widt
     data <- data %>% dplyr::mutate({{group}} := as.factor({{group}})) # if group is specified multiple ridges get plotted
   }
 
-  g <- data %>% ggplot2::ggplot(ggplot2::aes(x = {{parameter}}, y = {{group}}, fill = ggplot2::stat(quantile))) +
+  g <- data %>% ggplot2::ggplot(ggplot2::aes(x = {{parameter}}, y = {{group}}, fill = ggplot2::after_stat(quantile))) +
     ggridges::geom_density_ridges_gradient(quantile_lines = TRUE, quantile_fun = hdi_custWidth_internal, quantiles = hdi_width, vline_linetype = 2) +
     ggplot2::scale_fill_manual(values = c("transparent", color, "transparent"), guide = "none")
 
