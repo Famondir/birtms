@@ -964,48 +964,6 @@ library(tidyverse)
 library(pander)
 
 data(Science)
-# mod <- mirt(Science,1, itemtype='graded', verbose=FALSE)
-#
-# # Extract all items
-# # Compute the probability trace lines
-# # Put into a list
-# traceline <- NULL
-# for(i in 1:length(Science)){
-#   extr.2 <- extract.item(mod, i)
-#   Theta <- matrix(seq(-6,6, by = .1))
-#   traceline[[i]] <- probtrace(extr.2, Theta)
-# }
-#
-# names(traceline) <- paste('item',1:length(traceline))
-#
-# # rbind traceline
-# traceline.df <- do.call(rbind, traceline)
-#
-# # create item names length based on length of theta provided
-# item <- rep(names(traceline),each=length(Theta))
-#
-# # put them all together into a dataframe
-# l.format <- cbind.data.frame(Theta, item, traceline.df)
-#
-# # wide to long format.
-# longer.format <- gather(l.format,categorials,measurement,P.1:P.4)
-# longer.format$item<-as.factor(longer.format$item)
-#
-# # Selecting item
-# items <- c("item 1", "item 2", "item 3", "item 4")
-# item.format <-longer.format[longer.format$item == items[1],]
-#
-# # plot chart
-# ggplot(item.format, aes(Theta, measurement, colour = item, fill=categorials)) +
-#   geom_line() +
-#   ggtitle('Polytomous Tracelines') +
-#   xlab(expression(theta)) +
-#   ylab(expression(P(theta))) +
-#   geom_hline(aes(yintercept = 0.5)) + theme_bw() +
-#   theme(text = element_text(size=16),
-#         axis.text.x=element_text(colour="black"),
-#         axis.text.y=element_text(colour="black"),
-#         legend.title=element_blank())
 
 calculate_cumulative_icc <- function(thresholds, b, a, theta = NULL, b_is_easyness = TRUE, mult_all_by_a = FALSE) {
   # parts of this function coming from: https://aidenloe.github.io/irtplots.html

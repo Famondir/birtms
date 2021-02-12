@@ -6,13 +6,7 @@
 Returns odds ratio values for actual dataset and posterior predictions.
 Summarises the mode and hdi of their difference and returns the ppp-value.}
 \usage{
-get_or(
-  model,
-  n_samples = NULL,
-  hdi_width = 0.89,
-  zero_correction = FALSE,
-  use_hdci = FALSE
-)
+get_or(model, n_samples = NULL, hdi_width = 0.89, zero_correction = FALSE)
 }
 \arguments{
 \item{model}{birtmsfit}
@@ -22,8 +16,6 @@ get_or(
 \item{hdi_width}{double}
 
 \item{zero_correction}{boolean; should Haldane zero-correction be used? (Add 0.5 to all cells?)}
-
-\item{use_hdci}{boolean; should be returned a single credibility interval (without gap)?}
 }
 \value{
 birtmsdata; tibble with additinal attributes

@@ -12,7 +12,7 @@ vignette: >
   %\VignetteEncoding{UTF-8}
   %\VignetteEngine{knitr::rmarkdown}
 editor_options: 
-  chunk_output_type: console
+  chunk_output_type: inline
 ---
 
 ```{r, include = FALSE}
@@ -33,7 +33,14 @@ library(magrittr)
 
 ```{r}
 fit_1d_1pl_spm1 <- readRDS('../inst/extdata/fit_1d_1pl_spm1.rds')
-
 or_data <- birtms::get_or(fit_1d_1pl_spm1, zero_correction = TRUE)
 or_data %>% birtms::plot_ppmc_or_heatmap()
+```
+
+```{r}
+
+```
+
+```{r}
+
 ```

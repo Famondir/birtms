@@ -2,7 +2,8 @@
 # CMD check that they are intended to have no definition at time of package
 # building
 if(getRversion() >= "2.15.1")  utils::globalVariables(c('itempair', '.draw', 'item1', 'item2', '.lower', '.upper', 'ppv', 'value',
-                                                        'or_dif_mode', 'or_dif_mode', 'z_or_dif_mode_highlighted', 'z_or_dif_mode'))
+                                                        'or_dif_mode', 'or_dif_mode', 'z_or_dif_mode_highlighted', 'z_or_dif_mode',
+                                                        'above_rope', 'above_zero', 'beneath_rope', 'beneath_zero'))
 
 #' Odds ratio
 #' Calculates the odds ratio for the posterior samples or the original responses
@@ -84,7 +85,6 @@ calculate_odds_ratio <- function(y_rep = NULL, y = NULL, zero_correction = FALSE
 #' @param n_samples int - Number of posterior smaples to use
 #' @param hdi_width double
 #' @param zero_correction boolean; should Haldane zero-correction be used? (Add 0.5 to all cells?)
-#' @param use_hdci boolean; should be returned a single credibility interval (without gap)?
 #'
 #' @return birtmsdata; tibble with additinal attributes
 #' @export
@@ -96,7 +96,7 @@ calculate_odds_ratio <- function(y_rep = NULL, y = NULL, zero_correction = FALSE
 #' \dontrun{
 #' get_or(fit, n_samples = 500)
 #' }
-get_or <- function(model, n_samples = NULL, hdi_width = .89, zero_correction = FALSE, use_hdci = FALSE) {
+get_or <- function(model, n_samples = NULL, hdi_width = .89, zero_correction = FALSE) {
   seperate_itempairs <- function(x) {
     x <- x %>% mutate(itempair = stringr::str_remove(itempair, 'ItemPair')) %>% tidyr::separate(itempair, into = c('item1', 'item2'), convert = TRUE)
 
@@ -173,6 +173,12 @@ get_or <- function(model, n_samples = NULL, hdi_width = .89, zero_correction = F
 #' plot_ppmc_or_heatmap(or_data)
 #' }
 plot_ppmc_or_heatmap <- function(or_data, use_rope = FALSE, alternative_color = FALSE) {
+  # unite boolean columns that check if HDI includes zero or ROPE for multimodal distributions
+  or_data <- or_data %>% dplyr::select(item1, item2, or_dif_mode, above_rope, above_zero, beneath_rope, beneath_zero) %>%
+    dplyr::group_by(item1, item2) %>% dplyr::summarise_all(mean) %>%
+    dplyr::mutate_at(c('above_zero', 'above_rope', 'beneath_zero', 'beneath_rope'), ~ifelse(. > 0, TRUE, FALSE)) %>%
+    dplyr::ungroup()
+
   if (use_rope) {
     if (!is.finite(attr(or_data, 'rope_width'))) stop("rope_width attribute is not finite!")
 
@@ -201,7 +207,7 @@ plot_ppmc_or_heatmap <- function(or_data, use_rope = FALSE, alternative_color = 
     ggplot2::ggtitle('z-standardised Odds Ratio difference') +
     ggplot2::geom_tile(color="black") +
     ggplot2::theme(panel.grid.major = ggplot2::element_blank(), panel.border= ggplot2::element_rect(size=2, color="black", fill=NA),
-                   axis.ticks = ggplot2::element_blank(),plot.caption = ggtext::element_markdown(lineheight = 1.5, hjust = 0)) +
+                   axis.ticks = ggplot2::element_blank(), plot.caption = ggtext::element_markdown(lineheight = 1.5, hjust = 0)) +
     ggplot2::coord_fixed()
 
   if(alternative_color) {
@@ -237,4 +243,63 @@ plot_ppmc_or_heatmap <- function(or_data, use_rope = FALSE, alternative_color = 
   return(g)
 }
 
+plot_or_heatmap <- function(or_data, high_contrast = FALSE, get_transformation_graph = TRUE) {
+  or_data <- or_data %>% mutate(or_act_rescaled = brms::inv_logit_scaled(or_act - median(or_act)))
 
+  if(high_contrast) {
+    column <- sym('or_act_rescaled')
+    med <- round(median(or_data$or_act), 2)
+    limits <- c(brms::inv_logit_scaled(-med), HDInterval::hdi(or_data$or_act_rescaled, credMass = .89)[[2]])
+    cap <- paste0('**Transformationformula:** T(x) = inv_logit_sclaed(x - median(x))<br>',
+                  'median(x) = ', med)
+    scalename <- 'T(OR)'
+    title <- 'Transformed Odds Ratio values'
+    mid <- .5
+
+  } else{
+    column <- sym('or_act')
+    limits <- c(0, HDInterval::hdi(or_data$or_act, credMass = .89)[[2]])
+    cap <- 'No data transformation performed.'
+    scalename <- 'OR'
+    title <- 'Odds Ratio values'
+    mid <- 1
+  }
+
+  g <- or_data %>%
+    ggplot2::ggplot(ggplot2::aes(item1, item2, fill = {{column}}, label = {{column}}, height = 1, width = 1)) +
+    ggplot2::scale_x_continuous("Item A", expand=c(0,0), position = "top", breaks = seq(min(or_data$item1),max(or_data$item1),1)) +
+    ggplot2::scale_y_continuous("Item B", expand=c(0,0), breaks = seq(min(or_data$item2),max(or_data$item2),1)) +
+    ggplot2::ggtitle(title, subtitle = 'actual dataset') +
+    ggplot2::geom_tile(color="black") +
+    ggplot2::theme(panel.grid.major = ggplot2::element_blank(), panel.border= ggplot2::element_rect(size=2, color="black", fill=NA),
+                   axis.ticks = ggplot2::element_blank(), plot.caption = ggtext::element_markdown(lineheight = 1.5, hjust = 0)) +
+    ggplot2::coord_fixed() +
+    ggplot2::scale_fill_gradient2(low = "#0571b0", high = "#ca0020", mid = "#f7f7f7",
+                                  midpoint = mid, limit = c(limits[[1]], limits[[2]]), name = scalename,
+                                  oob = scales::squish, na.value = '#00ff00') +
+    ggplot2::labs(caption = cap)
+
+  if(high_contrast & get_transformation_graph) {
+
+
+    g2 <- ggplot2::ggplot() +
+      ggplot2::geom_function(fun = ~brms::inv_logit_scaled(. - med)) +
+      ggplot2::geom_vline(xintercept = 1, linetype = 'dashed') +
+      ggplot2::scale_x_continuous("OR", expand = c(0, 0.1), limits = c(0, HDInterval::hdi(or_data$or_act, credMass = .89)[[2]]),
+                                  breaks = (seq(0, HDInterval::hdi(or_data$or_act, credMass = .89)[[2]], 1))) +
+      ggplot2::scale_y_continuous("T(OR)", expand=c(0,0), limits = c(round(limits[[1]], 2),1),
+                                  breaks = sort(c(seq(0,1,.2), round(limits[[1]], 2), round(brms::inv_logit_scaled(1-med), 2)))) +
+      xlab('x') +
+      geom_hline(yintercept = brms::inv_logit_scaled(1-med), linetype = 'dashed') +
+      ggtitle('Transformationgraph') +
+      ggplot2::theme(panel.grid.minor = ggplot2::element_blank(), legend.position = "none") +
+      geom_point(data = or_data, aes(x = or_act, y = or_act_rescaled, fill = or_act_rescaled), shape = 21, size = 3) +
+      ggplot2::scale_fill_gradient2(low = "#0571b0", high = "#ca0020", mid = "#f7f7f7",
+                                    midpoint = .5, limit = c(limits[[1]], limits[[2]]), name = scalename,
+                                    oob = scales::squish, na.value = '#00ff00')
+
+    g <- gridExtra::grid.arrange(g, g2, ncol = 2)
+  }
+
+  return(g)
+}
