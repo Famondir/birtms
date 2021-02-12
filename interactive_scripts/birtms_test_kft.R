@@ -1388,3 +1388,42 @@ tibble::tribble(
 ) %>% calculate_odds_ratio()
 
 or_data %>% plot_ppmc_or_heatmap()
+
+or <- function(mat,corr=0) {
+    or <- (mat[,1]+corr)*(mat[,2]+corr)/((mat[,3]+corr)*(mat[,4]+corr))
+}
+
+# {
+# corrs <- unique(round(seq(1,500,1)/1000,10))
+# m <- matrix(round(runif(40000, 0, 1000),0), ncol = 4)
+# colnames(m) <- c('c00', 'c11', 'c01', 'c10')
+# m_dat <- m %>% as_tibble() %>% mutate(odds = or(m,0))
+# for (i in seq_along(corrs)) {
+#   odd <- paste0('odds_',round(corrs[i],5))
+#   m_dat <- m_dat %>% mutate({{odd}} := odds-or(m,corrs[i]))
+# }
+# # m_dat <- m_dat %>% filter(is.finite(odds))
+# diff <- m_dat %>% select(starts_with('odds_')) %>% tidybayes::gather_variables() %>% group_by(.variable) %>%
+#   tidybayes::median_hdi(.width = .5)
+# diff <- diff %>% separate(.variable, '_', into = c('prefix', 'num'), convert = TRUE) %>% rename(diff = .value, correction = num) %>% select(-prefix)
+# diff %>% ggplot(aes(x= correction, y = diff)) + geom_ribbon(aes(x= correction, ymin = .lower, ymax = .upper), fill='grey70') + geom_line()
+# }
+
+# Haldane-Korrektur Simulation
+# Je größer die Stichprobe (Anzahl Bearbeitungen <=> Werte in der Kontingenztabelle), desto kleiner der Effekt des Korrekturterms
+# Der Fehler wird mit kleinerem Korrektur Term ebenfalls kleiner; aber alles auf einer sehr niedrigen Ebene (wenn die Bearbeitungszahl groß ist)
+corrs <- unique(round(seq(1,5000,1)/10000,10))
+m <- matrix(round(runif(40000, 0, 100),0), ncol = 4)
+odds_reference <- or(m, 0)
+{
+c <- map(corrs, .f = ~or(mat = m, corr = .x))# %>% as.data.frame() %>% setNames(paste0('corr_',corrs))
+c1 <- map(.x = c, .f = ~(abs(odds_reference - .x)))
+c2 <- map(.x = c1, .f = ~median(.x)) %>% as.data.frame() %>% t() %>% `colnames<-`('diff') %>% as_tibble(rownames = 'corr')
+c3 <- map(.x = c1, .f = ~HDInterval::hdi(.x, credMass = .89)) %>% as.data.frame() %>% t() %>% `colnames<-`(c('lower89', 'upper89'))
+c3b <- map(.x = c1, .f = ~HDInterval::hdi(.x, credMass = .6)) %>% as.data.frame() %>% t() %>% `colnames<-`(c('lower60', 'upper60'))
+c3c <- map(.x = c1, .f = ~HDInterval::hdi(.x, credMass = .75)) %>% as.data.frame() %>% t() %>% `colnames<-`(c('lower75', 'upper75'))
+c4 <- cbind(c2, c3, c3b, c3c) %>% as_tibble(rownames = NULL)%>% mutate(corr = corrs)
+c4 %>% ggplot(aes(x= corr, y = diff)) + geom_ribbon(aes(x= corr, ymin = lower89, ymax = upper89), fill='grey89') +
+  geom_ribbon(aes(x= corr, ymin = lower75, ymax = upper75), fill='grey75') +
+  geom_ribbon(aes(x= corr, ymin = lower60, ymax = upper60), fill='grey60') + geom_line()
+}
