@@ -6,22 +6,22 @@
 Calculates the odds ratio for the posterior samples or the original responses
 adjusted from Anna Scharl and Timo Gnambs (https://www.tqmp.org/RegularArticles/vol15-2/p075/p075.pdf)}
 \usage{
-calculate_odds_ratio(y_rep = NULL, y = NULL, zero_correction = FALSE)
+calculate_odds_ratio(y_rep = NULL, y = NULL, zero_correction = "")
 }
 \arguments{
 \item{y_rep}{(pers) x (item) x (rep) array; replicated data (can handle response data as dataframe or lists of dataframes as well)}
 
 \item{y}{(pers) x (item) dataframe; response data}
 
-\item{zero_correction}{boolean; should Haldane zero-correction be used? (Add 0.5 to all cells?)}
+\item{zero_correction}{boolean; should adjusted Haldane zero-correction be used?}
 }
 \value{
 tibble
 }
 \description{
-Odds ratio
-Calculates the odds ratio for the posterior samples or the original responses
-adjusted from Anna Scharl and Timo Gnambs (https://www.tqmp.org/RegularArticles/vol15-2/p075/p075.pdf)
+During Haldane zero-correction a value close to 0 is added to all cells
+(https://www.oxfordreference.com/view/10.1093/acref/9780199976720.001.0001/acref-9780199976720-e-1977).
+Most common is 0.5. This value eliminates the first order bias term.
 }
 \examples{
 tibble::tribble(

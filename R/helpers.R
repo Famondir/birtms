@@ -130,3 +130,22 @@ make_responsedata_wider <- function(model) {
 
   return(data_wide)
 }
+
+
+#' Get mode
+#' Code from: https://www.tutorialspoint.com/r/r_mean_median_mode.htm
+#'
+#' @param v vector
+#'
+#' @return vector of length 1
+#' @export
+#'
+#' @examples
+#' v <- c(2, 2, 1)
+#' get_mode(v)
+get_mode <- function(v) {
+  uniqv <- unique(v)
+  modus <- uniqv[which.max(tabulate(match(v, uniqv)))]
+
+  return(modus)
+}

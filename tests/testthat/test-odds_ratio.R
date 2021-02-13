@@ -13,7 +13,7 @@ test_that("odds are calculated correctly", {
     ~x, ~y,
     1, 1,
     0, 0,
-  ) %>% calculate_odds_ratio(zero_correction = TRUE)
+  ) %>% calculate_odds_ratio(zero_correction = 'Haldane')
 
   expect_equal(result[[1,1]], 9)
 

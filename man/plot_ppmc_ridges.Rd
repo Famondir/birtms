@@ -9,8 +9,11 @@ plot_ppmc_ridges(
   parameter,
   group = 0,
   rope = FALSE,
-  hdi_width = 0.89,
-  color = "lightblue"
+  hdi = TRUE,
+  ci_width = 0.89,
+  color = "lightblue",
+  range = NULL,
+  ...
 )
 }
 \arguments{
@@ -22,9 +25,15 @@ plot_ppmc_ridges(
 
 \item{rope}{boolean; should the rope be plotted as a gray area?}
 
-\item{hdi_width}{double}
+\item{hdi}{boolean; should HDI or equitailed region be plotted}
+
+\item{ci_width}{double}
 
 \item{color}{color; sets color of ridges}
+
+\item{range}{double; c(min, max) used for setting xlim in coord_cartesian()}
+
+\item{...}{arguments passed to ggridges::stat_density_ridges()}
 }
 \value{
 ggplot2 object

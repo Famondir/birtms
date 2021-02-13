@@ -3,7 +3,7 @@
 # building
 if(getRversion() >= "2.15.1")  utils::globalVariables(c('itempair', '.draw', 'item1', 'item2', '.lower', '.upper', 'ppv', 'value',
                                                         'or_dif_mode', 'or_dif_mode', 'z_or_dif_mode_highlighted', 'z_or_dif_mode',
-                                                        'above_rope', 'above_zero', 'beneath_rope', 'beneath_zero'))
+                                                        'above_rope', 'above_zero', 'beneath_rope', 'beneath_zero', 'or_act'))
 
 #' Odds ratio
 #' Calculates the odds ratio for the posterior samples or the original responses
@@ -11,9 +11,7 @@ if(getRversion() >= "2.15.1")  utils::globalVariables(c('itempair', '.draw', 'it
 #'
 #' During Haldane zero-correction a value close to 0 is added to all cells
 #' (https://www.oxfordreference.com/view/10.1093/acref/9780199976720.001.0001/acref-9780199976720-e-1977).
-#' Most common is 0.5. Zero correction term is added to all counts for comparability. Since smaller value
-#' decrease the estimated deviation from uncorrected values in cases where no zero-correction is needed.
-#' Therefore instead of 0.5 a value of 0.05 is added.
+#' Most common is 0.5. This value eliminates the first order bias term.
 #'
 #' @param y_rep (pers) x (item) x (rep) array; replicated data (can handle response data as dataframe or lists of dataframes as well)
 #' @param y (pers) x (item) dataframe; response data
@@ -31,14 +29,14 @@ if(getRversion() >= "2.15.1")  utils::globalVariables(c('itempair', '.draw', 'it
 #' 0, 0,
 #' 1, 0
 #' ) %>% calculate_odds_ratio() # equals 0.5
-calculate_odds_ratio <- function(y_rep = NULL, y = NULL, zero_correction = FALSE) {
+calculate_odds_ratio <- function(y_rep = NULL, y = NULL, zero_correction = '') {
   if(is.null(y_rep) & is.null(y)) stop('Missing data argument! Use either y_rep or y.')
   if(!is.null(y_rep) & !is.null(y)) stop('Too many data arguments! Use either y_rep or y.')
 
   if(!is.null(y)) y_rep <- y # function only uses y_rep
   if(!is.array(y_rep)) {
-    if(!is.list(y_rep[[1]])) y_rep <- list2array(list(y_rep)) # make pseudo three dimensional array from dataframe
-    else y_rep <- list2array(y_rep) # make three dimensional array from dataframe list
+    if(!is.list(y_rep[[1]])) y_rep <- birtms::list2array(list(y_rep)) # make pseudo three dimensional array from dataframe
+    else y_rep <- birtms::list2array(y_rep) # make three dimensional array from dataframe list
   }
   if(dim(y_rep)[3] == 1) {
     sum_fct <- function(x) sum(x)
@@ -66,9 +64,24 @@ calculate_odds_ratio <- function(y_rep = NULL, y = NULL, zero_correction = FALSE
       n[3,] <- sum_fct(y_rep[, i, ] == 1 & y_rep[, j, ] == 0)
       n[4,] <- sum_fct(y_rep[, i, ] == 0 & y_rep[, j, ] == 1)
 
-      if (zero_correction) n <- n + 0.05
+      if (zero_correction == 'Haldane') {
+        n <- n + 0.5
+      }
 
       or[, count] <- (n[1,]*n[2,])/(n[3,]*n[4,])
+
+      if (zero_correction == 'Bayes') {
+        for(col_index in seq_len(ncol(n))) {
+          if (min(n[,col_index]) == 0) {
+            or[col_index, count] <- or_median_bayes(n[,col_index])
+            # print(paste('or pre:', round((n[1,]*n[2,])/(n[3,]*n[4,]),2)))
+            # print(paste('or post:', round(or[col_index, count],2)))
+            # n <- n + 0.5
+            # cat(paste('Haldane would have been:', round((n[1,]*n[2,])/(n[3,]*n[4,]),2), '\n\n'))
+          }
+        }
+      }
+
       or <- as.data.frame(or)
       colnames(or)[count] <- paste0('ItemPair', i, '_', j)
       count <- count + 1
@@ -81,6 +94,87 @@ calculate_odds_ratio <- function(y_rep = NULL, y = NULL, zero_correction = FALSE
   }
 
   return(or)
+}
+
+#' Simulate Odds Ratio distribution
+#' Extracted from PropCIs::orci.bayes()
+#'
+#' @param a1 a parameter for first beta distribution
+#' @param b1 b parameter for first beta distribution
+#' @param c1 a parameter for second beta distribution
+#' @param d1 b parameter for second beta distribution
+#' @param nsim integer
+#'
+#' @return vector of doubles, distribution od odds ratios
+or.sim <- function(a1,b1,c1,d1,nsim = nsim)
+{
+  z1 <- stats::rf(nsim, 2*a1,2*b1)
+  z2 <- stats::rf(nsim, 2*c1,2*d1)
+  a <- (d1/c1)/(b1/a1)
+  z <- a*z1/z2
+  z <- sort(z)
+  return(z)
+}
+
+#' Calculate successes per sample and sample sizes from contingency table
+#'
+#' @param mat vector of length 4 with counts c(n11, n00, n10, n01) from contingency table
+#'
+#' @return vector of length 4: c(y1, n1, y2, n2)
+contingency2successratio <- function(mat) {
+  y1 <-  mat[1] #n11
+  y2 <- mat[4] #n01
+  n1 <- mat[1] + mat[3] #n11 + n10
+  n2 <- mat[4] + mat[2] #n01 + n00
+
+  return(c(y1, n1, y2, n2))
+}
+
+#' Get the odds ratio distribution
+#' combines prior with actual data to posterior beta distributions and initiates sampling
+#' Extracted from PropCIs::orci.bayes()
+#'
+#' @param x1 number of successes in sample 1
+#' @param n1 sample size in sample 1
+#' @param x2 number of successes in sample 2
+#' @param n2 sample size in sample 2
+#' @param a beta prior for x1
+#' @param b beta prior for x2
+#' @param c beta prior for n1
+#' @param d beta prior for n2
+#' @param nsim integer
+#'
+#' @return vector of doubles, distribution od odds ratios
+or_distribution_bayes <- function(x1,n1,x2,n2,a,b,c,d, nsim = nsim)
+{
+  if(x2!=n2) {
+    a1 <- a + x1
+    b1 <- b + n1 - x1
+    c1 <- c + x2
+    d1 <- d + n2 - x2
+  } else {
+    a1 <- a + n1 - x1
+    b1 <- b +  x1
+    c1 <- c + n2 - x2
+    d1 <- d + x2
+  }
+
+  z <- or.sim(a1,b1,c1,d1, nsim)
+
+  return(z)
+}
+
+#' Get median of odds ratio distribution
+#'
+#' @param mat (4x1) matrix with counts n11, n00, n10, n01 from contingency table
+#' @param k double; concentration of beta priors: 0.5 for Jeffreys prior, 1 for uniform priors
+#' @param nsim interger
+#'
+#' @return median od odds ratio distribution
+or_median_bayes <- function(mat, k = 0.5, nsim = 10000000) {
+  v <- contingency2successratio(mat)
+  z <- or_distribution_bayes(v[[1]], v[[2]], v[[3]], v[[4]], k, k, k, k, nsim)
+  return(stats::median(z))
 }
 
 #' Summarises Odds Ratio statistic
@@ -116,6 +210,9 @@ get_or <- function(model, n_samples = NULL, hdi_width = .89, zero_correction = F
     return(x)
   }
 
+  comp <- FALSE
+  if(zero_correction == 'compromise') comp <- TRUE
+
   item <- model$var_specs$item
   person <- model$var_specs$person
 
@@ -127,8 +224,11 @@ get_or <- function(model, n_samples = NULL, hdi_width = .89, zero_correction = F
     list2array()
 
   message('Calculating posterior odds ratio')
+  if(comp) zero_correction <- 'Haldane'
   or_rep <- calculate_odds_ratio(yrep, zero_correction = zero_correction) # calculates odds ratio for posterior samples
 
+  message('Calculating actual odds ratio')
+  if(comp) zero_correction <- 'Bayes'
   y <- make_responsedata_wider(model) %>% select(-dplyr::any_of(unlist(model$var_specs)))
   or_act <- calculate_odds_ratio(y, zero_correction = zero_correction) %>% # calculates odds ratio for actual sample/data
     mutate(.draw = 0, .before = 1)
@@ -256,16 +356,20 @@ plot_ppmc_or_heatmap <- function(or_data, use_rope = FALSE, alternative_color = 
 #' for 1PL and 2PL models.
 #'
 #' @param or_data dataframe generated by birtms::get_or()
-#' @param median_centered_colorscale
+#' @param median_centered_colorscale boolean
 #'
-#' @return
+#' @return ggplot2 object
 #' @export
 #'
 #' @examples
+#' #' \dontrun{
+#' or_data <- get_or(fit, n_samples = 500)
+#' plot_or_heatmap(or_data)
+#' }
 plot_or_heatmap <- function(or_data, median_centered_colorscale = TRUE) {
   if(median_centered_colorscale) {
     cap <- 'Color scale midpoint is set to median(OR).'
-    mid <- median(or_data$or_act)
+    mid <- stats::median(or_data$or_act)
   } else{
     cap = 'Color scale midpoint is set to 1.'
     mid <- 1

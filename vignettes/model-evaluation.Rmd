@@ -33,14 +33,19 @@ library(magrittr)
 
 ```{r}
 fit_1d_1pl_spm1 <- readRDS('../inst/extdata/fit_1d_1pl_spm1.rds')
-or_data <- birtms::get_or(fit_1d_1pl_spm1, zero_correction = TRUE)
+or_data <- birtms::get_or(fit_1d_1pl_spm1, zero_correction = 'Haldane')
 or_data %>% birtms::plot_ppmc_or_heatmap()
 ```
 
-```{r}
+### Implementation process
 
-```
+It was very straight forward to calculate the odds ratio value for a single given item pair. And expending this approach to calculate odds ratios for all item pairs of the actual dataset was done without running into issues as well simply looping over all item pairs. Things became problematic when odds ratios should be calculated for all posterior predictions because the naive loop approach was slow. Therefore I was glad to find the R code for using odds ratios in a PPMC approach in an article by @Scharl.2019 that used the structure of a three-dimensional array to vectorise the calculation which I adopted happily.
 
-```{r}
+Later the problem occured that there might be counts of zero in the contingency table (i.e. for small samples). After some literature research I found the possibility of Haldane-Anscombe correction which is simply adding a constant close to zero (most often 0.5 is used) to all counts. At the same time many articles recommend not simply to use this method but instead using Fischer's exact test or some other methods. These yield a point estimator with confidence intervals for the odds ratio value. This can be used to test the hypothesis that two dichotomous variables are independent (and therfore in a in a NHST manner to make a decission if this null hypothesis should be rejected).
 
-```
+Add correction term to any odds ratio pair or only to those where a zero occurs?
+
+Size of the correction term? 0.5 eliminates first order error terms. But in simulations
+
+Add only to zeros or all four counts?
+Interpretation: Expacted values for itempairs if the assumed model is true.
