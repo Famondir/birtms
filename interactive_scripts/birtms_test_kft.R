@@ -1393,6 +1393,10 @@ or <- function(mat,corr=0) {
     or <- (mat[,1]+corr)*(mat[,2]+corr)/((mat[,3]+corr)*(mat[,4]+corr))
 }
 
+or <- function(mat,corr=0) {
+  or <- (mat[,1])*(mat[,2])/((mat[,3]+corr)*(mat[,4]))
+}
+
 # {
 # corrs <- unique(round(seq(1,500,1)/1000,10))
 # m <- matrix(round(runif(40000, 0, 1000),0), ncol = 4)
@@ -1412,9 +1416,16 @@ or <- function(mat,corr=0) {
 # Haldane-Korrektur Simulation
 # Je größer die Stichprobe (Anzahl Bearbeitungen <=> Werte in der Kontingenztabelle), desto kleiner der Effekt des Korrekturterms
 # Der Fehler wird mit kleinerem Korrektur Term ebenfalls kleiner; aber alles auf einer sehr niedrigen Ebene (wenn die Bearbeitungszahl groß ist)
-corrs <- unique(round(seq(1,5000,1)/10000,10))
-m <- matrix(round(runif(40000, 0, 100),0), ncol = 4)
-odds_reference <- or(m, 0)
+# hingegen wird die Differenz zum Wert wenn eine 0 eigentlich eine 1 sein würde für kleine Werte exponentiell größer
+corrs <- unique(round(seq(1,5000,1)/4000,10))
+m1 <- matrix(round(runif(40000, 0, 100),0), ncol = 4)
+m <- m1
+m[,3] <- 0
+m2 <- m1
+m2[,3] <- 1
+
+odds_reference <- or(m2, 0)
+odds_reference[is.infinite(odds_reference)] <- 1000000
 {
 c <- map(corrs, .f = ~or(mat = m, corr = .x))# %>% as.data.frame() %>% setNames(paste0('corr_',corrs))
 c1 <- map(.x = c, .f = ~(abs(odds_reference - .x)))
@@ -1425,5 +1436,211 @@ c3c <- map(.x = c1, .f = ~HDInterval::hdi(.x, credMass = .75)) %>% as.data.frame
 c4 <- cbind(c2, c3, c3b, c3c) %>% as_tibble(rownames = NULL)%>% mutate(corr = corrs)
 c4 %>% ggplot(aes(x= corr, y = diff)) + geom_ribbon(aes(x= corr, ymin = lower89, ymax = upper89), fill='grey89') +
   geom_ribbon(aes(x= corr, ymin = lower75, ymax = upper75), fill='grey75') +
-  geom_ribbon(aes(x= corr, ymin = lower60, ymax = upper60), fill='grey60') + geom_line()
+  geom_ribbon(aes(x= corr, ymin = lower60, ymax = upper60), fill='grey60') +
+  geom_line() + coord_cartesian(ylim = c(0,1000))
 }
+
+or2 <- function(mat,corr=0,ci=.89) {
+  z <- qnorm(ci+(1-ci)/2)
+  or <- (mat[,1]+corr)*(mat[,2]+corr)/((mat[,3]+corr)*(mat[,4]+corr))
+  se <- sqrt(1/(mat[,1]+corr)+1/(mat[,2]+corr)+1/(mat[,3]+corr)+1/(mat[,4]+corr))
+  upper <- exp(log(or)+z*se)
+  lower <- exp(log(or)-z*se)
+
+  return(list(or = or, lower = lower, upper = upper, ci = ci))
+}
+
+or_ci_uncond <- function(mat, ci = .89) {
+  y1 <-  mat[,1] #n11
+  y2 <- mat[,4] #n01
+  n1 <- mat[,1] + mat[,3] #n11 + n10
+  n2 <- mat[,4] + mat[,2] #n01 + n00
+
+  return(PropCIs::orscoreci(y1, n1, y2, n2, ci))
+}
+
+# n11, n00, n10, n01
+counts <- c(5,0,4,2)
+
+# der Median des bayes mit Jeffrey prior entspricht eher dem OR des inferenzstat.
+# Der Zugewinn von Bayes hauptsächlich in der 0 korrektur
+# Sonst sind alle Werte sehr ähnlich
+or_ci_uncond(matrix(counts, ncol = 4), .95)
+or_ci_uncond2(matrix(counts, ncol = 4), .95)
+or_ci_bayes(matrix(counts, ncol = 4), .95, k = 0.5) # Jeffrey
+or_ci_bayes(matrix(counts, ncol = 4), .95, k = 1) # uniform
+or_ci_bayes_with_median(matrix(counts, ncol = 4), .95, k = 0.5) # Jeffrey
+or_ci_bayes_with_median(matrix(counts, ncol = 4), .95, k = 1) # uniform
+
+# n11, n00, n10, n01
+or2(matrix(counts, ncol = 4),0,.95)
+
+# n11, n00, n10, n01
+ORtable<-matrix(c(counts[1],counts[3],counts[4],counts[2]),nrow = 2, ncol = 2)
+ORtable
+
+epitools::oddsratio.wald(ORtable, conf.level = .95)
+epitools::oddsratio.small(ORtable, conf.level = .95)
+
+
+orscoreci2 <-
+  function(x1,n1,x2,n2,conf.level){
+    px = x1/n1
+    py = x2/n2
+    if(((x1==0) && (x2==0)) || ((x1==n1) && (x2==n2))){
+      ul = 1/0
+      ll = 0
+      theta = NaN
+    }
+    else if((x1==0) || (x2==n2)){
+      ll = 0
+      theta = 0.01/n2
+      ul = limit(x1,n1,x2,n2,conf.level,theta,1)
+    }
+    else if((x1==n1) || (x2==0)){
+      ul = 1/0
+      theta = 100*n1
+      ll = limit(x1,n1,x2,n2,conf.level,theta,0)
+    }
+    else{
+      theta = px/(1-px)/(py/(1-py))/1.1
+      ll = limit(x1,n1,x2,n2,conf.level,theta,0)
+      theta=px/(1-px)/(py/(1-py))*1.1
+      ul = limit(x1,n1,x2,n2,conf.level,theta,1)
+      theta = px/(1-px)/(py/(1-py))
+    }
+    cint <- c(ll, ul)
+    attr(cint, "conf.level") <- conf.level
+    rval <- list(conf.int = cint)
+    class(rval) <- "htest"
+    return(list(rval, theta))
+  }
+
+or_ci_uncond2 <- function(mat, ci = .89) {
+  x1 <-  mat[,1] #n11
+  x2 <- mat[,4] #n01
+  n1 <- mat[,1] + mat[,3] #n11 + n10
+  n2 <- mat[,4] + mat[,2] #n01 + n00
+
+  return(orscoreci2(x1, n1, x2, n2, ci))
+}
+
+
+p = seq(0,1, length=100)
+plot(p, dbeta(p, 100, 100), ylab="density", type ="l", col=4)
+lines(p, dbeta(p, 0.5, 0.5), type ="l", col=3)
+lines(p, dbeta(p, 2, 2), col=2)
+lines(p, dbeta(p, 1, 1), col=1)
+legend(0.7,8, c("Be(100,100)","Be(0.5,0.5)","Be(2,2)", "Be(1,1)"),lty=c(1,1,1,1),col=c(4,3,2,1))
+
+limit <-
+  function(x,nx,y,ny,conflev,lim,t){
+
+    z = qchisq(conflev,1)
+    px = x/nx
+    score= 0
+    while ( score < z){
+      a = ny*(lim-1)
+      b = nx*lim+ny-(x+y)*(lim-1)
+      c = -(x+y)
+      p2d = (-b+sqrt(b^2-4*a*c))/(2*a)
+      p1d = p2d*lim/(1+p2d*(lim-1))
+      score = ((nx*(px-p1d))^2)*(1/(nx*p1d*(1-p1d))+1/(ny*p2d*(1-p2d)))*(nx+ny-1)/(nx+ny) ## added *(nx+ny-1)/(nx+ny)
+      ci = lim
+      if(t==0) { lim = ci/1.001 }
+      else{ lim = ci*1.001 }
+    }
+    return(ci)
+  }
+
+
+or_ci_bayes <- function(mat, ci = .89, k) {
+  y1 <-  mat[,1] #n11
+  y2 <- mat[,4] #n01
+  n1 <- mat[,1] + mat[,3] #n11 + n10
+  n2 <- mat[,4] + mat[,2] #n01 + n00
+
+  return(PropCIs::orci.bayes(y1, n1, y2, n2, k, k, k, k, ci))
+}
+
+or_ci_bayes_with_median <- function(mat, ci = .89, k) {
+  y1 <-  mat[,1] #n11
+  y2 <- mat[,4] #n01
+  n1 <- mat[,1] + mat[,3] #n11 + n10
+  n2 <- mat[,4] + mat[,2] #n01 + n00
+
+  return(orci.bayes_with_median(y1, n1, y2, n2, k, k, k, k, ci))
+}
+
+orci.bayes_with_median <- function(x1,n1,x2,n2,a,b,c,d,conf.level=0.95, nsim = 10000000)
+{
+  or.app<- function(a1,b1,c1,d1,conf.level,nsim=nsim)
+  {
+    z1 <- rf(nsim, 2*a1,2*b1)
+    z2 <- rf(nsim, 2*c1,2*d1)
+    a <- (d1/c1)/(b1/a1)
+    z <- a*z1/z2
+    z <- sort(z)
+    return(z)
+  }
+
+
+  # Bayes tail interval with beta priors
+
+  fct.F<- function(x,t,a1,b1,a2,b2){
+    c <- (b2/a2)/(b1/a1)
+    df(x,2*a2,2*b2)*pf(x*t/c,2*a1,2*b1)
+  }
+
+  or.F <- function(t,a1,b1,a2,b2)
+  {
+    return(integrate(fct.F,0,Inf,t=t,a1=a1,b1=b1,a2=a2,b2=b2)$value)
+  }
+
+  or.fct <- function(ab,a1,b1,c1,d1,conf.level)
+  {
+    abs(or.F(ab[2],a1,b1,c1,d1) - (1 - (1-conf.level)/2))+
+      abs(or.F(ab[1],a1,b1,c1,d1) - (1-conf.level)/2)
+  }
+
+
+  if(x2!=n2){
+    a1 <- a + x1
+    b1 <- b + n1 - x1
+    c1 <- c + x2
+    d1 <- d + n2 - x2
+    z <- or.app(a1,b1,c1,d1,conf.level,nsim)
+
+    lq <- nsim * (1-conf.level)/2
+    uq <- nsim * (1 - (1-conf.level)/2)
+    ci <- array(0,2)
+    ci[1] <- z[lq]
+    ci[2] <- z[uq]
+    start <- ci
+    tailci <- optim(start,or.fct,a1=a1,b1=b1,c1=c1,d1=d1,
+                    conf.level=conf.level,control=list(maxit=20000))$par
+    if(tailci[1] < 0) tailci[1]  <- 0 }
+  else{
+    a1 <- a + n1 - x1
+    b1 <- b +  x1
+    c1 <- c + n2 - x2
+    d1 <- d + x2
+    z <- or.app(a1,b1,c1,d1,conf.level,nsim)
+
+    lq <- nsim * (1-conf.level)/2
+    uq <- nsim * (1 - (1-conf.level)/2)
+    ci <- array(0,2)
+    ci[1] <- z[lq]
+    ci[2] <- z[uq]
+    start <- ci
+    tailci1 <- optim(start,or.fct,a1=a1,b1=b1,c1=c1,d1=d1,
+                     conf.level=conf.level,control=list(maxit=20000))$par
+    if(tailci[1] < 0) tailci[1]  <- 0
+    tailci <- array(0,2)
+    tailci[1] <- 1/ tailci1[2]
+    tailci[2] <- 1/ tailci1[1]
+  }
+  return(list(ci = tailci, median = median(z)))
+}
+
+
