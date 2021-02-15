@@ -29,7 +29,7 @@ if(getRversion() >= "2.15.1")  utils::globalVariables(c('itempair', '.draw', 'it
 #' 0, 0,
 #' 1, 0
 #' ) %>% calculate_odds_ratio() # equals 0.5
-calculate_odds_ratio <- function(y_rep = NULL, y = NULL, zero_correction = '') {
+calculate_odds_ratio <- function(y_rep = NULL, y = NULL, zero_correction = '', nsim = 10000000) {
   if(is.null(y_rep) & is.null(y)) stop('Missing data argument! Use either y_rep or y.')
   if(!is.null(y_rep) & !is.null(y)) stop('Too many data arguments! Use either y_rep or y.')
 
@@ -53,8 +53,13 @@ calculate_odds_ratio <- function(y_rep = NULL, y = NULL, zero_correction = '') {
   rep <- dim(y_rep)[3] # number of (post) samples
   J <- dim(y_rep)[2] # number of items
   n <- matrix(0, 4, rep)
-  or <- matrix(data = NA, nrow = rep, ncol = (J^2 - J)/2)
+  or <- matrix(data = NA, nrow = rep, ncol = (J^2 - J)/2) %>% as.data.frame()
   count <- 1
+  or_ci <- NULL
+  if (rep == 1) {
+    or_ci <- rbind(or, or)
+    rownames(or_ci) <- c('lower_ci_act_data', 'upper_ci_act_data')
+  }
 
   for (j in seq_len(J)) {
     i <- 1
@@ -65,15 +70,16 @@ calculate_odds_ratio <- function(y_rep = NULL, y = NULL, zero_correction = '') {
       n[4,] <- sum_fct(y_rep[, i, ] == 0 & y_rep[, j, ] == 1)
 
       if (zero_correction == 'Haldane') {
-        n <- n + 0.5
-      }
+        corr <- 0.5
+        n <- n + corr
+      } else corr <- 0
 
       or[, count] <- (n[1,]*n[2,])/(n[3,]*n[4,])
 
       if (zero_correction == 'Bayes') {
         for(col_index in seq_len(ncol(n))) {
           if (min(n[,col_index]) == 0) {
-            or[col_index, count] <- or_median_bayes(n[,col_index])
+            or[col_index, count] <- or_median_bayes(n[,col_index], nsim = nsim)
             # print(paste('or pre:', round((n[1,]*n[2,])/(n[3,]*n[4,]),2)))
             # print(paste('or post:', round(or[col_index, count],2)))
             # n <- n + 0.5
@@ -82,7 +88,11 @@ calculate_odds_ratio <- function(y_rep = NULL, y = NULL, zero_correction = '') {
         }
       }
 
-      or <- as.data.frame(or)
+      if(rep == 1) {
+        or_ci[, count] <- or_ci_woolf(or[, count], n, corr) %>% unlist()
+        colnames(or_ci)[count] <- paste0('ItemPair', i, '_', j)
+      }
+
       colnames(or)[count] <- paste0('ItemPair', i, '_', j)
       count <- count + 1
       i <- i + 1
@@ -93,7 +103,17 @@ calculate_odds_ratio <- function(y_rep = NULL, y = NULL, zero_correction = '') {
     or <- cbind(.draw, or)
   }
 
-  return(or)
+  return(list(or = or, ci = or_ci))
+}
+
+or_ci_woolf <- function(or, counts, corr = 0.5, ci = .89) {
+  counts <- c(counts)
+  z <- qnorm(ci + (1 - ci)/2)
+  se <- sqrt(1/(counts[1]+corr)+1/(counts[2]+corr)+1/(counts[3]+corr)+1/(counts[4]+corr))
+  upper <- exp(log(or)+z*se)
+  lower <- exp(log(or)-z*se)
+
+  return(list(lower = lower, upper = upper))
 }
 
 #' Simulate Odds Ratio distribution
@@ -174,7 +194,11 @@ or_distribution_bayes <- function(x1,n1,x2,n2,a,b,c,d, nsim = nsim)
 or_median_bayes <- function(mat, k = 0.5, nsim = 10000000) {
   v <- contingency2successratio(mat)
   z <- or_distribution_bayes(v[[1]], v[[2]], v[[3]], v[[4]], k, k, k, k, nsim)
-  return(stats::median(z))
+
+  if (v[[3]] == v[[4]]) med <- 1/stats::median(z)
+  else med <- stats::median(z)
+
+  return(med)
 }
 
 #' Summarises Odds Ratio statistic
@@ -196,7 +220,7 @@ or_median_bayes <- function(mat, k = 0.5, nsim = 10000000) {
 #' \dontrun{
 #' get_or(fit, n_samples = 500)
 #' }
-get_or <- function(model, n_samples = NULL, hdi_width = .89, zero_correction = FALSE) {
+get_or <- function(model, n_samples = NULL, hdi_width = .89, zero_correction = 'none') {
   seperate_itempairs <- function(x) {
     x <- x %>% mutate(itempair = stringr::str_remove(itempair, 'ItemPair')) %>% tidyr::separate(itempair, into = c('item1', 'item2'), convert = TRUE)
 
@@ -225,13 +249,20 @@ get_or <- function(model, n_samples = NULL, hdi_width = .89, zero_correction = F
 
   message('Calculating posterior odds ratio')
   if(comp) zero_correction <- 'Haldane'
-  or_rep <- calculate_odds_ratio(yrep, zero_correction = zero_correction) # calculates odds ratio for posterior samples
+
+  if(zero_correction == 'fastBayes') {
+    zero_correction <- 'Bayes'
+    or_rep <- calculate_odds_ratio(yrep, zero_correction = zero_correction, nsim = 10000)$or
+  } else {
+    or_rep <- calculate_odds_ratio(yrep, zero_correction = zero_correction)$or # calculates odds ratio for posterior samples
+  }
 
   message('Calculating actual odds ratio')
   if(comp) zero_correction <- 'Bayes'
   y <- make_responsedata_wider(model) %>% select(-dplyr::any_of(unlist(model$var_specs)))
-  or_act <- calculate_odds_ratio(y, zero_correction = zero_correction) %>% # calculates odds ratio for actual sample/data
-    mutate(.draw = 0, .before = 1)
+  or_list <- calculate_odds_ratio(y, zero_correction = zero_correction) # calculates odds ratio for actual sample/data
+  or_act <- or_list$or %>% mutate(.draw = 0, .before = 1)
+  or_act_ci <- or_list$ci %>% t() %>% tibble::as_tibble(rownames = "itempair") %>% seperate_itempairs()
 
   or_act_dat <- rep_dataframe(or_act, nrow(or_rep))
   or_dif <- or_rep - or_act_dat
@@ -244,20 +275,17 @@ get_or <- function(model, n_samples = NULL, hdi_width = .89, zero_correction = F
   or_ppp <- colMeans(or_dif %>% select(-.draw) > 0) %>% tibble::as_tibble(rownames = "itempair") %>% seperate_itempairs() %>%
     dplyr::rename(or_ppp = value)
 
-  rope <- stats::sd(or_act$or_act)/10
-  message(paste0('ROPE is set to sd(or_act)/10: ', round(rope,2)))
-  or_dif_hdi <- or %>% tidyr::unnest() %>% tidybayes::mode_hdi(or_dif, .width = hdi_width) %>% dplyr::rename(or_dif_mode = or_dif) %>%
-    mutate(above_zero = .lower > 0, beneath_zero = .upper < 0,
-           above_rope = .lower > 0 + rope, beneath_rope = .upper < 0 - rope)
+  or_dif_hdi <- or %>% tidyr::unnest() %>% tidybayes::mode_hdi(or_dif, .width = hdi_width) %>% dplyr::rename(or_dif_mode = or_dif)
 
   or <- or %>% left_join(or_act, by = c('item1', 'item2')) %>%
+    left_join(or_act_ci, by = c('item1', 'item2')) %>%
     left_join(or_rep, by = c('item1', 'item2')) %>%
     left_join(or_dif_hdi, by = c('item1', 'item2')) %>%
     left_join(or_ppp, by = c('item1', 'item2')) %>%
-    dplyr::relocate(dplyr::any_of(c('or_act', 'or_rep')), .after = item2) %>%
+    dplyr::relocate(dplyr::any_of(c('or_act', 'lower_ci_act_data', 'upper_ci_act_data', 'or_rep_samples')), .after = item2) %>%
     dplyr::ungroup()
 
-  or <- or %>% new_birtmsdata(list(rope_width = rope))
+  # or <- or %>% new_birtmsdata(list(rope_width = rope))
 
   return(or)
 }
@@ -280,13 +308,18 @@ get_or <- function(model, n_samples = NULL, hdi_width = .89, zero_correction = F
 #' }
 plot_ppmc_or_heatmap <- function(or_data, use_rope = FALSE, alternative_color = FALSE) {
   # unite boolean columns that check if HDI includes zero or ROPE for multimodal distributions
-  or_data <- or_data %>% dplyr::select(item1, item2, or_dif_mode, above_rope, above_zero, beneath_rope, beneath_zero) %>%
+  rope <- stats::sd(or_data$or_act)/10
+
+  or_data <- or_data %>% dplyr::mutate(above_zero = .lower > 0, beneath_zero = .upper < 0,
+                                       above_rope = .lower > 0 + rope, beneath_rope = .upper < 0 - rope) %>%
+    dplyr::select(item1, item2, or_dif_mode, above_rope, above_zero, beneath_rope, beneath_zero) %>%
     dplyr::group_by(item1, item2) %>% dplyr::summarise_all(mean) %>%
     dplyr::mutate_at(c('above_zero', 'above_rope', 'beneath_zero', 'beneath_rope'), ~ifelse(. > 0, TRUE, FALSE)) %>%
     dplyr::ungroup()
 
   if (use_rope) {
-    if (!is.finite(attr(or_data, 'rope_width'))) stop("rope_width attribute is not finite!")
+    if (!is.finite(rope)) stop("rope_width attribute is not finite!")
+    message(paste0('ROPE is set to sd(or_act)/10: ', round(rope,2)))
 
     above <- or_data$above_rope
     beneath <- or_data$beneath_rope

@@ -5,9 +5,9 @@ test_that("odds are calculated correctly", {
     0, 0, 1,
   ) %>% calculate_odds_ratio()
 
-  expect_equal(result[[1,1]], Inf)
-  expect_equal(result[[1,2]], NaN)
-  expect_equal(result[[1,3]], NaN)
+  expect_equal(result$or[[1,1]], Inf)
+  expect_equal(result$or[[1,2]], NaN)
+  expect_equal(result$or[[1,3]], NaN)
 
   result <- tibble::tribble(
     ~x, ~y,
@@ -15,7 +15,7 @@ test_that("odds are calculated correctly", {
     0, 0,
   ) %>% calculate_odds_ratio(zero_correction = 'Haldane')
 
-  expect_equal(result[[1,1]], 9)
+  expect_equal(result$or[[1,1]], 9)
 
   result <- tibble::tribble(
     ~x, ~y,
@@ -26,7 +26,7 @@ test_that("odds are calculated correctly", {
     1, 0
   ) %>% calculate_odds_ratio()
 
-  expect_equal(result[[1,1]], 0.5)
+  expect_equal(result$or[[1,1]], 0.5)
 })
 
 test_that(".draw colum is handeled right", {
@@ -40,7 +40,7 @@ test_that(".draw colum is handeled right", {
     7, 1, 0,
   ) %>% calculate_odds_ratio()
 
-  expect_equal(result[[1,2]], 0.5)
+  expect_equal(result$or[[1,2]], 0.5)
 })
 
 test_that("different inputtypes are handled well", {
@@ -60,7 +60,7 @@ test_that("different inputtypes are handled well", {
   ) %>% dplyr::group_by(.draw) %>% dplyr::group_split(.keep = TRUE) %>%
     list2array() %>% calculate_odds_ratio()
 
-  expect_equal(result[[1,2]], 0.5)
+  expect_equal(result$or[[1,2]], 0.5)
 
   # list od tibbles
   result <- tibble::tribble(
@@ -78,7 +78,7 @@ test_that("different inputtypes are handled well", {
   ) %>% dplyr::group_by(.draw) %>% dplyr::group_split(.keep = TRUE) %>%
     calculate_odds_ratio()
 
-  expect_equal(result[[1,2]], 0.5)
+  expect_equal(result$or[[1,2]], 0.5)
 
   # pseudo three dimensional array
   result <- tibble::tribble(
@@ -91,7 +91,7 @@ test_that("different inputtypes are handled well", {
   ) %>% dplyr::group_by(.draw) %>% dplyr::group_split(.keep = TRUE) %>%
     list2array() %>% calculate_odds_ratio()
 
-  expect_equal(result[[1,2]], 0.5)
+  expect_equal(result$or[[1,2]], 0.5)
 
   # data.frame
   result <- tibble::tribble(
@@ -103,5 +103,5 @@ test_that("different inputtypes are handled well", {
     7, 1, 0,
   ) %>% as.data.frame() %>% calculate_odds_ratio()
 
-  expect_equal(result[[1,2]], 0.5)
+  expect_equal(result$or[[1,2]], 0.5)
 })

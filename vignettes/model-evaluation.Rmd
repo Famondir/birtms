@@ -37,6 +37,16 @@ or_data <- birtms::get_or(fit_1d_1pl_spm1, zero_correction = 'Haldane')
 or_data %>% birtms::plot_ppmc_or_heatmap()
 ```
 
+
+Should use `zero_correction = 'Bayes'` only if there are few 0 counts in the posterior samples. You can check this via:
+
+```{r}
+or_data <- birtms::get_or(fit_1d_1pl_spm1, zero_correction = 'none')
+or_data %>% unnest('or_dif_samples') %>% pull(or_dif) %>% is.infinite() %>% sum()
+```
+
+In this example you shouldn't use it since it will take a very long time to run.
+
 ### Implementation process
 
 It was very straight forward to calculate the odds ratio value for a single given item pair. And expending this approach to calculate odds ratios for all item pairs of the actual dataset was done without running into issues as well simply looping over all item pairs. Things became problematic when odds ratios should be calculated for all posterior predictions because the naive loop approach was slow. Therefore I was glad to find the R code for using odds ratios in a PPMC approach in an article by @Scharl.2019 that used the structure of a three-dimensional array to vectorise the calculation which I adopted happily.

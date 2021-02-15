@@ -1460,20 +1460,31 @@ or_ci_uncond <- function(mat, ci = .89) {
 }
 
 # n11, n00, n10, n01
-counts <- c(5,0,4,2)
+counts <- c(50,20,40,20)
 
 # der Median des bayes mit Jeffrey prior entspricht eher dem OR des inferenzstat.
 # Der Zugewinn von Bayes hauptsächlich in der 0 korrektur
 # Sonst sind alle Werte sehr ähnlich
 or_ci_uncond(matrix(counts, ncol = 4), .95)
-or_ci_uncond2(matrix(counts, ncol = 4), .95)
+# or_ci_uncond2(matrix(counts, ncol = 4), .95)
 or_ci_bayes(matrix(counts, ncol = 4), .95, k = 0.5) # Jeffrey
 or_ci_bayes(matrix(counts, ncol = 4), .95, k = 1) # uniform
-or_ci_bayes_with_median(matrix(counts, ncol = 4), .95, k = 0.5) # Jeffrey
+or_ci_bayes_with_median(matrix(counts, ncol = 4), .95, k = 0.5)# Jeffrey
 or_ci_bayes_with_median(matrix(counts, ncol = 4), .95, k = 1) # uniform
+
+# vari <- matrix(NA, ncol = 5, nrow = 100) %>% as.data.frame()
+# for (i in 1:100) {
+#   for (j in 1:5) {
+#     res <- or_ci_bayes_with_median(matrix(counts, ncol = 4), .95, k = 0.5, nsim = 100*(10^j))
+#     vari[i,j] <- res$median
+#   }
+# }
+#
+# vari2 <- vari
 
 # n11, n00, n10, n01
 or2(matrix(counts, ncol = 4),0,.95)
+or2(matrix(counts, ncol = 4),0.5,.95)
 
 # n11, n00, n10, n01
 ORtable<-matrix(c(counts[1],counts[3],counts[4],counts[2]),nrow = 2, ncol = 2)
@@ -1483,38 +1494,38 @@ epitools::oddsratio.wald(ORtable, conf.level = .95)
 epitools::oddsratio.small(ORtable, conf.level = .95)
 
 
-orscoreci2 <-
-  function(x1,n1,x2,n2,conf.level){
-    px = x1/n1
-    py = x2/n2
-    if(((x1==0) && (x2==0)) || ((x1==n1) && (x2==n2))){
-      ul = 1/0
-      ll = 0
-      theta = NaN
-    }
-    else if((x1==0) || (x2==n2)){
-      ll = 0
-      theta = 0.01/n2
-      ul = limit(x1,n1,x2,n2,conf.level,theta,1)
-    }
-    else if((x1==n1) || (x2==0)){
-      ul = 1/0
-      theta = 100*n1
-      ll = limit(x1,n1,x2,n2,conf.level,theta,0)
-    }
-    else{
-      theta = px/(1-px)/(py/(1-py))/1.1
-      ll = limit(x1,n1,x2,n2,conf.level,theta,0)
-      theta=px/(1-px)/(py/(1-py))*1.1
-      ul = limit(x1,n1,x2,n2,conf.level,theta,1)
-      theta = px/(1-px)/(py/(1-py))
-    }
-    cint <- c(ll, ul)
-    attr(cint, "conf.level") <- conf.level
-    rval <- list(conf.int = cint)
-    class(rval) <- "htest"
-    return(list(rval, theta))
-  }
+# orscoreci2 <-
+#   function(x1,n1,x2,n2,conf.level){
+#     px = x1/n1
+#     py = x2/n2
+#     if(((x1==0) && (x2==0)) || ((x1==n1) && (x2==n2))){
+#       ul = 1/0
+#       ll = 0
+#       theta = NaN
+#     }
+#     else if((x1==0) || (x2==n2)){
+#       ll = 0
+#       theta = 0.01/n2
+#       ul = limit(x1,n1,x2,n2,conf.level,theta,1)
+#     }
+#     else if((x1==n1) || (x2==0)){
+#       ul = 1/0
+#       theta = 100*n1
+#       ll = limit(x1,n1,x2,n2,conf.level,theta,0)
+#     }
+#     else{
+#       theta = px/(1-px)/(py/(1-py))/1.1
+#       ll = limit(x1,n1,x2,n2,conf.level,theta,0)
+#       theta=px/(1-px)/(py/(1-py))*1.1
+#       ul = limit(x1,n1,x2,n2,conf.level,theta,1)
+#       theta = px/(1-px)/(py/(1-py))
+#     }
+#     cint <- c(ll, ul)
+#     attr(cint, "conf.level") <- conf.level
+#     rval <- list(conf.int = cint)
+#     class(rval) <- "htest"
+#     return(list(rval, theta))
+#   }
 
 or_ci_uncond2 <- function(mat, ci = .89) {
   x1 <-  mat[,1] #n11
@@ -1563,13 +1574,22 @@ or_ci_bayes <- function(mat, ci = .89, k) {
   return(PropCIs::orci.bayes(y1, n1, y2, n2, k, k, k, k, ci))
 }
 
-or_ci_bayes_with_median <- function(mat, ci = .89, k) {
+or_ci_bayes_with_median <- function(mat, ci = .89, k, nsim = 10000000) {
   y1 <-  mat[,1] #n11
   y2 <- mat[,4] #n01
   n1 <- mat[,1] + mat[,3] #n11 + n10
   n2 <- mat[,4] + mat[,2] #n01 + n00
 
-  return(orci.bayes_with_median(y1, n1, y2, n2, k, k, k, k, ci))
+  return(orci.bayes_with_median(y1, n1, y2, n2, k, k, k, k, ci, nsim))
+}
+
+count_to_rate <- function(mat) {
+  y1 <-  mat[1] #n11
+  y2 <- mat[4] #n01
+  n1 <- mat[1] + mat[3] #n11 + n10
+  n2 <- mat[4] + mat[2] #n01 + n00
+
+  return(c(y1, n1, y2, n2))
 }
 
 orci.bayes_with_median <- function(x1,n1,x2,n2,a,b,c,d,conf.level=0.95, nsim = 10000000)
@@ -1603,6 +1623,7 @@ orci.bayes_with_median <- function(x1,n1,x2,n2,a,b,c,d,conf.level=0.95, nsim = 1
       abs(or.F(ab[1],a1,b1,c1,d1) - (1-conf.level)/2)
   }
 
+  # browser()
 
   if(x2!=n2){
     a1 <- a + x1
@@ -1611,6 +1632,7 @@ orci.bayes_with_median <- function(x1,n1,x2,n2,a,b,c,d,conf.level=0.95, nsim = 1
     d1 <- d + n2 - x2
     z <- or.app(a1,b1,c1,d1,conf.level,nsim)
 
+    med <- median(z)
     lq <- nsim * (1-conf.level)/2
     uq <- nsim * (1 - (1-conf.level)/2)
     ci <- array(0,2)
@@ -1619,7 +1641,8 @@ orci.bayes_with_median <- function(x1,n1,x2,n2,a,b,c,d,conf.level=0.95, nsim = 1
     start <- ci
     tailci <- optim(start,or.fct,a1=a1,b1=b1,c1=c1,d1=d1,
                     conf.level=conf.level,control=list(maxit=20000))$par
-    if(tailci[1] < 0) tailci[1]  <- 0 }
+    if(tailci[1] < 0) tailci[1]  <- 0
+    }
   else{
     a1 <- a + n1 - x1
     b1 <- b +  x1
@@ -1627,6 +1650,7 @@ orci.bayes_with_median <- function(x1,n1,x2,n2,a,b,c,d,conf.level=0.95, nsim = 1
     d1 <- d + x2
     z <- or.app(a1,b1,c1,d1,conf.level,nsim)
 
+    med <- median(1/z)
     lq <- nsim * (1-conf.level)/2
     uq <- nsim * (1 - (1-conf.level)/2)
     ci <- array(0,2)
@@ -1635,12 +1659,15 @@ orci.bayes_with_median <- function(x1,n1,x2,n2,a,b,c,d,conf.level=0.95, nsim = 1
     start <- ci
     tailci1 <- optim(start,or.fct,a1=a1,b1=b1,c1=c1,d1=d1,
                      conf.level=conf.level,control=list(maxit=20000))$par
-    if(tailci[1] < 0) tailci[1]  <- 0
+    # if(tailci1[1] < 0) tailci1[1]  <- ci[1]
     tailci <- array(0,2)
     tailci[1] <- 1/ tailci1[2]
     tailci[2] <- 1/ tailci1[1]
+
   }
-  return(list(ci = tailci, median = median(z)))
+  return(list(ci = tailci, median = med#, ci2 = c(1/ci[[2]], 1/ci[[1]]), mode = 1/get_mode(z), mean = 1/mean(z)
+              )
+         )
 }
 
 
