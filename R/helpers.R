@@ -131,21 +131,47 @@ make_responsedata_wider <- function(model) {
   return(data_wide)
 }
 
-
 #' Get mode
-#' Code from: https://www.tutorialspoint.com/r/r_mean_median_mode.htm
 #'
 #' @param v vector
+#' @param ... arguments passed to modeest::hsm()
 #'
-#' @return vector of length 1
+#' @return vector
 #' @export
 #'
 #' @examples
 #' v <- c(2, 2, 1)
 #' get_mode(v)
-get_mode <- function(v) {
+get_mode <- function(v, ...) {
   uniqv <- unique(v)
-  modus <- uniqv[which.max(tabulate(match(v, uniqv)))]
+  tab <- tabulate(match(v, uniqv))
+  modus <- uniqv[which( tab == max(tab))]
+  n_modes <- length(modus)
+
+  if(is.numeric(v)) modus <- modeest::hsm(v, ...)
+
+  if(n_modes != 1) {
+    m <- paste0('Tie occured! There are ', n_modes, ' modes.')
+    if(is.numeric(v)) m <- paste(m, 'Returning a mode within highest density region.\nSee modeest::hsm(). Use ... arguments to adjust behavior.')
+    else m <- paste(m, 'Returning all modes.')
+    warning(m)
+  }
 
   return(modus)
+}
+
+#' Mode via hsm and HDI
+#' define a point_interval function using the hsm (half sample mode) estimator from modeest
+#'
+#' @param ... see ggdist::point_interval()
+#'
+#' @return dataframe
+#' @export
+#'
+#' @examples
+#' hsm_hdi(c(1,2,3,3,2.5))
+hsm_hdi <- function(...) {
+  hdi <- function(...) ggdist::hdi(...)
+  hsm <- function(...) modeest::hsm(...)
+  ggdist::point_interval(..., .point = hsm, .interval = hdi)
 }

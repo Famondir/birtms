@@ -1460,7 +1460,7 @@ or_ci_uncond <- function(mat, ci = .89) {
 }
 
 # n11, n00, n10, n01
-counts <- c(50,20,40,20)
+counts <- c(5,4,4,2)
 
 # der Median des bayes mit Jeffrey prior entspricht eher dem OR des inferenzstat.
 # Der Zugewinn von Bayes hauptsächlich in der 0 korrektur
@@ -1670,4 +1670,23 @@ orci.bayes_with_median <- function(x1,n1,x2,n2,a,b,c,d,conf.level=0.95, nsim = 1
          )
 }
 
+# ------ Mode tests- -----
+library(modeest)
 
+# modeest::hsm() works the way a mode is assumed to work in my eyes
+allmodes <- function(z) {
+  c(asselin(z),
+    #grenander(x),
+    #hrm(x),
+    hsm(z),
+    #lientz(z),
+    #meanshift(z),
+    shorth(z),
+    #naive(z),
+    #parzen(z),
+    #tsybakov(x),
+    venter(z),
+    #vieu(z)
+    get_mode(z)
+    )
+}
