@@ -1714,3 +1714,23 @@ aggregate_warnings({
   }
   y <- 2
 })
+
+
+# -------------- odds ratio IRT limits ------------
+
+ai <- 1
+aj <- 1
+sig <- 1
+beta <- 0
+
+upper_limit <- exp(ai*aj*sig^2)
+lower_limit <- exp(log(upper_limit)/(1+sig^2*(beta+(ai^2+aj^2)/4)))
+
+or_lim_eval <- or_data %>% unnest(or_act_ci) %>% mutate(in_limits = ifelse(.lower > or_limits_irt(1,1,c(1,1.6))$lower_limit &
+                                                              .upper < or_limits_irt(1,1,c(1,1.6))$upper_limit, TRUE, FALSE),
+                                                        out_of_limits = ifelse(.lower > or_limits_irt(1,1,c(1,1.6))$upper_limit |
+                                                                                 .upper < or_limits_irt(1,1,c(1,1.6))$lower_limit, TRUE, FALSE),
+                                                        point_in_limits = ifelse(or_act > or_limits_irt(1,1,c(1,1.6))$lower_limit &
+                                                                                   or_act < or_limits_irt(1,1,c(1,1.6))$upper_limit, TRUE, FALSE),
+                                                        point_put_of_limits = ifelse(or_act > or_limits_irt(1,1,c(1,1.6))$upper_limit |
+                                                                                       or_act < or_limits_irt(1,1,c(1,1.6))$lower_limit, TRUE, FALSE))
