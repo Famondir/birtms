@@ -3,7 +3,8 @@
 # building
 if(getRversion() >= "2.15.1")  utils::globalVariables(c('itempair', '.draw', 'item1', 'item2', '.lower', '.upper', 'ppv', 'value',
                                                         'or_dif_mode', 'or_dif_mode', 'z_or_dif_mode_highlighted', 'z_or_dif_mode',
-                                                        'above_rope', 'above_zero', 'beneath_rope', 'beneath_zero', 'or_act'))
+                                                        'above_rope', 'above_zero', 'beneath_rope', 'beneath_zero', 'or_act',
+                                                        '.width', '.interval', '.zero_correction', '.point', 'or_dif_ci'))
 
 #' Odds ratio
 #' Calculates the odds ratio for the posterior samples or the original responses
@@ -15,7 +16,10 @@ if(getRversion() >= "2.15.1")  utils::globalVariables(c('itempair', '.draw', 'it
 #'
 #' @param y_rep (pers) x (item) x (rep) array; replicated data (can handle response data as dataframe or lists of dataframes as well)
 #' @param y (pers) x (item) dataframe; response data
-#' @param zero_correction boolean; should adjusted Haldane zero-correction be used?
+#' @param zero_correction character; 'none', 'Haldane', 'compromise' or 'Bayes'
+#' @param ci_method character; 'Woolf', 'unconditional', 'compromise', 'BayesEqTails' or 'BayesHDI'
+#' @param ci_width double
+#' @param nsim integer
 #'
 #' @return tibble
 #' @export
@@ -29,9 +33,11 @@ if(getRversion() >= "2.15.1")  utils::globalVariables(c('itempair', '.draw', 'it
 #' 0, 0,
 #' 1, 0
 #' ) %>% calculate_odds_ratio() # equals 0.5
-calculate_odds_ratio <- function(y_rep = NULL, y = NULL, zero_correction = '', nsim = 10000000) {
+calculate_odds_ratio <- function(y_rep = NULL, y = NULL, zero_correction = 'none', ci_method = 'Woolf', ci_width = .89, nsim = 10000000) {
   if(is.null(y_rep) & is.null(y)) stop('Missing data argument! Use either y_rep or y.')
   if(!is.null(y_rep) & !is.null(y)) stop('Too many data arguments! Use either y_rep or y.')
+  if(!(zero_correction %in% c('none', 'Haldane', 'compromise', 'Bayes'))) stop('Invalid zero correction method.')
+  if(!(ci_method %in% c('Woolf', 'unconditional', 'BayesEqTails', 'BayesHDI', 'compromise'))) stop('Invalid CI method.')
 
   if(!is.null(y)) y_rep <- y # function only uses y_rep
   if(!is.array(y_rep)) {
@@ -53,16 +59,19 @@ calculate_odds_ratio <- function(y_rep = NULL, y = NULL, zero_correction = '', n
   rep <- dim(y_rep)[3] # number of (post) samples
   J <- dim(y_rep)[2] # number of items
   n <- matrix(0, 4, rep)
-  or <- matrix(data = NA, nrow = rep, ncol = (J^2 - J)/2) %>% as.data.frame()
+  n_pairs <- (J^2 - J)/2
+  or <- matrix(data = NA, nrow = rep, ncol = n_pairs) %>% as.data.frame()
   count <- 1
   or_ci <- NULL
   if (rep == 1) {
     or_ci <- rbind(or, or)
-    rownames(or_ci) <- c('lower_ci_act_data', 'upper_ci_act_data')
+    rownames(or_ci) <- c('.lower', '.upper')
   }
+  percent <- 0.1
 
   for (j in seq_len(J)) {
     i <- 1
+
     while (i<j) {
       n[1,] <- sum_fct(y_rep[, i, ] == 1 & y_rep[, j, ] == 1)
       n[2,] <- sum_fct(y_rep[, i, ] == 0 & y_rep[, j, ] == 0)
@@ -80,22 +89,33 @@ calculate_odds_ratio <- function(y_rep = NULL, y = NULL, zero_correction = '', n
         for(col_index in seq_len(ncol(n))) {
           if (min(n[,col_index]) == 0) {
             or[col_index, count] <- or_median_bayes(n[,col_index], nsim = nsim)
-            # print(paste('or pre:', round((n[1,]*n[2,])/(n[3,]*n[4,]),2)))
-            # print(paste('or post:', round(or[col_index, count],2)))
-            # n <- n + 0.5
-            # cat(paste('Haldane would have been:', round((n[1,]*n[2,])/(n[3,]*n[4,]),2), '\n\n'))
           }
         }
       }
 
       if(rep == 1) {
-        or_ci[, count] <- or_ci_woolf(or[, count], n, corr) %>% unlist()
+        if (ci_method == 'Woolf') or_ci[, count] <- or_ci_woolf(or[, count], n, corr, ci_width) %>% unlist()
+        else if (ci_method == 'unconditional') or_ci[, count] <- or_ci_uncond(n, ci_width)
+        else if (ci_method == 'BayesEqTails') or_ci[, count] <- or_ci_bayes(n, ci_width, nsim = nsim, hdi = FALSE)
+        else if (ci_method == 'BayesHDI') or_ci[, count] <- or_ci_bayes(n, ci_width, nsim = nsim, hdi = TRUE)
+        else if (ci_method == 'compromise') {
+          if (min(n) == 0) or_ci[, count] <- or_ci_bayes(n, ci_width, nsim = nsim, hdi = FALSE)
+          else or_ci[, count] <- or_ci_uncond(n, ci_width)
+        }
+
         colnames(or_ci)[count] <- paste0('ItemPair', i, '_', j)
       }
 
       colnames(or)[count] <- paste0('ItemPair', i, '_', j)
       count <- count + 1
       i <- i + 1
+
+      if (ci_method %in% c('BayesEqTails', 'BayesHDI') | zero_correction == 'Bayes') {
+        if (count/n_pairs > percent) {
+          print(paste(100*percent, '% finished'))
+          percent <- percent + 0.1
+        }
+      }
     }
   }
 
@@ -106,109 +126,17 @@ calculate_odds_ratio <- function(y_rep = NULL, y = NULL, zero_correction = '', n
   return(list(or = or, ci = or_ci))
 }
 
-or_ci_woolf <- function(or, counts, corr = 0.5, ci = .89) {
-  counts <- c(counts)
-  z <- qnorm(ci + (1 - ci)/2)
-  se <- sqrt(1/(counts[1]+corr)+1/(counts[2]+corr)+1/(counts[3]+corr)+1/(counts[4]+corr))
-  upper <- exp(log(or)+z*se)
-  lower <- exp(log(or)-z*se)
-
-  return(list(lower = lower, upper = upper))
-}
-
-#' Simulate Odds Ratio distribution
-#' Extracted from PropCIs::orci.bayes()
-#'
-#' @param a1 a parameter for first beta distribution
-#' @param b1 b parameter for first beta distribution
-#' @param c1 a parameter for second beta distribution
-#' @param d1 b parameter for second beta distribution
-#' @param nsim integer
-#'
-#' @return vector of doubles, distribution od odds ratios
-or.sim <- function(a1,b1,c1,d1,nsim = nsim)
-{
-  z1 <- stats::rf(nsim, 2*a1,2*b1)
-  z2 <- stats::rf(nsim, 2*c1,2*d1)
-  a <- (d1/c1)/(b1/a1)
-  z <- a*z1/z2
-  z <- sort(z)
-  return(z)
-}
-
-#' Calculate successes per sample and sample sizes from contingency table
-#'
-#' @param mat vector of length 4 with counts c(n11, n00, n10, n01) from contingency table
-#'
-#' @return vector of length 4: c(y1, n1, y2, n2)
-contingency2successratio <- function(mat) {
-  y1 <-  mat[1] #n11
-  y2 <- mat[4] #n01
-  n1 <- mat[1] + mat[3] #n11 + n10
-  n2 <- mat[4] + mat[2] #n01 + n00
-
-  return(c(y1, n1, y2, n2))
-}
-
-#' Get the odds ratio distribution
-#' combines prior with actual data to posterior beta distributions and initiates sampling
-#' Extracted from PropCIs::orci.bayes()
-#'
-#' @param x1 number of successes in sample 1
-#' @param n1 sample size in sample 1
-#' @param x2 number of successes in sample 2
-#' @param n2 sample size in sample 2
-#' @param a beta prior for x1
-#' @param b beta prior for x2
-#' @param c beta prior for n1
-#' @param d beta prior for n2
-#' @param nsim integer
-#'
-#' @return vector of doubles, distribution od odds ratios
-or_distribution_bayes <- function(x1,n1,x2,n2,a,b,c,d, nsim = nsim)
-{
-  if(x2!=n2) {
-    a1 <- a + x1
-    b1 <- b + n1 - x1
-    c1 <- c + x2
-    d1 <- d + n2 - x2
-  } else {
-    a1 <- a + n1 - x1
-    b1 <- b +  x1
-    c1 <- c + n2 - x2
-    d1 <- d + x2
-  }
-
-  z <- or.sim(a1,b1,c1,d1, nsim)
-
-  return(z)
-}
-
-#' Get median of odds ratio distribution
-#'
-#' @param mat (4x1) matrix with counts n11, n00, n10, n01 from contingency table
-#' @param k double; concentration of beta priors: 0.5 for Jeffreys prior, 1 for uniform priors
-#' @param nsim interger
-#'
-#' @return median od odds ratio distribution
-or_median_bayes <- function(mat, k = 0.5, nsim = 10000000) {
-  v <- contingency2successratio(mat)
-  z <- or_distribution_bayes(v[[1]], v[[2]], v[[3]], v[[4]], k, k, k, k, nsim)
-
-  if (v[[3]] == v[[4]]) med <- 1/stats::median(z)
-  else med <- stats::median(z)
-
-  return(med)
-}
-
 #' Summarises Odds Ratio statistic
 #' Returns odds ratio values for actual dataset and posterior predictions.
 #' Summarises the mode and hdi of their difference and returns the ppp-value.
 #'
 #' @param model birtmsfit
 #' @param n_samples int - Number of posterior smaples to use
-#' @param hdi_width double
-#' @param zero_correction boolean; should Haldane zero-correction be used? (Add 0.5 to all cells?)
+#' @param zero_correction character; 'none', 'Haldane', 'compromise' or 'Bayes'
+#' @param ci_method character; 'Woolf', 'unconditional', 'compromise', 'BayesEqTails' or 'BayesHDI'
+#' @param ci_width double
+#' @param nsim_act integer
+#' @param nsim_rep integer
 #'
 #' @return birtmsdata; tibble with additinal attributes
 #' @export
@@ -220,7 +148,7 @@ or_median_bayes <- function(mat, k = 0.5, nsim = 10000000) {
 #' \dontrun{
 #' get_or(fit, n_samples = 500)
 #' }
-get_or <- function(model, n_samples = NULL, hdi_width = .89, zero_correction = 'none') {
+get_or <- function(model, n_samples = NULL, ci_width = .89, zero_correction = 'none', ci_method = 'Woolf', nsim_act = 10000000, nsim_rep = 100000) {
   seperate_itempairs <- function(x) {
     x <- x %>% mutate(itempair = stringr::str_remove(itempair, 'ItemPair')) %>% tidyr::separate(itempair, into = c('item1', 'item2'), convert = TRUE)
 
@@ -250,19 +178,17 @@ get_or <- function(model, n_samples = NULL, hdi_width = .89, zero_correction = '
   message('Calculating posterior odds ratio')
   if(comp) zero_correction <- 'Haldane'
 
-  if(zero_correction == 'fastBayes') {
-    zero_correction <- 'Bayes'
-    or_rep <- calculate_odds_ratio(yrep, zero_correction = zero_correction, nsim = 10000)$or
-  } else {
-    or_rep <- calculate_odds_ratio(yrep, zero_correction = zero_correction)$or # calculates odds ratio for posterior samples
-  }
+  or_rep <- calculate_odds_ratio(yrep, zero_correction = zero_correction, nsim = nsim_rep)$or # calculates odds ratio for posterior samples
 
   message('Calculating actual odds ratio')
   if(comp) zero_correction <- 'Bayes'
   y <- make_responsedata_wider(model) %>% select(-dplyr::any_of(unlist(model$var_specs)))
-  or_list <- calculate_odds_ratio(y, zero_correction = zero_correction) # calculates odds ratio for actual sample/data
+
+  or_list <- calculate_odds_ratio(y, zero_correction = zero_correction, ci_method = ci_method, nsim = nsim_act) # calculates odds ratio for actual sample/data
   or_act <- or_list$or %>% mutate(.draw = 0, .before = 1)
-  or_act_ci <- or_list$ci %>% t() %>% tibble::as_tibble(rownames = "itempair") %>% seperate_itempairs()
+  or_act_ci <- or_list$ci %>% t() %>% tibble::as_tibble(rownames = "itempair") %>% seperate_itempairs() %>%
+    dplyr::mutate(.width = ci_width, .zero_correction = zero_correction, .interval = ci_method) %>%
+    dplyr::group_by(item1, item2) %>% tidyr::nest(or_act_ci = c(.lower, .upper, .width, .zero_correction, .interval))
 
   or_act_dat <- rep_dataframe(or_act, nrow(or_rep))
   or_dif <- or_rep - or_act_dat
@@ -275,14 +201,15 @@ get_or <- function(model, n_samples = NULL, hdi_width = .89, zero_correction = '
   or_ppp <- colMeans(or_dif %>% select(-.draw) > 0) %>% tibble::as_tibble(rownames = "itempair") %>% seperate_itempairs() %>%
     dplyr::rename(or_ppp = value)
 
-  or_dif_hdi <- or %>% tidyr::unnest() %>% tidybayes::mode_hdi(or_dif, .width = hdi_width) %>% dplyr::rename(or_dif_mode = or_dif)
+  or_dif_hdi <- or %>% tidyr::unnest() %>% tidybayes::mode_hdi(or_dif, .width = ci_width) %>% dplyr::rename(or_dif_mode = or_dif) %>%
+    tidyr::nest(or_dif_ci = c(.lower, .upper, .width, .point, .interval))
 
   or <- or %>% left_join(or_act, by = c('item1', 'item2')) %>%
     left_join(or_act_ci, by = c('item1', 'item2')) %>%
     left_join(or_rep, by = c('item1', 'item2')) %>%
     left_join(or_dif_hdi, by = c('item1', 'item2')) %>%
     left_join(or_ppp, by = c('item1', 'item2')) %>%
-    dplyr::relocate(dplyr::any_of(c('or_act', 'lower_ci_act_data', 'upper_ci_act_data', 'or_rep_samples')), .after = item2) %>%
+    dplyr::relocate(dplyr::any_of(c('or_act', 'or_act_ci', 'or_rep_samples')), .after = item2) %>%
     dplyr::ungroup()
 
   # or <- or %>% new_birtmsdata(list(rope_width = rope))
@@ -310,7 +237,7 @@ plot_ppmc_or_heatmap <- function(or_data, use_rope = FALSE, alternative_color = 
   # unite boolean columns that check if HDI includes zero or ROPE for multimodal distributions
   rope <- stats::sd(or_data$or_act)/10
 
-  or_data <- or_data %>% dplyr::mutate(above_zero = .lower > 0, beneath_zero = .upper < 0,
+  or_data <- or_data %>% tidyr::unnest(or_dif_ci) %>% dplyr::mutate(above_zero = .lower > 0, beneath_zero = .upper < 0,
                                        above_rope = .lower > 0 + rope, beneath_rope = .upper < 0 - rope) %>%
     dplyr::select(item1, item2, or_dif_mode, above_rope, above_zero, beneath_rope, beneath_zero) %>%
     dplyr::group_by(item1, item2) %>% dplyr::summarise_all(mean) %>%
@@ -395,7 +322,7 @@ plot_ppmc_or_heatmap <- function(or_data, use_rope = FALSE, alternative_color = 
 #' @export
 #'
 #' @examples
-#' #' \dontrun{
+#' \dontrun{
 #' or_data <- get_or(fit, n_samples = 500)
 #' plot_or_heatmap(or_data)
 #' }
@@ -425,4 +352,207 @@ plot_or_heatmap <- function(or_data, median_centered_colorscale = TRUE) {
     ggplot2::labs(caption = cap)
 
   return(g)
+}
+
+
+
+#' Calculates CIs for Odds ratio with Woolfs method
+#'
+#' @param or double
+#' @param counts double of length 4
+#' @param corr double; Haldane zero correction term
+#' @param ci_width double
+#'
+#' @return double of length 2
+or_ci_woolf <- function(or, counts, corr = 0.5, ci_width = .89) {
+  counts <- c(counts)
+  z <- stats::qnorm(ci_width + (1 - ci_width)/2)
+  se <- sqrt(1/(counts[1]+corr)+1/(counts[2]+corr)+1/(counts[3]+corr)+1/(counts[4]+corr))
+  upper <- exp(log(or)+z*se)
+  lower <- exp(log(or)-z*se)
+
+  return(list(lower = lower, upper = upper))
+}
+
+#' Wrapper to get bayesian CI for OR
+#'
+#' @param counts double of length 4
+#' @param ci double
+#'
+#' @return double of length 2
+or_ci_uncond <- function(counts, ci = .89) {
+  v <- contingency2successratio(counts)
+  ci <- PropCIs::orscoreci(v[[1]], v[[2]], v[[3]], v[[4]], ci)
+
+  return(ci)
+}
+
+#' Calculates CI for Odds Ratio bayesian way
+#' Extracted from PropCIs::orci.bayes()
+#' Can return HDI instead of equal tailed CI interval as well.
+#'
+#' @param counts double of length 4
+#' @param conf.level double
+#' @param k double; prior for beta distribution
+#' @param nsim integer
+#' @param hdi boolean; should HDI be used instead of equaly tailes CI?
+#'
+#' @return double of length 2
+or_ci_bayes <- function(counts, conf.level = 0.89, k = .5, nsim = 10000000, hdi = FALSE) {
+  # Bayes tail interval with beta priors
+  fct.F<- function(x,t,a1,b1,a2,b2){
+    c <- (b2/a2)/(b1/a1)
+    stats::df(x,2*a2,2*b2)*stats::pf(x*t/c,2*a1,2*b1)
+  }
+
+  or.F <- function(t,a1,b1,a2,b2)
+  {
+    return(stats::integrate(fct.F,0,Inf,t=t,a1=a1,b1=b1,a2=a2,b2=b2)$value)
+  }
+
+  or.fct <- function(ab,a1,b1,c1,d1,conf.level)
+  {
+    abs(or.F(ab[2],a1,b1,c1,d1) - (1 - (1-conf.level)/2))+
+      abs(or.F(ab[1],a1,b1,c1,d1) - (1-conf.level)/2)
+  }
+
+  v <- contingency2successratio(counts)
+  temp <- or_distribution_bayes(v[[1]], v[[2]], v[[3]], v[[4]], k, k, k, k, nsim)
+  z <- temp[[1]]
+
+  if(hdi) {
+    ci <- z %>% HDInterval::hdi(credMass = conf.level) %>% c()
+    return(ci)
+  } else {
+    a1 <- temp[[2]]
+    b1 <- temp[[3]]
+    c1 <- temp[[4]]
+    d1 <- temp[[5]]
+
+    lq <- nsim * (1-conf.level)/2
+    uq <- nsim * (1 - (1-conf.level)/2)
+    ci <- array(0,2)
+    ci[1] <- z[lq]
+    ci[2] <- z[uq]
+    start <- ci
+
+    if (v[[3]] != v[[4]]) {
+      tailci <- stats::optim(start,or.fct,a1=a1,b1=b1,c1=c1,d1=d1,
+                      conf.level=conf.level,control=list(maxit=20000))$par
+      if(tailci[1] < 0) tailci[1]  <- 0
+    } else {
+      tailci1 <- stats::optim(start,or.fct,a1=a1,b1=b1,c1=c1,d1=d1,
+                       conf.level=conf.level,control=list(maxit=20000))$par
+      if(tailci1[1] < 0) tailci1[1]  <- ci[1]
+      tailci <- array(0,2)
+      tailci[1] <- 1/ tailci1[2]
+      tailci[2] <- 1/ tailci1[1]
+    }
+
+    return(tailci)
+  }
+}
+
+#' Simulate Odds Ratio distribution
+#' Extracted from PropCIs::orci.bayes()
+#'
+#' @param a1 a parameter for first beta distribution
+#' @param b1 b parameter for first beta distribution
+#' @param c1 a parameter for second beta distribution
+#' @param d1 b parameter for second beta distribution
+#' @param nsim integer
+#'
+#' @return vector of doubles, distribution od odds ratios
+or.sim <- function(a1,b1,c1,d1,nsim = 10000000)
+{
+  z1 <- stats::rf(nsim, 2*a1,2*b1)
+  z2 <- stats::rf(nsim, 2*c1,2*d1)
+  a <- (d1/c1)/(b1/a1)
+  z <- a*z1/z2
+  z <- sort(z)
+  return(z)
+}
+
+#' Calculate successes per sample and sample sizes from contingency table
+#'
+#' @param mat vector of length 4 with counts c(n11, n00, n10, n01) from contingency table
+#'
+#' @return vector of length 4: c(y1, n1, y2, n2)
+contingency2successratio <- function(mat) {
+  y1 <-  mat[1] #n11
+  y2 <- mat[4] #n01
+  n1 <- mat[1] + mat[3] #n11 + n10
+  n2 <- mat[4] + mat[2] #n01 + n00
+
+  return(c(y1, n1, y2, n2))
+}
+
+#' Get the odds ratio distribution
+#' combines prior with actual data to posterior beta distributions and initiates sampling
+#' Extracted from PropCIs::orci.bayes()
+#'
+#' @param x1 number of successes in sample 1
+#' @param n1 sample size in sample 1
+#' @param x2 number of successes in sample 2
+#' @param n2 sample size in sample 2
+#' @param a beta prior for x1
+#' @param b beta prior for x2
+#' @param c beta prior for n1
+#' @param d beta prior for n2
+#' @param nsim integer
+#'
+#' @return vector of doubles, distribution od odds ratios
+or_distribution_bayes <- function(x1,n1,x2,n2,a,b,c,d, nsim = 10000000)
+{
+  if(x2!=n2) {
+    a1 <- a + x1
+    b1 <- b + n1 - x1
+    c1 <- c + x2
+    d1 <- d + n2 - x2
+  } else {
+    a1 <- a + n1 - x1
+    b1 <- b +  x1
+    c1 <- c + n2 - x2
+    d1 <- d + x2
+  }
+
+  z <- or.sim(a1,b1,c1,d1, nsim)
+
+  return(list(z, a1, b1, c1, d1))
+}
+
+#' Get odds ratio distribution
+#'
+#' @param counts (4x1) matrix with counts n11, n00, n10, n01 from contingency table
+#' @param k double; concentration of beta priors: 0.5 for Jeffreys prior, 1 for uniform priors
+#' @param nsim interger
+#'
+#' @return double, odds ratio distribution
+#' @export
+#'
+#' @examples
+#' c <- c(5,2,10,7) # n11, n00, n10, n01
+#' or_dist <- get_or_distribution(c, nsim = 10)
+get_or_distribution <- function(counts, k = 0.5, nsim = 10000000) {
+    v <- contingency2successratio(counts)
+    z <- or_distribution_bayes(v[[1]], v[[2]], v[[3]], v[[4]], k, k, k, k, nsim)[[1]]
+
+    return(z)
+}
+
+#' Get median of odds ratio distribution
+#'
+#' @param counts (4x1) matrix with counts n11, n00, n10, n01 from contingency table
+#' @param k double; concentration of beta priors: 0.5 for Jeffreys prior, 1 for uniform priors
+#' @param nsim interger
+#'
+#' @return median of odds ratio distribution
+or_median_bayes <- function(counts, k = 0.5, nsim = 10000000) {
+  v <- contingency2successratio(counts)
+  z <- or_distribution_bayes(v[[1]], v[[2]], v[[3]], v[[4]], k, k, k, k, nsim)[[1]]
+
+  if (v[[3]] == v[[4]]) med <- 1/stats::median(z)
+  else med <- stats::median(z)
+
+  return(med)
 }
