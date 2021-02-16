@@ -2,20 +2,20 @@
 % Please edit documentation in R/helpers.R
 \name{get_mode}
 \alias{get_mode}
-\title{Get mode
-Code from: https://www.tutorialspoint.com/r/r_mean_median_mode.htm}
+\title{Get mode}
 \usage{
-get_mode(v)
+get_mode(v, ...)
 }
 \arguments{
 \item{v}{vector}
+
+\item{...}{arguments passed to modeest::hsm()}
 }
 \value{
-vector of length 1
+vector
 }
 \description{
 Get mode
-Code from: https://www.tutorialspoint.com/r/r_mean_median_mode.htm
 }
 \examples{
 v <- c(2, 2, 1)

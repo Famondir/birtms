@@ -6,16 +6,30 @@
 Returns odds ratio values for actual dataset and posterior predictions.
 Summarises the mode and hdi of their difference and returns the ppp-value.}
 \usage{
-get_or(model, n_samples = NULL, hdi_width = 0.89, zero_correction = FALSE)
+get_or(
+  model,
+  n_samples = NULL,
+  ci_width = 0.89,
+  zero_correction = "none",
+  ci_method = "Woolf",
+  nsim_act = 1e+07,
+  nsim_rep = 1e+05
+)
 }
 \arguments{
 \item{model}{birtmsfit}
 
 \item{n_samples}{int - Number of posterior smaples to use}
 
-\item{hdi_width}{double}
+\item{ci_width}{double}
 
-\item{zero_correction}{boolean; should Haldane zero-correction be used? (Add 0.5 to all cells?)}
+\item{zero_correction}{character; 'none', 'Haldane', 'compromise' or 'Bayes'}
+
+\item{ci_method}{character; 'Woolf', 'unconditional', 'compromise', 'BayesEqTails' or 'BayesHDI'}
+
+\item{nsim_act}{integer}
+
+\item{nsim_rep}{integer}
 }
 \value{
 birtmsdata; tibble with additinal attributes

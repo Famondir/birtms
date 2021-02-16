@@ -16,7 +16,7 @@ plot_or_heatmap(or_data, median_centered_colorscale = TRUE)
 \item{median_centered_colorscale}{boolean}
 }
 \value{
-
+ggplot2 object
 }
 \description{
 Odds ratio heatmap
@@ -24,4 +24,10 @@ Odds ratio values should be greater 1 for items that are conditionally independe
 IRT model (Holland, Rosenbaum, 1986). Haberman (2007) shows that the lower bond can be estimated more
 precisely (and will be even higher than 1) and also a upper bond can be calculated and gives formulae
 for 1PL and 2PL models.
+}
+\examples{
+\dontrun{
+or_data <- get_or(fit, n_samples = 500)
+plot_or_heatmap(or_data)
+}
 }

@@ -5,7 +5,7 @@
 \title{Simulate Odds Ratio distribution
 Extracted from PropCIs::orci.bayes()}
 \usage{
-or.sim(a1, b1, c1, d1, nsim = nsim)
+or.sim(a1, b1, c1, d1, nsim = 1e+07)
 }
 \arguments{
 \item{a1}{a parameter for first beta distribution}

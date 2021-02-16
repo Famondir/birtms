@@ -42,7 +42,7 @@ Should use `zero_correction = 'Bayes'` only if there are few 0 counts in the pos
 
 ```{r}
 or_data <- birtms::get_or(fit_1d_1pl_spm1, zero_correction = 'none')
-or_data %>% unnest('or_dif_samples') %>% pull(or_dif) %>% is.infinite() %>% sum()
+or_data %>% tidyr::unnest('or_dif_samples') %>% dplyr::pull(or_dif) %>% is.infinite() %>% sum()
 ```
 
 In this example you shouldn't use it since it will take a very long time to run.

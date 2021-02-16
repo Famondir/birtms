@@ -6,7 +6,7 @@
 combines prior with actual data to posterior beta distributions and initiates sampling
 Extracted from PropCIs::orci.bayes()}
 \usage{
-or_distribution_bayes(x1, n1, x2, n2, a, b, c, d, nsim = nsim)
+or_distribution_bayes(x1, n1, x2, n2, a, b, c, d, nsim = 1e+07)
 }
 \arguments{
 \item{x1}{number of successes in sample 1}

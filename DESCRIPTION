@@ -30,7 +30,10 @@ Imports:
     scales,
     ggplot2,
     HDInterval,
-    ggridges
+    ggridges,
+    PropCIs,
+    ggdist,
+    modeest
 RoxygenNote: 7.1.1
 VignetteBuilder: knitr
 Config/testthat/edition: 3
