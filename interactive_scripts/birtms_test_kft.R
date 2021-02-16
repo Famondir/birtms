@@ -1389,6 +1389,8 @@ tibble::tribble(
 
 or_data %>% plot_ppmc_or_heatmap()
 
+# ----- odss ratio ci tests -----
+
 or <- function(mat,corr=0) {
     or <- (mat[,1]+corr)*(mat[,2]+corr)/((mat[,3]+corr)*(mat[,4]+corr))
 }
@@ -1690,3 +1692,25 @@ allmodes <- function(z) {
     get_mode(z)
     )
 }
+
+# ------ tyrcatch ------
+
+log_list <- list()
+suppressWarnings(
+withCallingHandlers({
+  for (i in 1:10) {
+    x <- or_data3 %>% filter(item1 == 1, item2 == 2) %>% unnest(or_dif_samples) %>% hsm_hdi(or_dif)
+    }
+  }, warning = function(w) {log_list <<- c(log_list, w)})
+)
+w <- log_list %>% unlist() %>% unique()
+warning(w)
+
+
+
+aggregate_warnings({
+  for (i in 1:10) {
+    x <- or_data3 %>% filter(item1 == 1, item2 == 2) %>% unnest(or_dif_samples) %>% hsm_hdi(or_dif)
+  }
+  y <- 2
+})

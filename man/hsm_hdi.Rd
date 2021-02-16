@@ -5,10 +5,27 @@
 \title{Mode via hsm and HDI
 define a point_interval function using the hsm (half sample mode) estimator from modeest}
 \usage{
-hsm_hdi(...)
+hsm_hdi(
+  .data,
+  ...,
+  .width = 0.89,
+  inf.rm = FALSE,
+  nan.rm = FALSE,
+  tie.limit = 0.05
+)
 }
 \arguments{
-\item{...}{see ggdist::point_interval()}
+\item{.data}{dataframe}
+
+\item{...}{columns to get point_interval for}
+
+\item{.width}{double, ci width}
+
+\item{inf.rm}{boolean, should infinite values be dropped}
+
+\item{nan.rm}{boolean, should NaN values be dropped}
+
+\item{tie.limit}{double}
 }
 \value{
 dataframe

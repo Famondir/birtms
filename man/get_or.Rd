@@ -13,7 +13,8 @@ get_or(
   zero_correction = "none",
   ci_method = "Woolf",
   nsim_act = 1e+07,
-  nsim_rep = 1e+05
+  nsim_rep = 1e+05,
+  tie.limit = 0.05
 )
 }
 \arguments{
@@ -30,6 +31,8 @@ get_or(
 \item{nsim_act}{integer}
 
 \item{nsim_rep}{integer}
+
+\item{tie.limit}{double}
 }
 \value{
 birtmsdata; tibble with additinal attributes

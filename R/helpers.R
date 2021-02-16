@@ -1,3 +1,8 @@
+# Sets the expressions used to build the formula as global variables to inform R
+# CMD check that they are intended to have no definition at time of package
+# building
+if(getRversion() >= "2.15.1")  utils::globalVariables(c('.x'))
+
 #' Function to convert a list of dataframes to a 3D array
 #' All objects in the list will be dataframes with identical column headings.
 #' From Hannah Buckley (https://www.researchgate.net/publication/277670582_R_function_to_convert_a_list_of_dataframes_into_a_3-D_array)
@@ -163,15 +168,50 @@ get_mode <- function(v, ...) {
 #' Mode via hsm and HDI
 #' define a point_interval function using the hsm (half sample mode) estimator from modeest
 #'
-#' @param ... see ggdist::point_interval()
+#' @param ... columns to get point_interval for
+#' @param .data dataframe
+#' @param .width double, ci width
+#' @param inf.rm boolean, should infinite values be dropped
+#' @param nan.rm boolean, should NaN values be dropped
+#' @param tie.limit double
 #'
 #' @return dataframe
 #' @export
 #'
 #' @examples
 #' hsm_hdi(c(1,2,3,3,2.5))
-hsm_hdi <- function(...) {
+hsm_hdi <- function(.data, ..., .width = .89, inf.rm = FALSE, nan.rm = FALSE, tie.limit = .05) {
   hdi <- function(...) ggdist::hdi(...)
-  hsm <- function(...) modeest::hsm(...)
-  ggdist::point_interval(..., .point = hsm, .interval = hdi)
+  hsm <- function(...) modeest::hsm(..., tie.limit = tie.limit)
+
+  dots <- rlang::enquos(...)
+  if (inf.rm) .data <- .data %>% dplyr::filter_at(dplyr::vars(!!!dots), dplyr::all_vars(is.finite(.x)))
+  if (nan.rm) .data <- .data %>% dplyr::filter_at(dplyr::vars(!!!dots), dplyr::all_vars(!is.nan(.x)))
+  ggdist::point_interval(.data, ..., .width = .width, .point = hsm, .interval = hdi)
+}
+
+
+#' Aggregates identical warnings
+#' Used to get a warning only once when it occures more often (e.g. from an expression in a loop or purrr::map())
+#' Code inside expression will be executed and therefore alters / creates variables in parent environment.
+#'
+#' @param expr expression to execute
+#'
+#' @export
+#'
+#' @examples
+aggregate_warnings <- function(expr) {
+  log_list <- list()
+
+  suppressWarnings(
+    withCallingHandlers({
+      expr
+    }, warning = function(w) {log_list <<- c(log_list, w)})
+  )
+
+  w <- log_list %>% unlist() %>% unique()
+  if(!is.null(w)) {
+    w <- w %>% glue::glue_collapse('\n')
+    warning(w)
+  }
 }
