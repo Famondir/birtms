@@ -4,7 +4,7 @@
 \alias{get_or}
 \title{Summarises Odds Ratio statistic
 Returns odds ratio values for actual dataset and posterior predictions.
-Summarises the mode and hdi of their difference and returns the ppp-value.}
+Summarises the mode and HDI of their difference and returns the ppp-value.}
 \usage{
 get_or(
   model,
@@ -40,7 +40,7 @@ birtmsdata; tibble with additinal attributes
 \description{
 Summarises Odds Ratio statistic
 Returns odds ratio values for actual dataset and posterior predictions.
-Summarises the mode and hdi of their difference and returns the ppp-value.
+Summarises the mode and HDI of their difference and returns the ppp-value.
 }
 \examples{
 \dontrun{

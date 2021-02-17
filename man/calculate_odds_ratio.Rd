@@ -20,7 +20,7 @@ calculate_odds_ratio(
 
 \item{y}{(pers) x (item) dataframe; response data}
 
-\item{zero_correction}{character; 'none', 'Haldane', 'compromise' or 'Bayes'}
+\item{zero_correction}{character; 'none', 'Haldane', or 'Bayes'}
 
 \item{ci_method}{character; 'Woolf', 'unconditional', 'compromise', 'BayesEqTails' or 'BayesHDI'}
 
