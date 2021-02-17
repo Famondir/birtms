@@ -553,7 +553,11 @@ get_or_distribution <- function(counts, k = 0.5, nsim = 10000000) {
     v <- contingency2successratio(counts)
     z <- or_distribution_bayes(v[[1]], v[[2]], v[[3]], v[[4]], k, k, k, k, nsim)[[1]]
 
-    return(z)
+    if (v[[3]] == v[[4]]) {
+      return(1/z)
+    } else {
+      return(z)
+    }
 }
 
 #' Get mode of odds ratio distribution
