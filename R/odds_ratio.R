@@ -16,7 +16,7 @@ if(getRversion() >= "2.15.1")  utils::globalVariables(c('itempair', '.draw', 'it
 #'
 #' @param y_rep (pers) x (item) x (rep) array; replicated data (can handle response data as dataframe or lists of dataframes as well)
 #' @param y (pers) x (item) dataframe; response data
-#' @param zero_correction character; 'none', 'Haldane', 'compromise' or 'Bayes'
+#' @param zero_correction character; 'none', 'Haldane', or 'Bayes'
 #' @param ci_method character; 'Woolf', 'unconditional', 'compromise', 'BayesEqTails' or 'BayesHDI'
 #' @param ci_width double
 #' @param nsim integer
@@ -36,7 +36,7 @@ if(getRversion() >= "2.15.1")  utils::globalVariables(c('itempair', '.draw', 'it
 calculate_odds_ratio <- function(y_rep = NULL, y = NULL, zero_correction = 'none', ci_method = 'Woolf', ci_width = .89, nsim = 10000000) {
   if(is.null(y_rep) & is.null(y)) stop('Missing data argument! Use either y_rep or y.')
   if(!is.null(y_rep) & !is.null(y)) stop('Too many data arguments! Use either y_rep or y.')
-  if(!(zero_correction %in% c('none', 'Haldane', 'compromise', 'Bayes'))) stop('Invalid zero correction method.')
+  if(!(zero_correction %in% c('none', 'Haldane', 'Bayes'))) stop('Invalid zero correction method.')
   if(!(ci_method %in% c('Woolf', 'unconditional', 'BayesEqTails', 'BayesHDI', 'compromise'))) stop('Invalid CI method.')
 
   if(!is.null(y)) y_rep <- y # function only uses y_rep
@@ -88,7 +88,7 @@ calculate_odds_ratio <- function(y_rep = NULL, y = NULL, zero_correction = 'none
       if (zero_correction == 'Bayes') {
         for(col_index in seq_len(ncol(n))) {
           if (min(n[,col_index]) == 0) {
-            or[col_index, count] <- or_mode_bayes(n[,col_index], nsim = nsim)
+            or[col_index, count] <- or_median_bayes(n[,col_index], nsim = nsim)
           }
         }
       }
@@ -128,7 +128,7 @@ calculate_odds_ratio <- function(y_rep = NULL, y = NULL, zero_correction = 'none
 
 #' Summarises Odds Ratio statistic
 #' Returns odds ratio values for actual dataset and posterior predictions.
-#' Summarises the mode and hdi of their difference and returns the ppp-value.
+#' Summarises the mode and HDI of their difference and returns the ppp-value.
 #'
 #' @param model birtmsfit
 #' @param n_samples int - Number of posterior smaples to use
@@ -430,10 +430,15 @@ or_ci_bayes <- function(counts, conf.level = 0.89, k = .5, nsim = 10000000, hdi 
 
   v <- contingency2successratio(counts)
   temp <- or_distribution_bayes(v[[1]], v[[2]], v[[3]], v[[4]], k, k, k, k, nsim)
-  z <- temp[[1]]
+  z <- sort(temp[[1]])
 
   if(hdi) {
-    ci <- z %>% HDInterval::hdi(credMass = conf.level) %>% c()
+    if (v[[3]] != v[[4]]) {
+      ci <- z %>% HDInterval::hdi(credMass = conf.level) %>% c()
+    } else {
+      ci <- 1/z %>% HDInterval::hdi(credMass = conf.level) %>% c()
+      warning('HDI is not invariant under transformation 1/z! Check if using equally tailed CI is more appropriate.')
+    }
     return(ci)
   } else {
     a1 <- temp[[2]]
@@ -481,7 +486,6 @@ or.sim <- function(a1,b1,c1,d1,nsim = 10000000)
   z2 <- stats::rf(nsim, 2*c1,2*d1)
   a <- (d1/c1)/(b1/a1)
   z <- a*z1/z2
-  z <- sort(z)
   return(z)
 }
 
@@ -553,6 +557,7 @@ get_or_distribution <- function(counts, k = 0.5, nsim = 10000000) {
 }
 
 #' Get mode of odds ratio distribution
+#' Be aware that the mode is not invariant to transformations like 1/z
 #'
 #' @param counts (4x1) matrix with counts n11, n00, n10, n01 from contingency table
 #' @param k double; concentration of beta priors: 0.5 for Jeffreys prior, 1 for uniform priors
@@ -563,8 +568,28 @@ or_mode_bayes <- function(counts, k = 0.5, nsim = 10000000) {
   v <- contingency2successratio(counts)
   z <- or_distribution_bayes(v[[1]], v[[2]], v[[3]], v[[4]], k, k, k, k, nsim)[[1]]
 
-  if (v[[3]] == v[[4]]) med <- 1/modeest::hsm(z)
+  if (v[[3]] == v[[4]]) {
+    med <- modeest::hsm(1/z)
+    warning('Mode is not invariant under transformation 1/z! Check if using median is more appropriate.')
+  }
   else med <- modeest::hsm(z)
+
+  return(med)
+}
+
+#' Get median of odds ratio distribution
+#'
+#' @param counts (4x1) matrix with counts n11, n00, n10, n01 from contingency table
+#' @param k double; concentration of beta priors: 0.5 for Jeffreys prior, 1 for uniform priors
+#' @param nsim interger
+#'
+#' @return mode of odds ratio distribution
+or_median_bayes <- function(counts, k = 0.5, nsim = 10000000) {
+  v <- contingency2successratio(counts)
+  z <- or_distribution_bayes(v[[1]], v[[2]], v[[3]], v[[4]], k, k, k, k, nsim)[[1]]
+
+  if (v[[3]] == v[[4]]) med <- 1/median(z)
+  else med <- median(z)
 
   return(med)
 }
@@ -588,5 +613,25 @@ or_limits_irt <- function(ai = 1, aj = 1, sigma = 1, beta = 0) {
   lower_limit <- exp(numerator/(1+sigma^2*(beta+(ai^2+aj^2)/4)))
   upper_limit <- exp(numerator)
 
-  return(list(lower_limit = lower_limit[[1]], upper_limit = upper_limit[[length(upper_limit)]]))
+  return(list(lower_limit = lower_limit, upper_limit = upper_limit))
+}
+
+#' Creates contingency table counts for item pair based odds ratio
+#'
+#' @param x double vector, answers to item 1
+#' @param y double vector, answers to item 2
+#'
+#' @return double vector of length 4: c(n11, n00, n10, n01)
+#' @export
+#'
+#' @examples
+count_for_itempair_or <- function(x, y) {
+  n <- rep(NA, 4)
+
+  n[1] <- sum(x == 1 & y == 1)
+  n[2] <- sum(x == 0 & y == 0)
+  n[3] <- sum(x == 1 & y == 0)
+  n[4] <- sum(x == 0 & y == 1)
+
+  return(n)
 }

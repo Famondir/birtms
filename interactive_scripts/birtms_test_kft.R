@@ -1734,3 +1734,31 @@ or_lim_eval <- or_data %>% unnest(or_act_ci) %>% mutate(in_limits = ifelse(.lowe
                                                                                    or_act < or_limits_irt(1,1,c(1,1.6))$upper_limit, TRUE, FALSE),
                                                         point_put_of_limits = ifelse(or_act > or_limits_irt(1,1,c(1,1.6))$upper_limit |
                                                                                        or_act < or_limits_irt(1,1,c(1,1.6))$lower_limit, TRUE, FALSE))
+
+y <- make_responsedata_wider(fit_1d_1pl_spm1) %>% select(-dplyr::any_of(unlist(fit_1d_1pl_spm1$var_specs)))
+counts <- count_for_itempair_or(y[,4], y[,10])
+v <- contingency2successratio(counts)
+z <- get_or_distribution(counts, k = .5, nsim = 4000)
+
+sigma <- fit_1d_1pl_spm1 %>% tidybayes::spread_draws(sd_person__Intercept) %>% pull(sd_person__Intercept)
+
+lims <- or_limits_irt(sigma = sigma)
+ll <- lims[[1]]
+ul <- lims[[2]]
+
+(z-ll) %>% as_tibble() %>% plot_ppmc_ridges(value, range = c(-5,5))
+(sample(z, 100000, replace = TRUE)-sample(ll, 10000, replace = TRUE)) %>% as_tibble() %>% plot_ppmc_ridges(value, range = c(-5,10), ci_width = .95)
+(sample(ul, 100000, replace = TRUE)-sample(z, 10000, replace = TRUE)) %>% as_tibble() %>% plot_ppmc_ridges(value, range = c(-10,10), ci_width = .95)
+(z-ll) %>% hsm_hdi()
+(sort(z)-sort(ll)) %>% hsm_hdi()
+
+or <- counts[[1]]*counts[[2]]/(counts[[3]]*counts[[4]])
+(or-ll) %>% as_tibble() %>% plot_ppmc_ridges(value, range = c(-5,5), ci_width = .95)
+(ul-or) %>% as_tibble() %>% plot_ppmc_ridges(value, range = c(-5,5), ci_width = .95)
+
+
+or_data_qi <- or_data %>% tidyr::unnest(or_dif_samples, keep_empty = TRUE) %>% group_by(item1, item2) %>% tidybayes::mean_qi(or_dif) %>%
+  tidyr::nest(or_dif_qi = c(.lower, .upper, .width, .point, .interval)) %>% rename(or_dif_mean = or_dif)
+or_data <- or_data %>% left_join(or_data_qi)
+
+or_data_temp <- or_data %>% tidyr::unnest(or_dif_qi, keep_empty = TRUE) %>% dplyr::mutate(above_zero = .lower > 0, beneath_zero = .upper < 0)
