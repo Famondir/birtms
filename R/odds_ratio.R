@@ -88,7 +88,7 @@ calculate_odds_ratio <- function(y_rep = NULL, y = NULL, zero_correction = 'none
       if (zero_correction == 'Bayes') {
         for(col_index in seq_len(ncol(n))) {
           if (min(n[,col_index]) == 0) {
-            or[col_index, count] <- or_median_bayes(n[,col_index], nsim = nsim)
+            or[col_index, count] <- median(get_or_distribution(n[,col_index], nsim = nsim))
           }
         }
       }
@@ -558,44 +558,6 @@ get_or_distribution <- function(counts, k = 0.5, nsim = 10000000) {
     } else {
       return(z)
     }
-}
-
-#' Get mode of odds ratio distribution
-#' Be aware that the mode is not invariant to transformations like 1/z
-#'
-#' @param counts (4x1) matrix with counts n11, n00, n10, n01 from contingency table
-#' @param k double; concentration of beta priors: 0.5 for Jeffreys prior, 1 for uniform priors
-#' @param nsim interger
-#'
-#' @return mode of odds ratio distribution
-or_mode_bayes <- function(counts, k = 0.5, nsim = 10000000) {
-  v <- contingency2successratio(counts)
-  z <- or_distribution_bayes(v[[1]], v[[2]], v[[3]], v[[4]], k, k, k, k, nsim)[[1]]
-
-  if (v[[3]] == v[[4]]) {
-    med <- modeest::hsm(1/z)
-    warning('Mode is not invariant under transformation 1/z! Check if using median is more appropriate.')
-  }
-  else med <- modeest::hsm(z)
-
-  return(med)
-}
-
-#' Get median of odds ratio distribution
-#'
-#' @param counts (4x1) matrix with counts n11, n00, n10, n01 from contingency table
-#' @param k double; concentration of beta priors: 0.5 for Jeffreys prior, 1 for uniform priors
-#' @param nsim interger
-#'
-#' @return mode of odds ratio distribution
-or_median_bayes <- function(counts, k = 0.5, nsim = 10000000) {
-  v <- contingency2successratio(counts)
-  z <- or_distribution_bayes(v[[1]], v[[2]], v[[3]], v[[4]], k, k, k, k, nsim)[[1]]
-
-  if (v[[3]] == v[[4]]) med <- 1/median(z)
-  else med <- median(z)
-
-  return(med)
 }
 
 #' Calculate Odds Ratio Limits for IRT models
