@@ -1736,29 +1736,60 @@ or_lim_eval <- or_data %>% unnest(or_act_ci) %>% mutate(in_limits = ifelse(.lowe
                                                                                        or_act < or_limits_irt(1,1,c(1,1.6))$lower_limit, TRUE, FALSE))
 
 y <- make_responsedata_wider(fit_1d_1pl_spm1) %>% select(-dplyr::any_of(unlist(fit_1d_1pl_spm1$var_specs)))
-counts <- count_for_itempair_or(y[,4], y[,10])
+counts <- count_for_itempair_or(y[,4], y[,5])
 v <- contingency2successratio(counts)
 z <- get_or_distribution(counts, k = .5, nsim = 4000)
 
-sigma <- fit_1d_1pl_spm1 %>% tidybayes::spread_draws(sd_person__Intercept) %>% pull(sd_person__Intercept)
 
-lims <- or_limits_irt(sigma = sigma)
-ll <- lims[[1]]
-ul <- lims[[2]]
 
-(z-ll) %>% as_tibble() %>% plot_ppmc_ridges(value, range = c(-5,5))
-(sample(z, 100000, replace = TRUE)-sample(ll, 10000, replace = TRUE)) %>% as_tibble() %>% plot_ppmc_ridges(value, range = c(-5,10), ci_width = .95)
-(sample(ul, 100000, replace = TRUE)-sample(z, 10000, replace = TRUE)) %>% as_tibble() %>% plot_ppmc_ridges(value, range = c(-10,10), ci_width = .95)
+(z-ll) %>% log() %>%  as_tibble() %>% plot_ppmc_ridges(value, range = c(0,5))
+(log(sample(z, 10000, replace = TRUE))-log(sample(ll, 10000, replace = TRUE)))  %>% as_tibble() %>% plot_ppmc_ridges(value, ci_width = .89, n = 1000000, hdi = FALSE)
+(sample(ul, 100000, replace = TRUE)-sample(z, 10000, replace = TRUE)) %>% as_tibble() %>% plot_ppmc_ridges(value, range = c(-10,10), ci_width = .89)
 (z-ll) %>% hsm_hdi()
 (sort(z)-sort(ll)) %>% hsm_hdi()
 
-or <- counts[[1]]*counts[[2]]/(counts[[3]]*counts[[4]])
-(or-ll) %>% as_tibble() %>% plot_ppmc_ridges(value, range = c(-5,5), ci_width = .95)
-(ul-or) %>% as_tibble() %>% plot_ppmc_ridges(value, range = c(-5,5), ci_width = .95)
+(sample(z, 10000, replace = TRUE)-sample(ll, 10000, replace = TRUE))  %>% as_tibble() %>%
+  plot_ppmc_ridges(value, n = 1000000, custom_ci = .$value %>% ggdist::hdi(.width = .89), range = c(-3, 2)) + xlim(-5, 10)
+(sample(ul, 10000, replace = TRUE)-sample(z, 10000, replace = TRUE))  %>% as_tibble() %>%
+  plot_ppmc_ridges(value, n = 1000000, custom_ci = .$value %>% ggdist::hdi(.width = .89), range = c(-80, 5)) + xlim(-150, 20)
 
+or <- counts[[1]]*counts[[2]]/(counts[[3]]*counts[[4]])
+(or-ll) %>% as_tibble() %>% plot_ppmc_ridges(value, range = c(-5,5), ci_width = .89)
+(ul-or) %>% as_tibble() %>% plot_ppmc_ridges(value, range = c(-50,10), ci_width = .89)
+
+(or-ll) %>% tidybayes::median_hdi()
 
 or_data_qi <- or_data %>% tidyr::unnest(or_dif_samples, keep_empty = TRUE) %>% group_by(item1, item2) %>% tidybayes::mean_qi(or_dif) %>%
   tidyr::nest(or_dif_qi = c(.lower, .upper, .width, .point, .interval)) %>% rename(or_dif_mean = or_dif)
 or_data <- or_data %>% left_join(or_data_qi)
 
 or_data_temp <- or_data %>% tidyr::unnest(or_dif_qi, keep_empty = TRUE) %>% dplyr::mutate(above_zero = .lower > 0, beneath_zero = .upper < 0)
+
+for (i in -500:500) {
+  print(paste(i, brms::logit_scaled(brms::inv_logit_scaled(i))))
+}
+
+or_data %>% plot_or_heatmap( )
+
+testdata <- birtms::compose_dataset(response_data = data_spm, response_columns = i1:i12)
+formula_1d_1pl <- birtms::build_formula()
+fit_1d_1pl_spm1_full <- birtms::birtm(data = testdata, formula = formula_1d_1pl,
+                                 file = 'models/fit_1d_1pl_spm1_full')
+
+
+model_specs <- list(item_parameter_number = 2)
+testdata <- birtms::compose_dataset(response_data = data_spm, response_columns = i1:i12)
+formula_1d_2pl <- birtms::build_formula(model_specifications = model_specs)
+prior_2pl_minimal <- brms::prior("normal(0, 2)", class = "b", nlpar = "skillintercept") +
+  brms::prior("normal(0, 1)", class = "b", nlpar = "logalpha") +
+  brms::prior("constant(1)", class = "sd", group = "person", nlpar = "theta")
+fit_1d_2pl_spm_full <- birtms::birtm(data = testdata, formula = formula_1d_2pl, prior = prior_2pl_minimal,
+                                model_specifications = model_specs,
+                                file = 'models/fit_1d_2pl_spm_full')
+
+fit_1d_1pl_spm1_itemnametest <- readRDS('models/fit_1d_1pl_spm1_itemnametest.rds')
+
+
+or_dif_bonds <- or_data_1pl_full %>% tidyr::unnest(or_dif_ci, keep_empty = TRUE) %>% dplyr::mutate(above_zero = .lower > 0, beneath_zero = .upper < 0,
+                                                                                                   above_rope = .lower > 0 + rope, beneath_rope = .upper < 0 - rope,
+                                                                                                   inside_rope = .lower > 0 - rope &  .upper < 0 + rope)

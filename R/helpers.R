@@ -185,8 +185,10 @@ hsm_hdi <- function(.data, ..., .width = .89, inf.rm = FALSE, nan.rm = FALSE, ti
   hsm <- function(...) modeest::hsm(..., tie.limit = tie.limit)
 
   dots <- rlang::enquos(...)
+
   if (inf.rm) .data <- .data %>% dplyr::filter_at(dplyr::vars(!!!dots), dplyr::all_vars(is.finite(.x)))
   if (nan.rm) .data <- .data %>% dplyr::filter_at(dplyr::vars(!!!dots), dplyr::all_vars(!is.nan(.x)))
+
   ggdist::point_interval(.data, ..., .width = .width, .point = hsm, .interval = hdi)
 }
 

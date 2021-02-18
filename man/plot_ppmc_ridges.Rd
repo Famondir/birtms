@@ -13,6 +13,7 @@ plot_ppmc_ridges(
   ci_width = 0.89,
   color = "lightblue",
   range = NULL,
+  custom_ci = NULL,
   ...
 )
 }
@@ -32,6 +33,8 @@ plot_ppmc_ridges(
 \item{color}{color; sets color of ridges}
 
 \item{range}{double; c(min, max) used for setting xlim in coord_cartesian()}
+
+\item{custom_ci}{double vector to pass the ci limits manually (e.g. when )}
 
 \item{...}{arguments passed to ggridges::stat_density_ridges()}
 }
