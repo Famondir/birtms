@@ -12,7 +12,8 @@ calculate_odds_ratio(
   zero_correction = "none",
   ci_method = "Woolf",
   ci_width = 0.89,
-  nsim = 1e+07
+  nsim_ci = 1e+07,
+  nsim_median = 1e+05
 )
 }
 \arguments{
@@ -26,7 +27,9 @@ calculate_odds_ratio(
 
 \item{ci_width}{double}
 
-\item{nsim}{integer}
+\item{nsim_ci}{integer; number of draws used to get a distribution of the odds ratio value to calculate CIs}
+
+\item{nsim_median}{integer; number of draws used to get a distribution of the odds ratio value to calculate the median}
 }
 \value{
 tibble

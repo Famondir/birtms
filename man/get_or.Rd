@@ -4,7 +4,7 @@
 \alias{get_or}
 \title{Summarises Odds Ratio statistic
 Returns odds ratio values for actual dataset and posterior predictions.
-Summarises the mode and HDI of their difference and returns the ppp-value.}
+Summarises the median and HDI of their difference and returns the ppp-value.}
 \usage{
 get_or(
   model,
@@ -12,15 +12,14 @@ get_or(
   ci_width = 0.89,
   zero_correction = "none",
   ci_method = "Woolf",
-  nsim_act = 1e+07,
-  nsim_rep = 1e+05,
-  tie.limit = 0.05
+  nsim_ci = 1e+07,
+  nsim_median = 1e+05
 )
 }
 \arguments{
 \item{model}{birtmsfit}
 
-\item{n_samples}{int - Number of posterior smaples to use}
+\item{n_samples}{int - Number of posterior samples to use}
 
 \item{ci_width}{double}
 
@@ -28,11 +27,9 @@ get_or(
 
 \item{ci_method}{character; 'Woolf', 'unconditional', 'compromise', 'BayesEqTails' or 'BayesHDI'}
 
-\item{nsim_act}{integer}
+\item{nsim_ci}{integer; number of draws used to get a distribution of the odds ratio value to calculate CIs}
 
-\item{nsim_rep}{integer}
-
-\item{tie.limit}{double}
+\item{nsim_median}{integer; number of draws used to get a distribution of the odds ratio value to calculate the median}
 }
 \value{
 birtmsdata; tibble with additinal attributes
@@ -40,7 +37,7 @@ birtmsdata; tibble with additinal attributes
 \description{
 Summarises Odds Ratio statistic
 Returns odds ratio values for actual dataset and posterior predictions.
-Summarises the mode and HDI of their difference and returns the ppp-value.
+Summarises the median and HDI of their difference and returns the ppp-value.
 }
 \examples{
 \dontrun{

@@ -1735,16 +1735,21 @@ or_lim_eval <- or_data %>% unnest(or_act_ci) %>% mutate(in_limits = ifelse(.lowe
                                                         point_put_of_limits = ifelse(or_act > or_limits_irt(1,1,c(1,1.6))$upper_limit |
                                                                                        or_act < or_limits_irt(1,1,c(1,1.6))$lower_limit, TRUE, FALSE))
 
-y <- make_responsedata_wider(fit_1d_1pl_spm1) %>% select(-dplyr::any_of(unlist(fit_1d_1pl_spm1$var_specs)))
-counts <- count_for_itempair_or(y[,4], y[,5])
+y <- make_responsedata_wider(fit_1d_1pl_spm1_full) %>% select(-dplyr::any_of(unlist(fit_1d_1pl_spm1$var_specs)))
+counts <- count_for_itempair_or(y[,1], y[,6])
 v <- contingency2successratio(counts)
 z <- get_or_distribution(counts, k = .5, nsim = 4000)
 
+sigma <- fit_1d_1pl_spm1_full %>% tidybayes::spread_draws(sd_person__Intercept) %>% pull(sd_person__Intercept)
 
+lims <- or_limits_irt(sigma = sigma)
+ll <- lims[[1]]
+ul <- lims[[2]]
 
 (z-ll) %>% log() %>%  as_tibble() %>% plot_ppmc_ridges(value, range = c(0,5))
-(log(sample(z, 10000, replace = TRUE))-log(sample(ll, 10000, replace = TRUE)))  %>% as_tibble() %>% plot_ppmc_ridges(value, ci_width = .89, n = 1000000, hdi = FALSE)
-(sample(ul, 100000, replace = TRUE)-sample(z, 10000, replace = TRUE)) %>% as_tibble() %>% plot_ppmc_ridges(value, range = c(-10,10), ci_width = .89)
+(sample(z, 10000, replace = TRUE)-sample(ll, 10000, replace = TRUE))  %>% as_tibble() %>% plot_ppmc_ridges(value, ci_width = .89)
+(sample(ul, 10000, replace = TRUE)-sample(z, 10000, replace = TRUE)) %>% as_tibble() %>% plot_ppmc_ridges(value, ci_width = .89)
+
 (z-ll) %>% hsm_hdi()
 (sort(z)-sort(ll)) %>% hsm_hdi()
 
@@ -1754,8 +1759,8 @@ z <- get_or_distribution(counts, k = .5, nsim = 4000)
   plot_ppmc_ridges(value, n = 1000000, custom_ci = .$value %>% ggdist::hdi(.width = .89), range = c(-80, 5)) + xlim(-150, 20)
 
 or <- counts[[1]]*counts[[2]]/(counts[[3]]*counts[[4]])
-(or-ll) %>% as_tibble() %>% plot_ppmc_ridges(value, range = c(-5,5), ci_width = .89)
-(ul-or) %>% as_tibble() %>% plot_ppmc_ridges(value, range = c(-50,10), ci_width = .89)
+(or-ll) %>% as_tibble() %>% plot_ppmc_ridges(value, ci_width = .89)
+(ul-or) %>% as_tibble() %>% plot_ppmc_ridges(value, ci_width = .89)
 
 (or-ll) %>% tidybayes::median_hdi()
 
@@ -1789,7 +1794,8 @@ fit_1d_2pl_spm_full <- birtms::birtm(data = testdata, formula = formula_1d_2pl, 
 
 fit_1d_1pl_spm1_itemnametest <- readRDS('models/fit_1d_1pl_spm1_itemnametest.rds')
 
-
-or_dif_bonds <- or_data_1pl_full %>% tidyr::unnest(or_dif_ci, keep_empty = TRUE) %>% dplyr::mutate(above_zero = .lower > 0, beneath_zero = .upper < 0,
-                                                                                                   above_rope = .lower > 0 + rope, beneath_rope = .upper < 0 - rope,
-                                                                                                   inside_rope = .lower > 0 - rope &  .upper < 0 + rope)
+# no posterior or_rep distribution falls inside the or_act CIs
+or_dif_bonds <- or_data_1pl_full %>% tidyr::unnest(or_dif_ci, keep_empty = TRUE) %>% tidyr::unnest(or_act_ci, names_sep = "") %>%
+  dplyr::mutate(above_zero = .lower > 0, beneath_zero = .upper < 0,
+                above_rope = .lower > 0 + rope, beneath_rope = .upper < 0 - rope,
+                inside_or_act_ci = .lower > (or_act_ci.lower- or_act) &  .upper < (or_act_ci.upper - or_act))

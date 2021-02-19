@@ -43,7 +43,7 @@ plot_ppmc_ridges <- function (data, parameter, group = 0, rope = FALSE, hdi = TR
 
   custom_lims <- function(...) {
     dots <- list(...)
-    ci <- brms::logit_scaled(head(dots[[2]], -1)) / tail(dots[[2]], 1)
+    ci <- brms::logit_scaled(utils::head(dots[[2]], -1)) / utils::tail(dots[[2]], 1)
     ci <- sort(ci)
 
     return(ci)

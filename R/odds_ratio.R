@@ -2,9 +2,14 @@
 # CMD check that they are intended to have no definition at time of package
 # building
 if(getRversion() >= "2.15.1")  utils::globalVariables(c('itempair', '.draw', 'item1', 'item2', '.lower', '.upper', 'ppv', 'value',
-                                                        'or_dif_mode', 'or_dif_mode', 'z_or_dif_mode_highlighted', 'z_or_dif_mode',
+                                                        'or_dif_median', 'z_or_dif_median_highlighted', 'z_or_dif_median',
                                                         'above_rope', 'above_zero', 'beneath_rope', 'beneath_zero', 'or_act',
-                                                        '.width', '.interval', '.zero_correction', '.point', 'or_dif_ci'))
+                                                        '.width', '.interval', '.zero_correction', '.point', 'or_dif_ci',
+                                                        'll_low', 'ul_low', 'sd_person__Intercept', 'itemname', 'item',
+                                                        'sd_person__theta_Intercept', 'b_logalpha_Intercept', 'r_item__logalpha',
+                                                        'alpha', 'll_up', 'ul_up', 'under_bonds', 'over_bonds', 'outof_bonds',
+                                                        'in_bonds', 'or_act_ci', 'or_act_ci.lower', 'or_act_ci.upper', 'inside_or_act_ci'
+                                                        ))
 
 #' Odds ratio
 #' Calculates the odds ratio for the posterior samples or the original responses
@@ -18,8 +23,9 @@ if(getRversion() >= "2.15.1")  utils::globalVariables(c('itempair', '.draw', 'it
 #' @param y (pers) x (item) dataframe; response data
 #' @param zero_correction character; 'none', 'Haldane', or 'Bayes'
 #' @param ci_method character; 'Woolf', 'unconditional', 'compromise', 'BayesEqTails' or 'BayesHDI'
+#' @param nsim_ci integer; number of draws used to get a distribution of the odds ratio value to calculate CIs
+#' @param nsim_median integer; number of draws used to get a distribution of the odds ratio value to calculate the median
 #' @param ci_width double
-#' @param nsim integer
 #'
 #' @return tibble
 #' @export
@@ -33,7 +39,8 @@ if(getRversion() >= "2.15.1")  utils::globalVariables(c('itempair', '.draw', 'it
 #' 0, 0,
 #' 1, 0
 #' ) %>% calculate_odds_ratio() # equals 0.5
-calculate_odds_ratio <- function(y_rep = NULL, y = NULL, zero_correction = 'none', ci_method = 'Woolf', ci_width = .89, nsim = 10000000) {
+calculate_odds_ratio <- function(y_rep = NULL, y = NULL, zero_correction = 'none', ci_method = 'Woolf', ci_width = .89,
+                                 nsim_ci = 10000000, nsim_median = 100000) {
   if(is.null(y_rep) & is.null(y)) stop('Missing data argument! Use either y_rep or y.')
   if(!is.null(y_rep) & !is.null(y)) stop('Too many data arguments! Use either y_rep or y.')
   if(!(zero_correction %in% c('none', 'Haldane', 'Bayes'))) stop('Invalid zero correction method.')
@@ -88,7 +95,7 @@ calculate_odds_ratio <- function(y_rep = NULL, y = NULL, zero_correction = 'none
       if (zero_correction == 'Bayes') {
         for(col_index in seq_len(ncol(n))) {
           if (min(n[,col_index]) == 0) {
-            or[col_index, count] <- stats::median(get_or_distribution(n[,col_index], nsim = nsim))
+            or[col_index, count] <- stats::median(get_or_distribution(n[,col_index], nsim = nsim_median))
           }
         }
       }
@@ -96,10 +103,10 @@ calculate_odds_ratio <- function(y_rep = NULL, y = NULL, zero_correction = 'none
       if(rep == 1) {
         if (ci_method == 'Woolf') or_ci[, count] <- or_ci_woolf(or[, count], n, corr, ci_width) %>% unlist()
         else if (ci_method == 'unconditional') or_ci[, count] <- or_ci_uncond(n, ci_width)
-        else if (ci_method == 'BayesEqTails') or_ci[, count] <- or_ci_bayes(n, ci_width, nsim = nsim, hdi = FALSE)
-        else if (ci_method == 'BayesHDI') or_ci[, count] <- or_ci_bayes(n, ci_width, nsim = nsim, hdi = TRUE)
+        else if (ci_method == 'BayesEqTails') or_ci[, count] <- or_ci_bayes(n, ci_width, nsim = nsim_ci, hdi = FALSE)
+        else if (ci_method == 'BayesHDI') or_ci[, count] <- or_ci_bayes(n, ci_width, nsim = nsim_ci, hdi = TRUE)
         else if (ci_method == 'compromise') {
-          if (min(n) == 0) or_ci[, count] <- or_ci_bayes(n, ci_width, nsim = nsim, hdi = FALSE)
+          if (min(n) == 0) or_ci[, count] <- or_ci_bayes(n, ci_width, nsim = nsim_ci, hdi = FALSE)
           else or_ci[, count] <- or_ci_uncond(n, ci_width)
         }
 
@@ -128,16 +135,15 @@ calculate_odds_ratio <- function(y_rep = NULL, y = NULL, zero_correction = 'none
 
 #' Summarises Odds Ratio statistic
 #' Returns odds ratio values for actual dataset and posterior predictions.
-#' Summarises the mode and HDI of their difference and returns the ppp-value.
+#' Summarises the median and HDI of their difference and returns the ppp-value.
 #'
 #' @param model birtmsfit
-#' @param n_samples int - Number of posterior smaples to use
+#' @param n_samples int - Number of posterior samples to use
 #' @param zero_correction character; 'none', 'Haldane', 'compromise' or 'Bayes'
 #' @param ci_method character; 'Woolf', 'unconditional', 'compromise', 'BayesEqTails' or 'BayesHDI'
 #' @param ci_width double
-#' @param nsim_act integer
-#' @param nsim_rep integer
-#' @param tie.limit double
+#' @param nsim_ci integer; number of draws used to get a distribution of the odds ratio value to calculate CIs
+#' @param nsim_median integer; number of draws used to get a distribution of the odds ratio value to calculate the median
 #'
 #' @return birtmsdata; tibble with additinal attributes
 #' @export
@@ -149,7 +155,7 @@ calculate_odds_ratio <- function(y_rep = NULL, y = NULL, zero_correction = 'none
 #' \dontrun{
 #' get_or(fit, n_samples = 500)
 #' }
-get_or <- function(model, n_samples = NULL, ci_width = .89, zero_correction = 'none', ci_method = 'Woolf', nsim_act = 10000000, nsim_rep = 100000, tie.limit = .05) {
+get_or <- function(model, n_samples = NULL, ci_width = .89, zero_correction = 'none', ci_method = 'Woolf', nsim_ci = 10000000, nsim_median = 100000) {
   seperate_itempairs <- function(x) {
     x <- x %>% mutate(itempair = stringr::str_remove(itempair, 'ItemPair')) %>% tidyr::separate(itempair, into = c('item1', 'item2'), convert = TRUE)
 
@@ -169,6 +175,9 @@ get_or <- function(model, n_samples = NULL, ci_width = .89, zero_correction = 'n
   item <- model$var_specs$item
   person <- model$var_specs$person
 
+  y <- make_responsedata_wider(model) %>% select(-dplyr::any_of(unlist(model$var_specs)))
+  itemnames <- colnames(y)
+
   yrep <- posterior_predict_long(model, n_samples) %>%
     select({{person}}, {{item}}, .draw, yrep) %>%
     tidyr::pivot_wider(names_from = {{item}}, values_from = 'yrep') %>%
@@ -178,20 +187,13 @@ get_or <- function(model, n_samples = NULL, ci_width = .89, zero_correction = 'n
 
   message('Calculating posterior odds ratio')
   if(comp) zero_correction <- 'Haldane'
-
-  aggregate_warnings(
-    or_rep <- calculate_odds_ratio(yrep, zero_correction = zero_correction, nsim = nsim_rep)$or # calculates odds ratio for posterior samples
-  )
+  or_rep <- calculate_odds_ratio(yrep, zero_correction = zero_correction, nsim_median = nsim_median, nsim_ci = nsim_ci)$or # calculates odds ratio for posterior samples
 
   message('Calculating actual odds ratio')
   if(comp) zero_correction <- 'Bayes'
-  y <- make_responsedata_wider(model) %>% select(-dplyr::any_of(unlist(model$var_specs)))
-  itemnames <- colnames(y)
-
-  aggregate_warnings(
-    or_list <- calculate_odds_ratio(y, zero_correction = zero_correction, ci_method = ci_method, nsim = nsim_act) # calculates odds ratio for actual sample/data
-  )
+  or_list <- calculate_odds_ratio(y, zero_correction = zero_correction, ci_method = ci_method, nsim_median = nsim_median, nsim_ci = nsim_ci) # calculates odds ratio for actual sample/data
   or_act <- or_list$or %>% mutate(.draw = 0, .before = 1)
+
   or_act_ci <- or_list$ci %>% t() %>% tibble::as_tibble(rownames = "itempair") %>% seperate_itempairs() %>%
     dplyr::mutate(.width = ci_width, .zero_correction = zero_correction, .interval = ci_method) %>%
     dplyr::group_by(item1, item2) %>% tidyr::nest(or_act_ci = c(.lower, .upper, .width, .zero_correction, .interval))
@@ -208,13 +210,9 @@ get_or <- function(model, n_samples = NULL, ci_width = .89, zero_correction = 'n
   or_ppp <- colMeans(or_dif %>% select(-.draw) > 0) %>% tibble::as_tibble(rownames = "itempair") %>% seperate_itempairs() %>%
     dplyr::rename(or_ppp = value)
 
-  or_dif_hdi <- or %>% tidyr::unnest() %>% dplyr::filter(is.finite(or_dif))
-  aggregate_warnings(
-    or_dif_hdi <- or_dif_hdi %>% hsm_hdi(or_dif, .width = ci_width, tie.limit = tie.limit)
-  )
-  or_dif_hdi <- or_dif_hdi %>%
-    # tidybayes::median_hdi(or_dif, .width = ci_width) %>%
-    dplyr::rename(or_dif_mode = or_dif) %>%
+  or_dif_hdi <- or %>% tidyr::unnest() %>% dplyr::filter(is.finite(or_dif)) %>%
+    tidybayes::median_hdi(or_dif, .width = ci_width) %>%
+    dplyr::rename(or_dif_median = or_dif) %>%
     tidyr::nest(or_dif_ci = c(.lower, .upper, .width, .point, .interval))
 
   or <- or %>% left_join(or_act, by = c('item1', 'item2')) %>%
@@ -241,21 +239,25 @@ get_or <- function(model, n_samples = NULL, ci_width = .89, zero_correction = 'n
 #'
 #' @return ggplot object
 #' @export
+#' @importFrom ggplot2 aes
 #'
 #' @examples
 #' \dontrun{
 #' or_data <- get_or(fit, n_samples = 500)
 #' plot_ppmc_or_heatmap(or_data)
 #' }
-plot_ppmc_or_heatmap <- function(or_data, use_rope = FALSE, alternative_color = FALSE) {
+plot_ppmc_or_heatmap <- function(or_data, use_rope = FALSE, alternative_color = TRUE) {
   # unite boolean columns that check if HDI includes zero or ROPE for multimodal distributions
   rope <- stats::mad(or_data$or_act)/10
 
-  or_data <- or_data %>% tidyr::unnest(or_dif_ci, keep_empty = TRUE) %>% dplyr::mutate(above_zero = .lower > 0, beneath_zero = .upper < 0,
-                                       above_rope = .lower > 0 + rope, beneath_rope = .upper < 0 - rope) %>%
-    dplyr::select(item1, item2, or_dif_mode, above_rope, above_zero, beneath_rope, beneath_zero) %>%
+  or_data <- or_data %>% tidyr::unnest(or_dif_ci, keep_empty = TRUE) %>% tidyr::unnest(or_act_ci, names_sep = "") %>%
+    dplyr::mutate(above_zero = .lower > 0, beneath_zero = .upper < 0,
+                  above_rope = .lower > 0 + rope, beneath_rope = .upper < 0 - rope,
+                  inside_or_act_ci = .lower > (or_act_ci.lower- or_act) &  .upper < (or_act_ci.upper - or_act)) %>%
+    dplyr::select(item1, item2, or_dif_median, above_rope, above_zero, beneath_rope, beneath_zero, inside_or_act_ci) %>%
     dplyr::group_by(item1, item2) %>% dplyr::summarise_all(~mean(.x, na.rm = FALSE)) %>%
-    dplyr::mutate_at(c('above_zero', 'above_rope', 'beneath_zero', 'beneath_rope'), ~ifelse(. > 0, TRUE, FALSE)) %>%
+    dplyr::mutate_at(c('above_zero', 'above_rope', 'beneath_zero', 'beneath_rope'), ~ifelse(. != 0, TRUE, FALSE)) %>%
+    dplyr::mutate_at(c('inside_or_act_ci'), ~ifelse(. == 1, TRUE, FALSE)) %>%
     dplyr::ungroup()
 
   if (use_rope) {
@@ -278,10 +280,10 @@ plot_ppmc_or_heatmap <- function(or_data, use_rope = FALSE, alternative_color = 
   cap2 <- paste0(cap2, '*Blue* fields represent items where predicted odds ratio is lower than actual observed odds ratio.<br>
     *Red* fields represent items where predicted odds ratio is higher than actual observed odds ratio.')
 
-  or_data <- or_data %>% dplyr::mutate(z_or_dif_mode = scale(or_dif_mode),
-                                       z_or_dif_mode_highlighted = ifelse(above | beneath, NA, z_or_dif_mode))
+  or_data <- or_data %>% dplyr::mutate(z_or_dif_median = scale(or_dif_median),
+                                       z_or_dif_median_highlighted = ifelse(above | beneath, NA, z_or_dif_median))
 
-  g <- ggplot2::ggplot(or_data, ggplot2::aes(item1, item2, fill = z_or_dif_mode_highlighted, label = z_or_dif_mode_highlighted, height = 1, width = 1)) +
+  g <- ggplot2::ggplot(or_data, aes(item1, item2, fill = z_or_dif_median_highlighted, label = z_or_dif_median_highlighted, height = 1, width = 1)) +
     ggplot2::scale_x_continuous("Item A", expand=c(0,0), position = "top", breaks = seq(min(or_data$item1),max(or_data$item1),1)) +
     ggplot2::scale_y_continuous("Item B", expand=c(0,0), breaks = seq(min(or_data$item2),max(or_data$item2),1)) +
     ggplot2::ggtitle('z-standardised Odds Ratio difference') +
@@ -291,18 +293,29 @@ plot_ppmc_or_heatmap <- function(or_data, use_rope = FALSE, alternative_color = 
     ggplot2::coord_fixed()
 
   if(alternative_color) {
-    or_data <- or_data %>% dplyr::mutate(z_or_dif_mode = scale(or_dif_mode), z_or_dif_mode_highlighted = ifelse(above | beneath, NA, abs(z_or_dif_mode)))
+    or_data <- or_data %>% dplyr::mutate(z_or_dif_median = scale(or_dif_median), z_or_dif_median_highlighted = ifelse(above | beneath, NA, abs(z_or_dif_median)))
 
     g <- g + ggplot2::scale_fill_gradient(low = "white", high = "grey50", limit = c(0, 1), oob = scales::squish,
                                           na.value = '#00ff00', name = "\u007C z(\u0394OR) \u007C") +
       ggplot2::labs(caption = cap2)
 
+    fillings <- NULL
+
     if(sum(above, na.rm = TRUE) > 0) { # otherwise the empty subset throws an error
-      g <- g + ggplot2::geom_tile(data = subset(or_data, above), fill = '#ca0020', color="black")
+      g <- g + ggplot2::geom_tile(data = subset(or_data, above), aes(alpha = 'over bonds'), fill = '#ca0020', color="black")
+      fillings <- c("#ca0020", fillings)
     }
     if(sum(beneath, na.rm = TRUE) > 0) {
-      g <- g + ggplot2::geom_tile(data = subset(or_data, beneath), fill = '#0571b0', color="black")
+      g <- g + ggplot2::geom_tile(data = subset(or_data, beneath), aes(alpha = 'under bonds'), fill = '#0571b0', color="black")
+      fillings <- c("#0571b0", fillings)
     }
+    if(sum(or_data$inside_or_act_ci, na.rm = TRUE) > 0) {
+      g <- g + ggplot2::geom_tile(data = subset(or_data, or_data$inside_or_act_ci), aes(alpha = 'in bonds'), fill = '#1a9641', color="black")
+      fillings <- c("#1a9641", fillings)
+    }
+
+    g <- g + ggplot2::scale_alpha_manual("Color flags", values=c(1, 1, 1),
+                                guide = ggplot2::guide_legend(override.aes = list(fill=fillings)))
 
   } else {
     g <- g + ggplot2::scale_fill_gradient2(low = "#0571b0", high = "#ca0020", mid = "#f7f7f7",
@@ -312,11 +325,11 @@ plot_ppmc_or_heatmap <- function(or_data, use_rope = FALSE, alternative_color = 
 
     if(sum(above, na.rm = TRUE) > 0) { # otherwise the empty subset throws an error
       g <- g + ggplot2::geom_tile(data = subset(or_data, above), fill = 'gray50', color="black") +
-        ggplot2::geom_text(data = subset(or_data, above), ggplot2::aes(label = 'H'), size = 5)
+        ggplot2::geom_text(data = subset(or_data, above), aes(label = 'H'), size = 5)
     }
     if(sum(beneath, na.rm = TRUE) > 0) {
       g <- g + ggplot2::geom_tile(data = subset(or_data, beneath), fill = 'gray50', color="black") +
-        ggplot2::geom_text(data = subset(or_data, beneath), ggplot2::aes(label = 'L'), size = 5)
+        ggplot2::geom_text(data = subset(or_data, beneath), aes(label = 'L'), size = 5)
     }
   }
 
@@ -330,38 +343,52 @@ plot_ppmc_or_heatmap <- function(or_data, use_rope = FALSE, alternative_color = 
 #' for 1PL and 2PL models.
 #'
 #' @param or_data dataframe generated by birtms::get_or()
-#' @param mode_centered_colorscale boolean
+#' @param median_centered_colorscale boolean
 #' @param model birtmsfit object
 #' @param a double; mean slope parameter (if not passed model)
 #' @param sigma double; standard deviation of person dimesnion (theta)
+#' @param bayesian boolean; should the bayesian distribution for actual odds ratio should be used as reference instead of point estimate
+#' @param nsim_ci integer; number of draws used to get a distribution of the odds ratio value to calculate CIs
+#' @param ci_width double
 #'
 #' @return ggplot2 object
 #' @export
+#' @importFrom ggplot2 aes
+#' @importFrom stats median
 #'
 #' @examples
 #' \dontrun{
 #' or_data <- get_or(fit, n_samples = 500)
 #' plot_or_heatmap(or_data)
 #' }
-plot_or_heatmap <- function(or_data, model = NULL, a = 1, sigma = 1, mode_centered_colorscale = TRUE) {
+plot_or_heatmap <- function(or_data, model = NULL, a = 1, sigma = 1, median_centered_colorscale = TRUE, bayesian = FALSE, nsim_ci = 1000000, ci_width = .89) {
   # check if odds are out of bonds
-  or_data <- or_data %>% mutate(ll_low = NA_real_, ll_up = NA_real_, ul_low = NA_real_, ul_up = NA_real_)
+  or_data <- or_data %>% mutate(ll_low = NA_real_, ll_up = NA_real_, ul_low = NA_real_, ul_up = NA_real_, or_act_scaled = NA_real_) %>%
+    mutate(or_act = ifelse(is.infinite(or_act) | is.nan(or_act), NA, or_act))
 
-  if(!is.null(model)) {
+  if(is.null(model)) {
+    if (bayesian) stop('Bayesian method needs acompanying model.')
+
+    lims <- or_limits_irt(ai = a, aj = a, sigma = sigma)
+    ll <- lims[[1]]
+    ul <- lims[[2]]
+
+    or_data <- or_data %>% mutate(ll_low = or_act-ll, ll_up = ll_low, ul_low = ul - or_act, ul_up = ul_low)
+  } else {
     if (model$model_specs$dimensionality_type != 'unidimensional') {
       warning('The limits used to color code the item pairs were derived only for unidimensional models.')
     }
 
     if (model$model_specs$item_parameter_number == 1) {
-      sigma <- model %>% tidybayes::spread_draws(sd_person__Intercept) %>% pull(sd_person__Intercept)
+      sigma <- model %>% tidybayes::spread_draws(sd_person__Intercept) %>% dplyr::pull(sd_person__Intercept)
     } else if (model$model_specs$item_parameter_number == 2) {
-      key <- tibble(itemname = c(or_data$itemname1, or_data$itemname2), item = c(or_data$item1, or_data$item2)) %>%
-        group_by(itemname) %>% summarise(item = median(item))
+      key <- tibble::tibble(itemname = c(or_data$itemname1, or_data$itemname2), item = c(or_data$item1, or_data$item2)) %>%
+        dplyr::group_by(itemname) %>% dplyr::summarise(item = stats::median(item))
 
-      sigma <- model %>% tidybayes::spread_draws(sd_person__theta_Intercept) %>% pull(sd_person__theta_Intercept)
+      sigma <- model %>% tidybayes::spread_draws(sd_person__theta_Intercept) %>% dplyr::pull(sd_person__theta_Intercept)
       alphas <- model %>% tidybayes::spread_draws(b_logalpha_Intercept, r_item__logalpha[itemname,])
-      alphas <- alphas %>% mutate(alpha = exp(b_logalpha_Intercept + r_item__logalpha)) %>% group_by(itemname) %>%
-        select(alpha, itemname) %>% nest() %>% left_join(key, by = c('itemname')) %>% arrange(item)
+      alphas <- alphas %>% mutate(alpha = exp(b_logalpha_Intercept + r_item__logalpha)) %>% dplyr::group_by(itemname) %>%
+        select(alpha, itemname) %>% tidyr::nest() %>% left_join(key, by = c('itemname')) %>% dplyr::arrange(item)
     } else{
       warning('The limits used to color code the item pairs were derived only for 1 and 2 parametric models.')
     }
@@ -371,6 +398,13 @@ plot_or_heatmap <- function(or_data, model = NULL, a = 1, sigma = 1, mode_center
     ll <- lims[[1]]
     ul <- lims[[2]]
 
+    if (bayesian) {
+      y <- make_responsedata_wider(model) %>% select(-dplyr::any_of(unlist(model$var_specs)))
+      percent <- 0.1
+      n_pairs <- nrow(or_data)
+      message('Calculating odds ratio distributions.')
+    }
+
     for (i in seq_along(or_data$or_act)) {
       # for 2PL models bonds are different for all itempairs
       if (model$model_specs$item_parameter_number == 2) {
@@ -379,15 +413,31 @@ plot_or_heatmap <- function(or_data, model = NULL, a = 1, sigma = 1, mode_center
         ul <- lims[[2]][[1]]
       }
 
-      or_data[i, c('ll_low', 'll_up')] <- (or_data$or_act[[i]] - ll) %>% ggdist::hdi(.width = .89)
-      or_data[i, c('ul_low', 'ul_up')] <- (ul - or_data$or_act[[i]]) %>% ggdist::hdi(.width = .89)
-    }
-  } else {
-    lims <- or_limits_irt(ai = a, aj = a, sigma = sigma)
-    ll <- lims[[1]]
-    ul <- lims[[2]]
+      if (bayesian) {
+        counts <- count_for_itempair_or(y[or_data$itemname1[[i]]], y[or_data$itemname2[[i]]])
+        v <- contingency2successratio(counts)
+        reference <- get_or_distribution(counts, k = .5, nsim = nsim_ci)
 
-    or_data <- or_data %>% mutate(ll_low = or_act-ll, ll_up = ll_low, ul_low = ul - or_act, ul_up = ul_low)
+        ll <- sample(ll, nsim_ci, replace = TRUE)
+        ul <- sample(ul, nsim_ci, replace = TRUE)
+
+        if (i/n_pairs > percent) {
+          print(paste(100*percent, '% finished'))
+          percent <- percent + 0.1
+        }
+      } else {
+        reference <- or_data$or_act[[i]]
+      }
+
+      or_data[i, c('ll_low', 'll_up')] <- (reference - ll) %>% ggdist::hdci(.width = ci_width)
+      or_data[i, c('ul_low', 'ul_up')] <- (ul - reference) %>% ggdist::hdci(.width = ci_width)
+
+      if (bayesian) {
+        or_data[i, 'or_act_scaled'] <- (sum(reference > median(ll)) - sum(reference >median(ul)))/nsim_ci
+      } else {
+        or_data[i, 'or_act_scaled'] <- (median(reference)-median(ll))/(median(ul)-median(ll))
+      }
+    }
   }
 
   or_data <- or_data %>% mutate(under_bonds = ifelse(ll_up < 0, TRUE, FALSE),
@@ -395,27 +445,48 @@ plot_or_heatmap <- function(or_data, model = NULL, a = 1, sigma = 1, mode_center
                                 in_bonds = ifelse(ll_low > 0 & ul_low > 0, TRUE, FALSE),
                                 outof_bonds = under_bonds|over_bonds)
 
-  #browser()
-
   # setting color sheme
-  limits <- c(0, HDInterval::hdi(or_data$or_act, credMass = .89)[[2]])
-  if(mode_centered_colorscale) {
-    cap <- 'Color scale midpoint is set to mode(OR).'
-    mid <- modeest::hsm(or_data$or_act)
+  if(median_centered_colorscale) {
+    limits <- c(0, HDInterval::hdi(or_data$or_act, credMass = .89)[[2]])
+    cap <- 'Color scale midpoint is set to median(OR).'
+    mid <- stats::median(or_data$or_act, na.rm = TRUE)
     colorscale <- ggplot2::scale_fill_gradient2(low = "#0571b0", high = "#ca0020", mid = "#f7f7f7",
                                                 midpoint = mid, limit = c(limits[[1]], limits[[2]]), name = 'OR',
                                                 oob = scales::squish, na.value = '#00ff00')
+    data_col <- sym('or_act')
   } else{
-    cap = 'Color scale midpoint is set to mean of upper and lower bonds.'
-    mid <- mean(c(ll, ul))
-    colorscale <- ggplot2::scale_fill_gradient2(low = "#fdae61", high = "#fdae61", mid = "#a6d96a",
-                                                midpoint = mid, limit = c(median(ll), median(ul)), name = 'OR',
-                                                oob = scales::squish, na.value = '#ff00ff')
+    if (bayesian & !is.null(model)) {
+      cap = 'Color scale shows the ratio of CI falling between bonds. <br>
+      1 := whole CI inbetween bonds. 0 := whole CI is outside of bonds.<br>
+      Dark green: Whole CI falls between bonds. Red: Whole CI is outsite of bonds.'
+
+      colorscale <- ggplot2::scale_fill_gradient(low = "grey50", high = "white", limit = c(0, 1), oob = scales::squish,
+                                   na.value = '#00ff00', name = "% of OR distribution in bonds")
+    } else {
+      cap = paste0('Dark green: Odds ratio point estimate falls between bonds in ', ci_width, ' % of the cases.<br>
+      Red: Odds ratio point estimate is outside of bonds in ', ci_width, ' % of the cases.')
+
+      if((length(a) == 1 & length(sigma) == 1 & is.null(model))) {
+        colorscale <- ggplot2::scale_fill_continuous(na.value = '#00ffff')
+      }
+      else {
+        colorscale <- ggplot2::scale_fill_gradient2(low = "#fdae61", high = "#fdae61", mid = "#a6d96a",
+                                                    midpoint = 0.5, limit = c(0, 1), name = 'scaled OR',
+                                                    oob = scales::squish, na.value = '#00ffff')
+
+        cap <- paste0('Color scale midpoint is set to mean of upper and lower bonds.<br>
+      1 := odds ratio value of the upper bond. 0 := odds ratio value of the lower bond.<br>', cap)
+      }
+    }
+
+    cap <- paste0('**Interpretation:** ', cap, '<br>Fields with an *L* represent items where odds ratio is lower than bonds.<br>
+    Fields with an *H* represent items where odds ratio is higher than bonds.')
+    data_col <- sym('or_act_scaled')
   }
 
   # plot heatmap
   g <- or_data %>%
-    ggplot2::ggplot(ggplot2::aes(item1, item2, fill = or_act, label = or_act, height = 1, width = 1)) +
+    ggplot2::ggplot(aes(item1, item2, fill = {{data_col}}, label = {{data_col}}, height = 1, width = 1)) +
     ggplot2::scale_x_continuous("Item A", expand=c(0,0), position = "top", breaks = seq(min(or_data$item1),max(or_data$item1),1)) +
     ggplot2::scale_y_continuous("Item B", expand=c(0,0), breaks = seq(min(or_data$item2),max(or_data$item2),1)) +
     ggplot2::ggtitle('Odds Ratio values', subtitle = 'actual dataset') +
@@ -427,7 +498,7 @@ plot_or_heatmap <- function(or_data, model = NULL, a = 1, sigma = 1, mode_center
     ggplot2::labs(caption = cap)
 
   fillings <- NULL
-  if(!mode_centered_colorscale) {
+  if(!median_centered_colorscale) {
     if(sum(or_data$outof_bonds, na.rm = TRUE) > 0) { # otherwise the empty subset throws an error
       g <- g + ggplot2::geom_tile(data = subset(or_data, outof_bonds), aes(alpha = 'out of bonds'), fill = '#d7191c', color="black")
       fillings <- c("#d7191c", fillings)
@@ -445,8 +516,8 @@ plot_or_heatmap <- function(or_data, model = NULL, a = 1, sigma = 1, mode_center
     }
 
     # creates second fill legend; alpha will get replaced by fill
-    g <- g + scale_alpha_manual("Types", values=c(1, 1),
-                                         guide=guide_legend(override.aes = list(fill=fillings)))
+    g <- g + ggplot2::scale_alpha_manual("Color flags", values=c(1, 1),
+                                         guide = ggplot2::guide_legend(override.aes = list(fill=fillings)))
 
   }
 
