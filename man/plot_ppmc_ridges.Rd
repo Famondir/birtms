@@ -2,7 +2,8 @@
 % Please edit documentation in R/plot_ppmc_ridges.R
 \name{plot_ppmc_ridges}
 \alias{plot_ppmc_ridges}
-\title{Plot PPMC parameter distributions}
+\title{Plot multiple PPMC parameter distributions
+Deprecated!}
 \usage{
 plot_ppmc_ridges(
   data,
@@ -42,7 +43,8 @@ plot_ppmc_ridges(
 ggplot2 object
 }
 \description{
-Plot PPMC parameter distributions
+Plot multiple PPMC parameter distributions
+Deprecated!
 }
 \examples{
 \dontrun{

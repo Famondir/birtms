@@ -1746,21 +1746,22 @@ lims <- or_limits_irt(sigma = sigma)
 ll <- lims[[1]]
 ul <- lims[[2]]
 
-(z-ll) %>% log() %>%  as_tibble() %>% plot_ppmc_ridges(value, range = c(0,5))
-(sample(z, 10000, replace = TRUE)-sample(ll, 10000, replace = TRUE))  %>% as_tibble() %>% plot_ppmc_ridges(value, ci_width = .89)
-(sample(ul, 10000, replace = TRUE)-sample(z, 10000, replace = TRUE)) %>% as_tibble() %>% plot_ppmc_ridges(value, ci_width = .89)
+(z-ll) %>% log() %>%  as_tibble() %>% plot_ppmc_ridges(value)
+(z-ll) %>% log() %>%  plot_ppmc_distribution(clean_data = TRUE)
+(sample(z, 10000, replace = TRUE)-sample(ll, 10000, replace = TRUE))  %>% plot_ppmc_distribution()
+(sample(ul, 10000, replace = TRUE)-sample(z, 10000, replace = TRUE)) %>% plot_ppmc_distribution()
 
 (z-ll) %>% hsm_hdi()
 (sort(z)-sort(ll)) %>% hsm_hdi()
 
-(sample(z, 10000, replace = TRUE)-sample(ll, 10000, replace = TRUE))  %>% as_tibble() %>%
-  plot_ppmc_ridges(value, n = 1000000, custom_ci = .$value %>% ggdist::hdi(.width = .89), range = c(-3, 2)) + xlim(-5, 10)
-(sample(ul, 10000, replace = TRUE)-sample(z, 10000, replace = TRUE))  %>% as_tibble() %>%
-  plot_ppmc_ridges(value, n = 1000000, custom_ci = .$value %>% ggdist::hdi(.width = .89), range = c(-80, 5)) + xlim(-150, 20)
+# (sample(z, 10000, replace = TRUE)-sample(ll, 10000, replace = TRUE))  %>% as_tibble() %>%
+#   plot_ppmc_ridges(value, n = 1000000, custom_ci = .$value %>% ggdist::hdi(.width = .89), range = c(-3, 2)) + xlim(-5, 10)
+# (sample(ul, 10000, replace = TRUE)-sample(z, 10000, replace = TRUE))  %>% as_tibble() %>%
+#   plot_ppmc_ridges(value, n = 1000000, custom_ci = .$value %>% ggdist::hdi(.width = .89), range = c(-80, 5)) + xlim(-150, 20)
 
 or <- counts[[1]]*counts[[2]]/(counts[[3]]*counts[[4]])
-(or-ll) %>% as_tibble() %>% plot_ppmc_ridges(value, ci_width = .89)
-(ul-or) %>% as_tibble() %>% plot_ppmc_ridges(value, ci_width = .89)
+(or-ll) %>% plot_ppmc_distribution()
+(ul-or) %>% plot_ppmc_distribution()
 
 (or-ll) %>% tidybayes::median_hdi()
 

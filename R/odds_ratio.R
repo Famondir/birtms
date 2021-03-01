@@ -156,6 +156,8 @@ calculate_odds_ratio <- function(y_rep = NULL, y = NULL, zero_correction = 'none
 #' get_or(fit, n_samples = 500)
 #' }
 get_or <- function(model, n_samples = NULL, ci_width = .89, zero_correction = 'none', ci_method = 'Woolf', nsim_ci = 10000000, nsim_median = 100000) {
+  if(model$model_specs$response_type != 'dichotom') stop('Odds ratios are only implemented for dichotomous models.')
+
   seperate_itempairs <- function(x) {
     x <- x %>% mutate(itempair = stringr::str_remove(itempair, 'ItemPair')) %>% tidyr::separate(itempair, into = c('item1', 'item2'), convert = TRUE)
 

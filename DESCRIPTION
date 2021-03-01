@@ -33,7 +33,9 @@ Imports:
     ggridges,
     PropCIs,
     ggdist,
-    modeest
+    modeest,
+    bde,
+    ggformula
 RoxygenNote: 7.1.1
 VignetteBuilder: knitr
 Config/testthat/edition: 3

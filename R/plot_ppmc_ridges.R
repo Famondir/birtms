@@ -1,9 +1,11 @@
 # Sets the expressions used to build the formula as global variables to inform R
 # CMD check that they are intended to have no definition at time of package
 # building
-if(getRversion() >= "2.15.1")  utils::globalVariables(c('quantile', 'xmin', 'xmax', 'ymin', 'ymax'))
+if(getRversion() >= "2.15.1")  utils::globalVariables(c('quantile', 'xmin', 'xmax', 'ymin', 'ymax', 'ymax_spline', 'ymin_spline', 'points',
+                                                        'density', 'ci_interval', 'ci_x', 'ci_y', 'x', 'y'))
 
-#' Plot PPMC parameter distributions
+#' Plot multiple PPMC parameter distributions
+#' Deprecated!
 #'
 #' @param data tibble
 #' @param parameter column name that holds numeric values to plot density ridges for
@@ -31,6 +33,8 @@ if(getRversion() >= "2.15.1")  utils::globalVariables(c('quantile', 'xmin', 'xma
 #' birtsms::plot_ppmc_distribution(or_dif, group = item2, rope = TRUE)
 #' }
 plot_ppmc_ridges <- function (data, parameter, group = 0, rope = FALSE, hdi = TRUE, ci_width = .89, color = 'lightblue', range = NULL, custom_ci = NULL, ...) {
+  .Deprecated("plot_ppmc_distribution")
+
   hdi_custWidth_internal <- function(...) {
     dots <- list(...)
     hdi_width <- dots[[2]]
@@ -90,6 +94,150 @@ plot_ppmc_ridges <- function (data, parameter, group = 0, rope = FALSE, hdi = TR
 
   if(!is.null(range)) {
     g <- g + ggplot2::coord_cartesian(xlim = range)
+  }
+
+  return(g)
+}
+
+#' Plot PPMC parameter distributions
+#'
+#' @param data numeric or single column from dataframe
+#' @param method character; 'Mueller94' or 'SJexpanded'
+#' @param ci_width double
+#' @param density_ci boolean; should CI for density should be bootstrapped?
+#' @param smooth_density_ci boolean; should CI be smoothed?
+#' @param color color
+#' @param n integer, number of points of desity estimation
+#' @param clean_data boolean; should infinite values and NaNs get removed?
+#'
+#' @return ggplot2 object
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' or_data <- get_or(fit, n_samples = 500)
+#' or_data %>% select(-or_rep_samples) %>% filter(item1 == 1, item2 == 2) %>%
+#' birtsms::unnest_keep_attr(or_dif_samples) %>% select(or_dif)
+#' birtsms::plot_ppmc_distribution()
+#' }
+plot_ppmc_distribution <- function(data, method = 'SJexpanded', ci_width = .89,
+                      density_ci = FALSE, smooth_density_ci = TRUE,
+                      color = 'lightblue', n = 512, clean_data = FALSE) {
+  if (!(method %in% c('Mueller94', 'SJexpanded'))) stop('Method not defined.')
+
+  density_boot <- function(d,w) {
+    data <- d[w]
+    dens <- data %>% get_density()
+
+    return(list(density = dens$y, points = dens$x))
+  }
+
+  set_interval <- function(x, ci) {
+    result <- rep(0, length(x))
+    for (i in ci) {
+      result <- ifelse(x > i, result + 1, result)
+    }
+
+    return(result)
+  }
+
+  get_grid <- function(dat, with_ci = TRUE) {
+    grid <- seq(min(dat), max(dat), stepsize)
+
+    if ( with_ci) {
+      scale <- ceiling(log10(max(dat)))
+      scale <- ifelse(scale > 1, 10^scale, 10) # otherwise we will get a tie at "group_by(point) %>% summarise()" later
+
+      grid <- sort(c(grid, ci-scale*.Machine$double.eps, ci+scale*.Machine$double.eps))
+    }
+    return(grid)
+  }
+
+  dens_mueller <- function(dat) {
+    grid <- get_grid(dat, FALSE)
+    dens <- dat %>% bde::bde(estimator = "boundarykernel", dataPointsCache = grid, lower.limit = min(dat), upper.limit = max(dat))
+    dens <- dens %>% density_converter(get_grid(dat))
+    return(dens)
+  }
+
+  dens_sj <- function(dat) {
+    rev_dat <- {-dat+max(dat)+min(dat)}
+    rev_dat <- c(rev_dat+(max(rev_dat)-min(rev_dat)), rev_dat-(max(rev_dat)-min(rev_dat)))
+    rev_dat <- rev_dat[-c(1:length(dat))]
+
+    dens <- c(dat, rev_dat) %>% stats::density(n = 3*n, bw="SJ") # not symmetrically around lower bound
+    dens$y <- dens$y*3
+
+    grid <- get_grid(dat)
+    a <- stats::approx(dens$x, dens$y, grid)
+    dens$x <- a$x
+    dens$y <- a$y
+    return(dens)
+  }
+
+  density_converter <- function(density_S4, grid) {
+    dens <- list(x = grid,
+                 y = bde::density(density_S4, grid),
+                 bw = bde::getb(density_S4),
+                 call = NULL,
+                 data.name = 'x',
+                 has.na = FALSE
+    )
+    class(dens) <- 'density'
+
+    return(dens)
+  }
+
+  median_call <- function(x) {
+    warning('Some density points got zero variance while bootstrapping')
+    median(x)
+  }
+
+  if (method == 'Mueller94') {
+    get_density <- dens_mueller
+  } else if (method == 'SJexpanded') {
+    get_density <- dens_sj
+  }
+
+  data <- data %>% as.numeric()
+  if (clean_data) {
+    data <- data[is.finite(data)]
+    data <- data[!is.na(data)]
+  }
+  stepsize = (max(data)-min(data))/n
+  ci <- NULL
+  ci <- data %>% get_density() %>% HDInterval::hdi(allowSplit = TRUE) %>% as.numeric()
+
+  dens <- get_density(data)
+
+  ci_data <- tibble::tibble(ci_x = ci, ci_y = stats::approx(dens$x, dens$y, xout = ci)$y)
+  dens_data <- tibble::tibble(x = dens$x, y = dens$y, ci_interval = as.factor(set_interval(x, ci)))
+
+  g <-  dens_data %>% ggplot2::ggplot() + ggplot2::geom_area(aes(x = x, y = y, fill = ci_interval), color = 'black') +
+    ggplot2::scale_fill_manual(values = c(rep(c("transparent", color),length(ci/2)), "transparent"), guide = "none")
+  g <- g + ggplot2::geom_segment(data = ci_data, aes(x = ci_x, xend = ci_x, y = 0, yend = ci_y), linetype = 'dashed')
+
+  if (density_ci) {
+    density_draws <- rep(length(data), 1000) %>% purrr::map(.f = ~sample(.x, size = length(data), replace = TRUE)) %>%
+      purrr::map_df(.f = ~density_boot(data, .x))
+    birtms::aggregate_warnings({
+      density_ci_data <- density_draws %>% dplyr::group_by(points) %>%
+        dplyr::summarise(min = ifelse(!is.na(stats::sd(density)), ggdist::hdi(density)[1], median_call(density)),
+                         max = ifelse(!is.na(stats::sd(density)), ggdist::hdi(density)[2], median_call(density))) # hdi stable or use hdci?
+    })
+
+    if (smooth_density_ci) {
+      g_temp <- ggplot2::ggplot() + ggformula::geom_spline(data = density_ci_data, aes(x = points, y= min), linetype = 'dashed') +
+        ggformula::geom_spline(data = density_ci_data, aes(x = points, y= max), linetype = 'dashed')
+
+      gg_data <- ggplot2::ggplot_build(g_temp)
+
+      density_ci_splines <- gg_data$data[[1]][,1:2] %>% cbind(gg_data$data[[2]][,2]) %>% stats::setNames(c('x', 'ymin_spline', 'ymax_spline'))
+
+      g <- g + ggplot2::geom_ribbon(data = density_ci_splines, aes(x = x, ymin = ymin_spline, max = ymax_spline), alpha = .25)
+    } else {
+      g <- g + ggplot2::geom_ribbon(data = density_ci_data, aes(x = points, ymin = min, max = max), alpha = .25)
+    }
   }
 
   return(g)
