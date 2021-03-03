@@ -4,14 +4,14 @@
 \alias{dens_sj_bounded}
 \title{Density with SJ-bandwidth method also suitable for bounded densities}
 \usage{
-dens_sj_bounded(dat, n = 512, cut = TRUE, na.rm = FALSE)
+dens_sj_bounded(dat, n = 512, truncate = TRUE, na.rm = FALSE)
 }
 \arguments{
 \item{dat}{numeric vector}
 
 \item{n}{integer, number of points where density gets evaluated}
 
-\item{cut}{boolean, should only be FALSE for internal use}
+\item{truncate}{boolean, should only be FALSE for internal use}
 
 \item{na.rm}{boolean}
 }

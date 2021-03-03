@@ -6,17 +6,20 @@
 \usage{
 plot_ppmc_distribution(
   data,
+  column = NULL,
   method = "SJexpanded",
   ci_width = 0.89,
   density_ci = FALSE,
-  smooth_density_ci = TRUE,
+  smooth_density_ci = FALSE,
   color = "lightblue",
   n = 512,
   clean_data = FALSE
 )
 }
 \arguments{
-\item{data}{numeric or single column from dataframe}
+\item{data}{numeric vector or dataframe}
+
+\item{column}{if data is a datframe specify a single column that should a plot be returned for}
 
 \item{method}{character; 'Mueller94' or 'SJexpanded'}
 
@@ -28,7 +31,7 @@ plot_ppmc_distribution(
 
 \item{color}{color}
 
-\item{n}{integer, number of points of desity estimation}
+\item{n}{integer, number of points of desity estimation; can be smaller for Mueller94 (start with 128)}
 
 \item{clean_data}{boolean; should infinite values and NaNs get removed?}
 }

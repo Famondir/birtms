@@ -417,8 +417,8 @@ plot_or_heatmap <- function(or_data, model = NULL, a = 1, sigma = 1, median_cent
       ll_vec <- (reference - ll) %>% ggdist::hdi(.width = ci_width)
       ul_vec <- (ul - reference) %>% ggdist::hdi(.width = ci_width)
       # if there are multiple HDI areas the lowest value will be the left and the highest the right limit
-      ll_vec <- matrix(c(min(ll_vec[,1]), max(ll_vec[,2])), ncol = 2)
-      ul_vec <- matrix(c(min(ul_vec[,1]), max(ul_vec[,2])), ncol = 2)
+      ll_vec <- max_range_hdi(ll_vec)
+      ul_vec <- max_range_hdi(ul_vec)
 
       or_data[i, c('ll_low', 'll_up')] <- ll_vec
       or_data[i, c('ul_low', 'ul_up')] <- ul_vec

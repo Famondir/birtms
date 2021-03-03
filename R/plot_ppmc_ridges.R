@@ -101,7 +101,8 @@ plot_ppmc_ridges <- function (data, parameter, group = 0, rope = FALSE, hdi = TR
 
 #' Plot PPMC parameter distributions
 #'
-#' @param data numeric or single column from dataframe
+#' @param data numeric vector or dataframe
+#' @param column if data is a datframe specify a single column that should a plot be returned for
 #' @param method character; 'Mueller94' or 'SJexpanded'
 #' @param ci_width double
 #' @param density_ci boolean; should CI for density should be bootstrapped?
@@ -120,7 +121,7 @@ plot_ppmc_ridges <- function (data, parameter, group = 0, rope = FALSE, hdi = TR
 #' birtsms::unnest_keep_attr(or_dif_samples) %>% select(or_dif)
 #' birtsms::plot_ppmc_distribution()
 #' }
-plot_ppmc_distribution <- function(data, method = 'SJexpanded', ci_width = .89,
+plot_ppmc_distribution <- function(data, column = NULL, method = 'SJexpanded', ci_width = .89,
                       density_ci = FALSE, smooth_density_ci = FALSE,
                       color = 'lightblue', n = 512, clean_data = FALSE) {
   if (!(method %in% c('Mueller94', 'SJexpanded'))) stop('Method not defined.')
@@ -182,9 +183,13 @@ plot_ppmc_distribution <- function(data, method = 'SJexpanded', ci_width = .89,
 
   if (method == 'Mueller94') {
     get_density <- dens_mueller
+    get_hdi <- hdi_mueller_bounded
   } else if (method == 'SJexpanded') {
     get_density <- dens_sj
+    get_hdi <- hdi_sj_bounded
   }
+
+  if(is.data.frame(data)) data <- data %>% dplyr::pull({{column}})
 
   data <- data %>% as.numeric()
   if (clean_data) {
@@ -212,7 +217,8 @@ plot_ppmc_distribution <- function(data, method = 'SJexpanded', ci_width = .89,
       purrr::map_df(.f = ~density_boot(data, .x))
     birtms::aggregate_warnings({
       density_ci_data <- density_draws %>% dplyr::group_by(points) %>%
-        dplyr::summarise(min = ggdist::hdci(density)[1], max = ggdist::hdci(density)[2]) # hdci or hdi? own functions or from ggdist?
+        dplyr::summarise(min = max_range_hdi(get_hdi(density))[1],
+                         max = max_range_hdi(get_hdi(density))[2]) # hdci or hdi? own functions or from ggdist?
     })
 
     if (smooth_density_ci) {

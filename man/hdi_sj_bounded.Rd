@@ -4,7 +4,7 @@
 \alias{hdi_sj_bounded}
 \title{HDI suitable also for bounded densities based on SJ banswidth method}
 \usage{
-hdi_sj_bounded(x, .width = 0.95, na.rm = FALSE, allowSplit = TRUE)
+hdi_sj_bounded(x, .width = 0.95, na.rm = FALSE)
 }
 \arguments{
 \item{x}{numeric vector}
@@ -12,8 +12,6 @@ hdi_sj_bounded(x, .width = 0.95, na.rm = FALSE, allowSplit = TRUE)
 \item{.width}{double, ci width}
 
 \item{na.rm}{boolean, should NA values be dropped}
-
-\item{allowSplit}{boolean, should the HDI be returned (possibly contains multiple regions)}
 }
 \value{
 matrix
