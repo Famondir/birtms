@@ -107,7 +107,7 @@ plot_ppmc_ridges <- function (data, parameter, group = 0, rope = FALSE, hdi = TR
 #' @param density_ci boolean; should CI for density should be bootstrapped?
 #' @param smooth_density_ci boolean; should CI be smoothed?
 #' @param color color
-#' @param n integer, number of points of desity estimation
+#' @param n integer, number of points of desity estimation; can be smaller for Mueller94 (start with 128)
 #' @param clean_data boolean; should infinite values and NaNs get removed?
 #'
 #' @return ggplot2 object
@@ -121,13 +121,13 @@ plot_ppmc_ridges <- function (data, parameter, group = 0, rope = FALSE, hdi = TR
 #' birtsms::plot_ppmc_distribution()
 #' }
 plot_ppmc_distribution <- function(data, method = 'SJexpanded', ci_width = .89,
-                      density_ci = FALSE, smooth_density_ci = TRUE,
+                      density_ci = FALSE, smooth_density_ci = FALSE,
                       color = 'lightblue', n = 512, clean_data = FALSE) {
   if (!(method %in% c('Mueller94', 'SJexpanded'))) stop('Method not defined.')
 
-  density_boot <- function(d,w) {
+  density_boot <- function(d, w) {
     data <- d[w]
-    dens <- data %>% get_density()
+    dens <- data %>% get_density(boot = TRUE)
 
     return(list(density = dens$y, points = dens$x))
   }
@@ -145,7 +145,7 @@ plot_ppmc_distribution <- function(data, method = 'SJexpanded', ci_width = .89,
     grid <- seq(min(dat), max(dat), stepsize)
 
     if ( with_ci) {
-      scale <- ceiling(log10(max(dat)))
+      scale <- ceiling(log10(max(abs(dat))))
       scale <- ifelse(scale > 1, 10^scale, 10) # otherwise we will get a tie at "group_by(point) %>% summarise()" later
 
       grid <- sort(c(grid, ci-scale*.Machine$double.eps, ci+scale*.Machine$double.eps))
@@ -153,43 +153,31 @@ plot_ppmc_distribution <- function(data, method = 'SJexpanded', ci_width = .89,
     return(grid)
   }
 
-  dens_mueller <- function(dat) {
+  dens_mueller <- function(dat, boot = FALSE) {
     grid <- get_grid(dat, FALSE)
-    dens <- dat %>% bde::bde(estimator = "boundarykernel", dataPointsCache = grid, lower.limit = min(dat), upper.limit = max(dat))
-    dens <- dens %>% density_converter(get_grid(dat))
+    dens <- dat %>% bde::bde(estimator = "boundarykernel", dataPointsCache = grid, lower.limit = min(data_org), upper.limit = max(data_org))
+
+    if(boot) grid <- get_grid(data_org, !boot)
+    else grid <- get_grid(dat, !boot)
+
+    dens <- dens %>% density_converter(grid = grid)
     return(dens)
   }
 
-  dens_sj <- function(dat) {
-    rev_dat <- {-dat+max(dat)+min(dat)}
-    rev_dat <- c(rev_dat+(max(rev_dat)-min(rev_dat)), rev_dat-(max(rev_dat)-min(rev_dat)))
-    rev_dat <- rev_dat[-c(1:length(dat))]
+  dens_sj <- function(dat, boot = FALSE) {
+    dens <- dens_sj_bounded(dat, n, cut = FALSE)
 
-    dens <- c(dat, rev_dat) %>% stats::density(n = 3*n, bw="SJ") # not symmetrically around lower bound
-    dens$y <- dens$y*3
+    if(boot) grid <- get_grid(data_org, !boot)
+    else grid <- get_grid(dat, !boot)
 
-    grid <- get_grid(dat)
     a <- stats::approx(dens$x, dens$y, grid)
     dens$x <- a$x
     dens$y <- a$y
     return(dens)
   }
 
-  density_converter <- function(density_S4, grid) {
-    dens <- list(x = grid,
-                 y = bde::density(density_S4, grid),
-                 bw = bde::getb(density_S4),
-                 call = NULL,
-                 data.name = 'x',
-                 has.na = FALSE
-    )
-    class(dens) <- 'density'
-
-    return(dens)
-  }
-
   median_call <- function(x) {
-    warning('Some density points got zero variance while bootstrapping')
+    warning('Some density points got zero variance while bootstrapping. Try reducing the number of density points n.')
     median(x)
   }
 
@@ -204,6 +192,8 @@ plot_ppmc_distribution <- function(data, method = 'SJexpanded', ci_width = .89,
     data <- data[is.finite(data)]
     data <- data[!is.na(data)]
   }
+  data_org <- data
+
   stepsize = (max(data)-min(data))/n
   ci <- NULL
   ci <- data %>% get_density() %>% HDInterval::hdi(allowSplit = TRUE) %>% as.numeric()
@@ -222,8 +212,8 @@ plot_ppmc_distribution <- function(data, method = 'SJexpanded', ci_width = .89,
       purrr::map_df(.f = ~density_boot(data, .x))
     birtms::aggregate_warnings({
       density_ci_data <- density_draws %>% dplyr::group_by(points) %>%
-        dplyr::summarise(min = ifelse(!is.na(stats::sd(density)), ggdist::hdi(density)[1], median_call(density)),
-                         max = ifelse(!is.na(stats::sd(density)), ggdist::hdi(density)[2], median_call(density))) # hdi stable or use hdci?
+        dplyr::summarise(min = ifelse(!is.na(stats::sd(density)), ggdist::hdci(density)[1], median_call(density)),
+                         max = ifelse(!is.na(stats::sd(density)), ggdist::hdci(density)[2], median_call(density))) # using hdci with SJ density throws error: sample is too sparse to find TD
     })
 
     if (smooth_density_ci) {

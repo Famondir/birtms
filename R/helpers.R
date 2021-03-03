@@ -136,63 +136,6 @@ make_responsedata_wider <- function(model) {
   return(data_wide)
 }
 
-#' Get mode
-#'
-#' @param v vector
-#' @param ... arguments passed to modeest::hsm()
-#'
-#' @return vector
-#' @export
-#'
-#' @examples
-#' v <- c(2, 2, 1)
-#' get_mode(v)
-get_mode <- function(v, ...) {
-  uniqv <- unique(v)
-  tab <- tabulate(match(v, uniqv))
-  modus <- uniqv[which( tab == max(tab))]
-  n_modes <- length(modus)
-
-  if(is.numeric(v)) modus <- modeest::hsm(v, ...)
-
-  if(n_modes != 1) {
-    m <- paste0('Tie occured! There are ', n_modes, ' modes.')
-    if(is.numeric(v)) m <- paste(m, 'Returning a mode within highest density region.\nSee modeest::hsm(). Use ... arguments to adjust behavior.')
-    else m <- paste(m, 'Returning all modes.')
-    warning(m)
-  }
-
-  return(modus)
-}
-
-#' Mode via hsm and HDI
-#' define a point_interval function using the hsm (half sample mode) estimator from modeest
-#'
-#' @param ... columns to get point_interval for
-#' @param .data dataframe
-#' @param .width double, ci width
-#' @param inf.rm boolean, should infinite values be dropped
-#' @param nan.rm boolean, should NaN values be dropped
-#' @param tie.limit double
-#'
-#' @return dataframe
-#' @export
-#'
-#' @examples
-#' hsm_hdi(c(1,2,3,3,2.5))
-hsm_hdi <- function(.data, ..., .width = .89, inf.rm = FALSE, nan.rm = FALSE, tie.limit = .05) {
-  hdi <- function(...) ggdist::hdi(...)
-  hsm <- function(...) modeest::hsm(..., tie.limit = tie.limit)
-
-  dots <- rlang::enquos(...)
-
-  if (inf.rm) .data <- .data %>% dplyr::filter_at(dplyr::vars(!!!dots), dplyr::all_vars(is.finite(.x)))
-  if (nan.rm) .data <- .data %>% dplyr::filter_at(dplyr::vars(!!!dots), dplyr::all_vars(!is.nan(.x)))
-
-  ggdist::point_interval(.data, ..., .width = .width, .point = hsm, .interval = hdi)
-}
-
-
 #' Aggregates identical warnings
 #' Used to get a warning only once when it occures more often (e.g. from an expression in a loop or purrr::map())
 #' Code inside expression will be executed and therefore alters / creates variables in parent environment.

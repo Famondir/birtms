@@ -1800,3 +1800,13 @@ or_dif_bonds <- or_data_1pl_full %>% tidyr::unnest(or_dif_ci, keep_empty = TRUE)
   dplyr::mutate(above_zero = .lower > 0, beneath_zero = .upper < 0,
                 above_rope = .lower > 0 + rope, beneath_rope = .upper < 0 - rope,
                 inside_or_act_ci = .lower > (or_act_ci.lower- or_act) &  .upper < (or_act_ci.upper - or_act))
+
+# --- beschränkte Dichten ----
+
+x <- c(rnorm(100, -3, .5), runif(100, 1,2))
+plot(density(x, bw = 'SJ'))
+lines(density(-x+max(x)+min(x), bw = 'SJ'), col = 'red')
+
+x2 <- c(exp(-1/runif(100,0,1)))
+plot(density(x2, bw = 'SJ'))
+(-x2) %>% plot_ppmc_distribution()
