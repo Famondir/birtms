@@ -94,7 +94,7 @@ hdi_sj_bounded <- function(x, .width = 0.95, na.rm = FALSE, allowSplit = TRUE) {
     return(matrix(c(NA_real_, NA_real_), ncol = 2))
   }
 
-  intervals = HDInterval::hdi(dens_sj_bounded(x,na.rm = na.rm, cut = TRUE),
+  intervals = HDInterval::hdi(dens_sj_bounded(x,na.rm = na.rm, truncate = TRUE),
                               credMass = .width, allowSplit = allowSplit)
 
   if (nrow(intervals) == 1) {
@@ -134,11 +134,11 @@ hdi_mueller_bounded <- function(x, .width = 0.95, na.rm = FALSE, allowSplit = TR
 #'
 #' @param dat numeric vector
 #' @param n integer, number of points where density gets evaluated
-#' @param cut boolean, should only be FALSE for internal use
+#' @param truncate boolean, should only be FALSE for internal use
 #' @param na.rm boolean
 #'
 #' @return S3 density
-dens_sj_bounded <- function(dat, n = 512, cut = TRUE, na.rm = FALSE) {
+dens_sj_bounded <- function(dat, n = 512, truncate = TRUE, na.rm = FALSE) {
   stepsize = (max(dat)-min(dat))/n
   grid <- seq(min(dat), max(dat), stepsize)
   n <- n*3
@@ -149,7 +149,7 @@ dens_sj_bounded <- function(dat, n = 512, cut = TRUE, na.rm = FALSE) {
   dens <- c(dat, rev_dat) %>% stats::density(n = n, bw="SJ", na.rm = na.rm, cut = 0) # not symmetrically around lower bound
   dens$y <- dens$y*3
 
-  if (cut) {
+  if (truncate) {
     a <- stats::approx(dens$x, dens$y, grid)
     dens$x <- a$x
     dens$y <- a$y

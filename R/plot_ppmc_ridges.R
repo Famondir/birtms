@@ -141,7 +141,7 @@ plot_ppmc_distribution <- function(data, method = 'SJexpanded', ci_width = .89,
     return(result)
   }
 
-  get_grid <- function(dat, with_ci = TRUE) {
+  get_grid <- function(dat, with_ci = FALSE) {
     grid <- seq(min(dat), max(dat), stepsize)
 
     if ( with_ci) {
@@ -154,21 +154,20 @@ plot_ppmc_distribution <- function(data, method = 'SJexpanded', ci_width = .89,
   }
 
   dens_mueller <- function(dat, boot = FALSE) {
-    grid <- get_grid(dat, FALSE)
-    dens <- dat %>% bde::bde(estimator = "boundarykernel", dataPointsCache = grid, lower.limit = min(data_org), upper.limit = max(data_org))
+    grid <- grid_common
+    dens <- dat %>% bde::bde(estimator = "boundarykernel", dataPointsCache = grid, lower.limit = min(grid), upper.limit = max(grid))
 
-    if(boot) grid <- get_grid(data_org, !boot)
-    else grid <- get_grid(dat, !boot)
+    if(!boot) grid <- get_grid(dat, with_ci = TRUE)
 
     dens <- dens %>% density_converter(grid = grid)
     return(dens)
   }
 
   dens_sj <- function(dat, boot = FALSE) {
-    dens <- dens_sj_bounded(dat, n, cut = FALSE)
+    dens <- dens_sj_bounded(dat, n, truncate = FALSE)
 
-    if(boot) grid <- get_grid(data_org, !boot)
-    else grid <- get_grid(dat, !boot)
+    if(boot) grid <- grid_common
+    else grid <- get_grid(dat, with_ci = TRUE)
 
     a <- stats::approx(dens$x, dens$y, grid)
     dens$x <- a$x
@@ -192,9 +191,10 @@ plot_ppmc_distribution <- function(data, method = 'SJexpanded', ci_width = .89,
     data <- data[is.finite(data)]
     data <- data[!is.na(data)]
   }
-  data_org <- data
 
   stepsize = (max(data)-min(data))/n
+  grid_common <- get_grid(data, with_ci = FALSE)
+
   ci <- NULL
   ci <- data %>% get_density() %>% HDInterval::hdi(allowSplit = TRUE) %>% as.numeric()
 
@@ -212,8 +212,7 @@ plot_ppmc_distribution <- function(data, method = 'SJexpanded', ci_width = .89,
       purrr::map_df(.f = ~density_boot(data, .x))
     birtms::aggregate_warnings({
       density_ci_data <- density_draws %>% dplyr::group_by(points) %>%
-        dplyr::summarise(min = ifelse(!is.na(stats::sd(density)), ggdist::hdci(density)[1], median_call(density)),
-                         max = ifelse(!is.na(stats::sd(density)), ggdist::hdci(density)[2], median_call(density))) # using hdci with SJ density throws error: sample is too sparse to find TD
+        dplyr::summarise(min = ggdist::hdci(density)[1], max = ggdist::hdci(density)[2]) # hdci or hdi? own functions or from ggdist?
     })
 
     if (smooth_density_ci) {
