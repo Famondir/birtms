@@ -123,7 +123,7 @@ plot_ppmc_ridges <- function (data, parameter, group = 0, rope = FALSE, hdi = TR
 #' }
 plot_ppmc_distribution <- function(data, column = NULL, method = 'SJexpanded', ci_width = .89,
                       density_ci = FALSE, smooth_density_ci = FALSE,
-                      color = 'lightblue', n = 512, clean_data = FALSE) {
+                      color = 'lightblue', n = 128, clean_data = FALSE) {
   if (!(method %in% c('Mueller94', 'SJexpanded'))) stop('Method not defined.')
 
   density_boot <- function(d, w) {
@@ -201,7 +201,7 @@ plot_ppmc_distribution <- function(data, column = NULL, method = 'SJexpanded', c
   grid_common <- get_grid(data, with_ci = FALSE)
 
   ci <- NULL
-  ci <- data %>% get_density() %>% HDInterval::hdi(allowSplit = TRUE) %>% as.numeric()
+  ci <- data %>% get_hdi(.width = ci_width) %>% as.numeric()
 
   dens <- get_density(data)
 
@@ -217,8 +217,8 @@ plot_ppmc_distribution <- function(data, column = NULL, method = 'SJexpanded', c
       purrr::map_df(.f = ~density_boot(data, .x))
     birtms::aggregate_warnings({
       density_ci_data <- density_draws %>% dplyr::group_by(points) %>%
-        dplyr::summarise(min = max_range_hdi(get_hdi(density))[1],
-                         max = max_range_hdi(get_hdi(density))[2]) # hdci or hdi? own functions or from ggdist?
+        dplyr::summarise(min = max_range_hdi(get_hdi(density, .width = ci_width))[1],
+                         max = max_range_hdi(get_hdi(density, .width = ci_width))[2]) # hdci or hdi? own functions or from ggdist?
     })
 
     if (smooth_density_ci) {

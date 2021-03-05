@@ -84,11 +84,19 @@ posterior_predictive_values_long <- function(model, n_samples = NULL, f) {
   message('Extracting posterior predictiv values')
   ppv <- f(model, subset = draws)
 
+  ifelse(length(dim(ppv)) > 2, multiple_ppvs <- TRUE, multiple_ppvs <- FALSE)
+
   message('Converting responses to long format')
-  ppv <- ppv %>% t() %>% as.data.frame()
-  if (!is.null(draws)) ppv <- ppv %>% stats::setNames(paste0('V', draws))
-  ppv <- ppv  %>% cbind(model$data) %>%
-    tidyr::pivot_longer(names_to = ".draw", names_prefix = 'V', names_transform = as.numeric(), values_to = 'ppv', cols = dplyr::starts_with("V"))
+  ppv <- ppv %>% as.data.frame() %>% mutate(.draw = row_number())
+  if (multiple_ppvs) {
+     ppv <- ppv %>% pivot_longer(names_to = c('.response_number', 'category'), names_sep = "([.])", names_transform = list(.response_number = as.integer),
+                   values_to = 'ppv', cols = !.draw)
+  }  else {
+    ppv <- ppv %>% pivot_longer(names_to = '.response_number', names_transform = list(.response_number = as.integer), names_prefix = 'V',
+                   values_to = 'ppv', cols = !.draw)
+  }
+  data <- model$data %>% mutate(.response_number = row_number())
+  ppv <- ppv %>% left_join(data, by = '.response_number')
 
   return(ppv)
 }

@@ -193,7 +193,7 @@ dens_sj_bounded <- function(dat, n = 512, truncate = TRUE, na.rm = FALSE) {
   grid <- seq(min(dat), max(dat), stepsize)
   n <- n*3
 
-  rev_dat <- {-dat+max(dat)+min(dat)}
+  rev_dat <- -dat+max(dat)+min(dat)
   rev_dat <- c(rev_dat+(max(rev_dat)-min(rev_dat)), rev_dat-(max(rev_dat)-min(rev_dat))) # max(rev_dat) = max(dat), analogous for min
 
   dens <- c(dat, rev_dat) %>% stats::density(n = n, bw="SJ", na.rm = na.rm, cut = 0) # not symmetrically around lower bound
@@ -238,3 +238,4 @@ max_range_hdi <- function(hdi) {
 
   return(hdi_range)
 }
+
