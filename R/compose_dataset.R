@@ -33,9 +33,14 @@
 compose_dataset <- function(response_data, response_columns, variable_specifications = NULL,
                             person_data = NULL, item_data = NULL, situation_data = NULL) {
 
+  browser()
+
+  response_data <- response_data %>% dplyr::ungroup()
+
   variable_specifications <- check_and_set_specifications(variable_specifications)
 
   if(!is.null(person_data)) {
+    person_data <- person_data %>% dplyr::ungroup()
     if (length(intersect(names(person_data), names(response_data))) > 1) stop(glue::glue('There are columns with the same name in response_data and person_data!\nThe colliding names are: {glue::glue_collapse(setdiff(intersect(names(person_data), names(response_data)),variable_specifications$person), sep = ", ")}'))
     response_data <- response_data %>% dplyr::left_join(person_data, by = variable_specifications$person)
   }
@@ -59,6 +64,7 @@ compose_dataset <- function(response_data, response_columns, variable_specificat
 
   item_covariables <- NULL
   if (!is.null(item_data)) {
+    item_data <- item_data %>% dplyr::ungroup()
     item_covariables <- names(variable_specifications) %>% stringr::str_detect('item_covariables') %>% purrr::keep(.x = variable_specifications) %>%
       unlist(use.names = FALSE) %>% unique()
     item_data <- item_data %>% dplyr::select(variable_specifications$item, item_covariables, variable_specifications$regular_dimensions, variable_specifications$unregular_dimensions)
@@ -70,6 +76,7 @@ compose_dataset <- function(response_data, response_columns, variable_specificat
 
   situation_covariables <- NULL
   if (!is.null(situation_data)) {
+    situation_data <- situation_data %>% dplyr::ungroup()
     situation_covariables <- names(variable_specifications) %>% stringr::str_detect('situation_covariables') %>% purrr::keep(.x = variable_specifications) %>%
       unlist(use.names = FALSE) %>% unique()
     situation_data <- situation_data %>% dplyr::select(variable_specifications$item, variable_specifications$person, situation_covariables)
@@ -78,6 +85,8 @@ compose_dataset <- function(response_data, response_columns, variable_specificat
 
     dataset <- dataset %>% dplyr::left_join(situation_data, by = c(variable_specifications$person, variable_specifications$item))
   }
+
+  dataset <- dataset[which(!is.na(dataset[variable_specifications$response])),]
 
   # correct_names <- c(variable_specifications$item, variable_specifications$response, variable_specifications$person,
   #                    person_covariables, item_covariables, situation_covariables)
