@@ -33,8 +33,6 @@
 compose_dataset <- function(response_data, response_columns, variable_specifications = NULL,
                             person_data = NULL, item_data = NULL, situation_data = NULL) {
 
-  browser()
-
   response_data <- response_data %>% dplyr::ungroup()
 
   variable_specifications <- check_and_set_specifications(variable_specifications)
