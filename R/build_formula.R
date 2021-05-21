@@ -27,6 +27,10 @@ build_formula <- function(variable_specifications = NULL, model_specifications =
     ensym_list() %>% enlist_syms() # if %>% used all the way the passed name to check_and_set_specifications() will be "."
   mod_specs <- check_and_set_specifications(model_specifications)
 
+  if (!is.null(var_specs$uniform_dif)) {
+    stop('At the moment the dif parameter is not implemented.')
+  }
+
   if (mod_specs$dimensionality_type == 'multidimensional_noncompensatory') {
     stop('At the moment noncompensatory models are not implemented.')
   }
