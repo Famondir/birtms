@@ -999,3 +999,11 @@ test_that("monotonous praedictors can be specified", {
   expect_equal_bf(build_formula(variable_specs, model_specs), form_1PL)
 
 })
+
+test_that("monotonous praedictors can be specified", {
+  # 1PL regular
+  variable_specs <- rlang::list2(uniform_dif = c('test'),
+  )
+  expect_error(build_formula(variable_specifications = variable_specs), "dif parameter is not implemented")
+
+})
