@@ -1,0 +1,165 @@
+---
+title: "Graphical Model Evaluation"
+author: "Simon Schäfer"
+date: "9 8 2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(brms)
+
+glob_refit = FALSE
+```
+
+Lade unterschiedliche Datensätze.
+
+```{r}
+data_spm <- rio::import("../data/data_spm.rda")
+
+eirtdata <- read_csv("https://raw.githubusercontent.com/danielbkatz/EIRT/master/eirtdata.csv")
+eirtdata <- eirtdata[-1]
+eirtdata <- eirtdata %>% mutate(treat = ifelse(treat==1, "treat", "not-treat"))
+eirtdata$treat <- as.factor(eirtdata$treat)
+eirtdata$proflevel <- as.factor(eirtdata$proflevel)
+eirtdata$abilcov <- as.factor(eirtdata$abilcov)
+
+data_tina <- rio::import("../inst/extdata/data_tina.xlsx")
+
+data_simon <- rio::import("../inst/extdata/daten_fdw_simon.xlsx")
+```
+
+## 1PL
+
+Fitte 1pl-Modelle mit birtms.
+
+```{r}
+priors_1d_1pl <- prior("normal(0, 3)", class = "sd", group = "person") +
+  prior("normal(0, 3)", class = "sd", group = "item")
+
+fit_1d_1pl_spm_full1 <- birtms::birtm_aio(response_data = data_spm, response_columns = i1:i12,
+                                          prior = priors_1d_1pl,
+                                          file = "../inst/extdata/fit_1d_1pl_spm_full1",
+                                          refit = glob_refit)
+
+priors_1d_1pl_token <- prior("normal(0, 3)", class = "sd", group = "token") +
+  prior("normal(0, 3)", class = "sd", group = "item")
+
+fit_1d_1pl_tina1 <- birtms::birtm_aio(response_data = data_tina, 
+                                      response_columns = SuHT3.binary:KaKST1.binary,
+                                      prior = priors_1d_1pl_token,
+                                      file = "../inst/extdata/fit_1d_1pl_tina1",
+                                      variable_specifications = list(person = 'token'),
+                                      refit = glob_refit)
+
+priors_1d_1pl_id <- prior("normal(0, 3)", class = "sd", group = "id") +
+  prior("normal(0, 3)", class = "sd", group = "item")
+
+# Ein Modell über alle Dimensionen hinweg konvergiert schlecht
+# fit_1d_1pl_eirt1 <- birtms::birtm_aio(response_data = eirtdata, 
+#                                       response_columns = Math.1:MathWordProb.1,
+#                                       prior = priors_1d_1pl_id,
+#                                       file = "../inst/extdata/fit_1d_1pl_eirt1",
+#                                       variable_specifications = list(person = 'id'),
+#                                       refit = glob_refit)
+fit_1d_1pl_eirt_science1 <- birtms::birtm_aio(response_data = eirtdata, 
+                                      response_columns = Science.1:Science.10,
+                                      prior = priors_1d_1pl_id,
+                                      file = "../inst/extdata/fit_1d_1pl_eirt_science1",
+                                      variable_specifications = list(person = 'id'),
+                                      refit = glob_refit)
+
+priors_1d_1pl_Usercode <- prior("normal(0, 3)", class = "sd", group = "Usercode") +
+  prior("normal(0, 3)", class = "sd", group = "item")
+
+fit_1d_1pl_simon1 <- birtms::birtm_aio(response_data = data_simon,
+                                       response_columns = p001MC_02:p076MC_07,
+                                       prior = priors_1d_1pl_Usercode,
+                                       file = "../inst/extdata/fit_1d_1pl_simon1",
+                                       variable_specifications = list(person = 'Usercode'),
+                                       refit = glob_refit)
+```
+
+Berechne marginale Loglikelihood und marginal-loo-cv:
+
+```{r}
+mll_spm <- marginal_loglik(fit_1d_1pl_spm_full1, n_nodes = 3) # check_n_nodes ist hier nicht nötig (bereits mit 5 nodes konvergiert)
+mll_simon <- marginal_loglik(fit_1d_1pl_simon1) # braucht 17 - 33 nodes; schlechtere pareto k Werte als beim 1pl
+mll_tina <- marginal_loglik(fit_1d_1pl_tina1)
+mll_eirt <- marginal_loglik(fit_1d_1pl_eirt_science1)
+```
+
+## 2PL
+
+Fitte 2pl-Modelle
+
+```{r}
+# f <- birtms::build_formula(model_specifications = list(item_parameter_number = 2))
+# d <- birtms::compose_dataset(response_data = data_spm,
+#                                               response_columns = i1:i12)
+# get_prior(f, d)
+
+priors_1d_2pl <- prior("normal(0, 3)", nlpar = "skillintercept") +
+  prior("normal(0, 1)", class = "b", nlpar = "logalpha") +
+  prior("constant(1)", class = "sd", group = "person", nlpar = "theta") +
+  prior("normal(0, 3)", class = "sd", group = "item", nlpar = "beta") +
+  prior("normal(0, 1)", class = "sd", group = "item", nlpar = "logalpha")
+
+fit_1d_2pl_spm_full1 <- birtms::birtm_aio(response_data = data_spm, response_columns = i1:i12,
+                                          prior = priors_1d_2pl,
+                                          model_specifications = list(item_parameter_number = 2),
+                                          file = "../inst/extdata/fit_1d_2pl_spm_full1",
+                                          refit = glob_refit)
+
+priors_1d_2pl_Usercode <- prior("normal(0, 3)", nlpar = "skillintercept") +
+  prior("normal(0, 1)", class = "b", nlpar = "logalpha") +
+  prior("constant(1)", class = "sd", group = "Usercode", nlpar = "theta") +
+  prior("normal(0, 3)", class = "sd", group = "item", nlpar = "beta") +
+  prior("normal(0, 1)", class = "sd", group = "item", nlpar = "logalpha")
+
+fit_1d_2pl_simon1 <- birtms::birtm_aio(response_data = data_simon, response_columns = p001MC_02:p076MC_07,
+                                          prior = priors_1d_2pl_Usercode,
+                                          model_specifications = list(item_parameter_number = 2),
+                                          file = "../inst/extdata/fit_1d_2pl_simon1",
+                                          variable_specifications = list(person = 'Usercode'),
+                                          refit = glob_refit)
+
+priors_1d_2pl_token <- prior("normal(0, 3)", nlpar = "skillintercept") +
+  prior("normal(0, 1)", class = "b", nlpar = "logalpha") +
+  prior("constant(1)", class = "sd", group = "token", nlpar = "theta") +
+  prior("normal(0, 3)", class = "sd", group = "item", nlpar = "beta") +
+  prior("normal(0, 1)", class = "sd", group = "item", nlpar = "logalpha")
+
+fit_1d_2pl_tina1 <- birtms::birtm_aio(response_data = data_tina, 
+                                      response_columns = SuHT3.binary:KaKST1.binary,
+                                      prior = priors_1d_2pl_token,
+                                      model_specifications = list(item_parameter_number = 2),
+                                      file = "../inst/extdata/fit_1d_2pl_tina1",
+                                      variable_specifications = list(person = 'token'),
+                                      refit = glob_refit)
+
+priors_1d_2pl_id <- prior("normal(0, 3)", nlpar = "skillintercept") +
+  prior("normal(0, 1)", class = "b", nlpar = "logalpha") +
+  prior("constant(1)", class = "sd", group = "id", nlpar = "theta") +
+  prior("normal(0, 3)", class = "sd", group = "item", nlpar = "beta") +
+  prior("normal(0, 1)", class = "sd", group = "item", nlpar = "logalpha")
+
+fit_1d_2pl_eirt1 <- birtms::birtm_aio(response_data = eirtdata, 
+                                      Science.1:Science.10,
+                                      prior = priors_1d_2pl_id,
+                                      file = "../inst/extdata/fit_1d_2pl_eirt_science1",
+                                      variable_specifications = list(person = 'id'),
+                                      model_specifications = list(item_parameter_number = 2),
+                                      refit = glob_refit)
+
+```
+
+Berechne marginale Loglikelihood und marginal-loo-cv:
+
+```{r}
+mll_spm_2pl <- marginal_loglik(fit_1d_2pl_spm_full1) # bessere pareto k Werte als das 1pl Modell
+mll_simon_2pl <- marginal_loglik(fit_1d_2pl_simon1)
+mll_tina_2pl <- marginal_loglik(fit_1d_2pl_tina1)
+mll_eirt_2pl <- marginal_loglik(fit_1d_2pl_eirt1) # <- 1pl model generalises better!
+```
