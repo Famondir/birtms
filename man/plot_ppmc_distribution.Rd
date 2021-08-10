@@ -12,7 +12,7 @@ plot_ppmc_distribution(
   density_ci = FALSE,
   smooth_density_ci = FALSE,
   color = "lightblue",
-  n = 512,
+  n = 128,
   clean_data = FALSE
 )
 }

@@ -87,15 +87,15 @@ posterior_predictive_values_long <- function(model, n_samples = NULL, f) {
   ifelse(length(dim(ppv)) > 2, multiple_ppvs <- TRUE, multiple_ppvs <- FALSE)
 
   message('Converting responses to long format')
-  ppv <- ppv %>% as.data.frame() %>% mutate(.draw = row_number())
+  ppv <- ppv %>% as.data.frame() %>% mutate(.draw = dplyr::row_number())
   if (multiple_ppvs) {
-     ppv <- ppv %>% pivot_longer(names_to = c('.response_number', 'category'), names_sep = "([.])", names_transform = list(.response_number = as.integer),
+     ppv <- ppv %>% tidyr::pivot_longer(names_to = c('.response_number', 'category'), names_sep = "([.])", names_transform = list(.response_number = as.integer),
                    values_to = 'ppv', cols = !.draw)
   }  else {
-    ppv <- ppv %>% pivot_longer(names_to = '.response_number', names_transform = list(.response_number = as.integer), names_prefix = 'V',
+    ppv <- ppv %>% tidyr::pivot_longer(names_to = '.response_number', names_transform = list(.response_number = as.integer), names_prefix = 'V',
                    values_to = 'ppv', cols = !.draw)
   }
-  data <- model$data %>% mutate(.response_number = row_number())
+  data <- model$data %>% mutate(.response_number = dplyr::row_number())
   ppv <- ppv %>% left_join(data, by = '.response_number')
 
   return(ppv)

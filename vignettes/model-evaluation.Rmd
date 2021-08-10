@@ -31,8 +31,11 @@ library(magrittr)
 
 ## Odds ratio
 
-```{r fig.width=7, fig.height=7}
+```{r}
 fit_1d_1pl_spm1 <- readRDS('../inst/extdata/fit_1d_1pl_spm1.rds')
+```
+
+```{r fig.width=7, fig.height=7}
 or_data <- birtms::get_or(fit_1d_1pl_spm1, zero_correction = 'Haldane')
 or_data %>% birtms::plot_ppmc_or_heatmap()
 ```
