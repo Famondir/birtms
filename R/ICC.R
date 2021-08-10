@@ -1,6 +1,11 @@
 ICC_check <- function(item_id = 1, model, num_groups = NULL, post_responses = NULL) {
+  stopifnot(model$model_specs$response_type == 'dichotom')
+  stopifnot(model$model_specs$add_common_dimension == FALSE)
+  stopifnot(model$model_specs$dimensinality_type == 'unidimensional')
+
   data_long <- model$data %>% mutate(item.id = get.item.id(.))
   person <- model$var_specs$person
+  symperson <- sym({{person}})
 
   if (is.null(num_groups)) num_groups <- round(length(unique(data_long[[{{person}}]]))^(1/3))
 
@@ -12,79 +17,93 @@ ICC_check <- function(item_id = 1, model, num_groups = NULL, post_responses = NU
 
   table_person_values <- get.table_person_values(model = model, num_groups = num_groups)
 
-  beta = FALSE
-  delta = FALSE
-  alpha = FALSE
-  gamma = FALSE
-  logitgamma = FALSE
-  testlet = FALSE
+  item_key <- data_long %>% select(item.id, item) %>% unique
+  rownames(item_key) <- item_key$item
 
-  pars <- model[["fit"]]@model_pars
+  if (fit$model_specs$item_parameter_number == 1) {
+    table_marg_pars_1PL_tidy <- model %>%
+      tidybayes::spread_draws(r_item[item,], b_Intercept) %>% mutate(beta = b_Intercept+r_item, item_nr = item_key[item,"item.id"])
+  } else if (fit$model_specs$item_parameter_number == 2) {
 
-  if (any(str_detect(pars, 'beta'))) {
-    beta = TRUE
-  } else {
-    stop('No item difficulties specified as beta.')
-  }
-  if (any(str_detect(pars, 'delt'))) {
-    delta = TRUE
-  } else {
-    stop('No derived item difficulties specified as delta found.')
-  }
-  if (any(str_detect(pars, 'alpha'))) {
-    alpha = TRUE
-  }
-  if (any(str_detect(pars, 'logitgamma'))) {
-    logitgamma = TRUE
-  }
-  if (any(pars == 'gamma')) {
-    gamma = TRUE
-  }
-  if (any(str_detect(pars, 'testlet'))) {
-    testlet = TRUE
-  }
+  } else stop('Currently only 1pl and 2pl models are supported.')
 
-  print('extracting itempars')
-
-  if (testlet) {
-    if (gamma) {
-      table_marg_pars_3PL_Testlets_tidy <- model %>%
-        spread_draws(marginalized_alpha[item_nr], marginalized_delta[item_nr], gamma[item_nr]) %>% mutate(item = unique(data_long$item)[item_nr])
-    } else if (logitgamma) {
-      warning('Modelle ohne abgeleiteten Parameter gamma werden nicht weiter unterstützt')
-      gamma_table <- model %>% spread_draws(r_item__logitgamma[item], b_logitgamma_Intercept) %>%
-        mutate(logitgamma = r_item__logitgamma + b_logitgamma_Intercept, gamma = inv_logit_scaled(logitgamma))
-      table_marg_pars_3PL_Testlets_tidy <- model %>%
-        spread_draws(marginalized_alpha[item_nr], marginalized_delta[item_nr]) %>% mutate(item = unique(data_long$item)[item_nr]) %>%
-        ungroup %>% mutate(gamma = gamma_table$gamma)
-    } else if (alpha) {
-      table_marg_pars_2PL_Testlets_tidy <- model %>%
-        spread_draws(marginalized_alpha[item_nr], marginalized_delta[item_nr]) %>% mutate(item = unique(data_long$item)[item_nr])
-    } else {
-      table_marg_pars_1PL_Testlets_tidy <- model %>%
-        spread_draws(marginalized_delta[item_nr]) %>% mutate(item = levels(data_long$item)[item_nr])
-    }
-  } else {
-    # stop('Modelle ohne Testlet noch nicht implementiert')
-    if (gamma) {
-      table_marg_pars_3PL_tidy <- model %>%
-        spread_draws(delt[item_nr], alpha1[item_nr], gamma[item_nr]) %>% mutate(item = levels(data_long$item)[item_nr])
-    } else if (alpha) {
-      table_marg_pars_2PL_tidy <- model %>%
-        spread_draws(delt[item_nr], alpha1[item_nr]) %>% mutate(item = levels(data_long$item)[item_nr])
-    } else {
-      table_marg_pars_1PL_tidy <- model %>%
-        spread_draws(delt[item_nr]) %>% mutate(item = levels(data_long$item)[item_nr])
-    }
-  }
+  # beta = FALSE
+  # delta = FALSE
+  # alpha = FALSE
+  # gamma = FALSE
+  # logitgamma = FALSE
+  # testlet = FALSE
+  #
+  # pars <- model[["fit"]]@model_pars
+  #
+  # if (any(str_detect(pars, 'beta'))) {
+  #   beta = TRUE
+  # } else {
+  #   stop('No item difficulties specified as beta.')
+  # }
+  # if (any(str_detect(pars, 'delt'))) {
+  #   delta = TRUE
+  # } else {
+  #   stop('No derived item difficulties specified as delta found.')
+  # }
+  # if (any(str_detect(pars, 'alpha'))) {
+  #   alpha = TRUE
+  # }
+  # if (any(str_detect(pars, 'logitgamma'))) {
+  #   logitgamma = TRUE
+  # }
+  # if (any(pars == 'gamma')) {
+  #   gamma = TRUE
+  # }
+  # if (any(str_detect(pars, 'testlet'))) {
+  #   testlet = TRUE
+  # }
+  #
+  # print('extracting itempars')
+  #
+  # if (testlet) {
+  #   if (gamma) {
+  #     table_marg_pars_3PL_Testlets_tidy <- model %>%
+  #       spread_draws(marginalized_alpha[item_nr], marginalized_delta[item_nr], gamma[item_nr]) %>% mutate(item = unique(data_long$item)[item_nr])
+  #   } else if (logitgamma) {
+  #     warning('Modelle ohne abgeleiteten Parameter gamma werden nicht weiter unterstützt')
+  #     gamma_table <- model %>% spread_draws(r_item__logitgamma[item], b_logitgamma_Intercept) %>%
+  #       mutate(logitgamma = r_item__logitgamma + b_logitgamma_Intercept, gamma = inv_logit_scaled(logitgamma))
+  #     table_marg_pars_3PL_Testlets_tidy <- model %>%
+  #       spread_draws(marginalized_alpha[item_nr], marginalized_delta[item_nr]) %>% mutate(item = unique(data_long$item)[item_nr]) %>%
+  #       ungroup %>% mutate(gamma = gamma_table$gamma)
+  #   } else if (alpha) {
+  #     table_marg_pars_2PL_Testlets_tidy <- model %>%
+  #       spread_draws(marginalized_alpha[item_nr], marginalized_delta[item_nr]) %>% mutate(item = unique(data_long$item)[item_nr])
+  #   } else {
+  #     table_marg_pars_1PL_Testlets_tidy <- model %>%
+  #       spread_draws(marginalized_delta[item_nr]) %>% mutate(item = levels(data_long$item)[item_nr])
+  #   }
+  # } else {
+  #   # stop('Modelle ohne Testlet noch nicht implementiert')
+  #   if (gamma) {
+  #     table_marg_pars_3PL_tidy <- model %>%
+  #       spread_draws(delt[item_nr], alpha1[item_nr], gamma[item_nr]) %>% mutate(item = levels(data_long$item)[item_nr])
+  #   } else if (alpha) {
+  #     table_marg_pars_2PL_tidy <- model %>%
+  #       spread_draws(delt[item_nr], alpha1[item_nr]) %>% mutate(item = levels(data_long$item)[item_nr])
+  #   } else {
+  #     table_marg_pars_1PL_tidy <- model %>%
+  #       spread_draws(delt[item_nr]) %>% mutate(item = levels(data_long$item)[item_nr])
+  #   }
+  # }
 
   print('datawrangling for ICCs')
 
-  key <- get.scoregroup(num_groups = num_groups, table_person_values = table_person_values)
-  yrep_item <- yrep_item %>% mutate(group_id = key[person.id,1], .before = 1) %>% arrange(group_id, person.id, item, sample)
+  key <- get.scoregroup(model, num_groups = num_groups, table_person_values = table_person_values)
+  yrep_item <- yrep_item %>% mutate(group_id = key[person.id,1], .before = 1) #%>% arrange(group_id, person.id, item, sample) # ist das arrange notwendig?
   # table_person_values <- table_person_values %>% arrange(ID) %>% mutate(group_id = key$group_id, .before = 1) %>% arrange(group_id, ID) # schon in der Helperfunktion erledigt
 
-  theta_post <- model %>% spread_draws(r_ID__theta[ID,]) %>% mutate(group_id = key[ID,1], .before = 1) %>% rename(theta = r_ID__theta) %>% arrange(group_id, ID)
+  r_person <- sym(paste0('r_',{{person}}))
+  r_person_vec <- str2lang(paste0({{r_person}},'[',{{person}},',]'))
+
+  theta_post <- model %>% tidybayes::spread_draws(!!r_person_vec) %>% mutate(group_id = key[{{symperson}},1], .before = 1) %>%
+    rename(theta = !!r_person) #%>% arrange(group_id, {{person}})
 
   # if (testlet) {
   #   theta_testlet_post <- model %>% spread_draws(r_ID__testlet[ID,testlet])
@@ -96,9 +115,10 @@ ICC_check <- function(item_id = 1, model, num_groups = NULL, post_responses = NU
   #   theta_post <- theta_post %>% ungroup() %>% mutate(theta = theta_post2$theta_adj)
   # }
 
-  temp <- data_long %>% filter(item.id == item_id) %>% select(ID, response)
+  temp <- data_long %>% filter(item.id == item_id) %>% select({{person}}, response)
 
-  data_gg <- table_person_values %>% select(group_id, ID, theta, score) %>% arrange(ID) %>% left_join(temp, by = 'ID') %>% rename(item_score = response) %>%
+  data_gg <- table_person_values %>% select(group_id, {{person}}, theta, score) %>% #arrange(ID) %>%
+    left_join(temp, by = {{person}}) %>% rename(item_score = response) %>%
     # mutate(item_score = ifelse(ID %in% temp$ID, temp$response, NA)) %>%
     group_by(group_id)
 
@@ -109,9 +129,10 @@ ICC_check <- function(item_id = 1, model, num_groups = NULL, post_responses = NU
     summarise(person_mean = mean(response, na.rm = T), person_sd = sd(response, na.rm = T), n = sum(!is.na(response)), se = person_sd/sqrt(n), .groups = 'drop') %>%
     rename(y = person_mean, yerr = person_sd, se_x = se, n_x = n) %>% ungroup() %>% arrange(group_id, person.id)
 
-  temp2 <- theta_post %>% group_by(group_id, ID) %>% filter(ID %in% unique(yrep_item$person.id)) %>%
+  temp2 <- theta_post %>% group_by(group_id, {{symperson}}) %>% #filter({{symperson}} %in% unique(yrep_item$person.id)) %>% # später filtern viel schneller!
     summarise(person_mean = mean(theta, na.rm = T), person_sd = sd(theta, na.rm = T), n = sum(!is.na(theta)), se = person_sd/sqrt(n), .groups = 'drop') %>%
-    rename(x = person_mean, xerr = person_sd, se_y = se, n_y = n) %>% ungroup %>% arrange(group_id, ID) %>% rename(person.id = ID)
+    rename(x = person_mean, xerr = person_sd, se_y = se, n_y = n) %>% ungroup %>% #arrange(group_id, {{person}}) %>%
+    rename(person.id = {{person}}) %>% filter(person.id %in% unique(yrep_item$person.id))
 
   data_gg_post <- data_gg_post %>% left_join(temp2, by = c('person.id', 'group_id'))
 
@@ -277,9 +298,10 @@ getYrep <- function(model, data_long = NULL, yrep, item_id = 1) {
   print('generating yrep')
 
   person <- model$var_specs$person
+  # symperson <- sym(person)
 
   n <- nrow(yrep)
-  long.rep <- yrep %>% t() %>% as.data.frame() %>% mutate(ID = data_long[{{person}}], item = data_long$item, item_id = data_long$item.id, .before = 1)
+  long.rep <- yrep %>% t() %>% as.data.frame() %>% mutate({{person}} := data_long[[{{person}}]], item = data_long$item, item_id = data_long$item.id, .before = 1)
   names(long.rep) <- c("person.id", "item", "item.id", c(1:n))
 
   yrep <- long.rep %>% filter(item.id == item_id) %>% pivot_longer(cols = '1':colnames(.)[ncol(.)], names_to = 'sample', values_to = 'response')
