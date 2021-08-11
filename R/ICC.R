@@ -1,4 +1,4 @@
-ICC_check <- function(item_id = 1, model, num_groups = NULL, post_responses = NULL) {
+ICC_check <- function(model, item_id = 1, num_groups = NULL, caption = NULL, post_responses = NULL) {
   stopifnot(model$model_specs$response_type == 'dichotom')
   stopifnot(model$model_specs$add_common_dimension == FALSE)
   stopifnot(model$model_specs$dimensinality_type == 'unidimensional')
@@ -9,111 +9,43 @@ ICC_check <- function(item_id = 1, model, num_groups = NULL, post_responses = NU
 
   if (is.null(num_groups)) num_groups <- round(length(unique(data_long[[{{person}}]]))^(1/3))
 
-  if (is.null(post_responses)) {
-    stop('Die vom Modell vorhergesagten Beobachtungen (post_responses) fehlen.')
-  } else {
-    yrep_item <- getYrep(model, data_long = data_long, yrep = post_responses$yrep, item_id = item_id)
-  }
+  if (is.null(post_responses)) post_responses <- get_postdata(model)
+  yrep_item <- getYrep(model, data_long = data_long, yrep = post_responses$yrep, item_id = item_id)
 
   table_person_values <- get.table_person_values(model = model, num_groups = num_groups)
 
   item_key <- data_long %>% select(item.id, item) %>% unique
   rownames(item_key) <- item_key$item
 
-  if (fit$model_specs$item_parameter_number == 1) {
-    table_marg_pars_1PL_tidy <- model %>%
-      tidybayes::spread_draws(r_item[item,], b_Intercept) %>% mutate(beta = b_Intercept+r_item, item_nr = item_key[item,"item.id"])
-  } else if (fit$model_specs$item_parameter_number == 2) {
+  if (model$model_specs$item_parameter_number == 1) {
+    table_marg_pars <- model %>%
+      tidybayes::spread_draws(r_item[item,], b_Intercept) %>% mutate(delta = b_Intercept+r_item, item_nr = item_key[item,"item.id"],
+                                                                     alpha = 1, gamma = 0, psi = 0)
+
+    r_person <- sym(paste0('r_',{{person}}))
+
+  } else if (model$model_specs$item_parameter_number == 2) {
+    table_marg_pars <- model %>%
+      tidybayes::spread_draws(r_item__beta[item,], b_skillintercept_Intercept,
+                              r_item__logalpha[item,], b_logalpha_Intercept) %>%
+      mutate(delta = b_skillintercept_Intercept+r_item__beta,
+             item_nr = item_key[item,"item.id"],
+             alpha = exp(b_logalpha_Intercept+r_item__logalpha),
+             gamma = 0, psi = 0)
+
+    r_person <- sym(paste0('r_',{{person}},'__theta'))
 
   } else stop('Currently only 1pl and 2pl models are supported.')
 
-  # beta = FALSE
-  # delta = FALSE
-  # alpha = FALSE
-  # gamma = FALSE
-  # logitgamma = FALSE
-  # testlet = FALSE
-  #
-  # pars <- model[["fit"]]@model_pars
-  #
-  # if (any(str_detect(pars, 'beta'))) {
-  #   beta = TRUE
-  # } else {
-  #   stop('No item difficulties specified as beta.')
-  # }
-  # if (any(str_detect(pars, 'delt'))) {
-  #   delta = TRUE
-  # } else {
-  #   stop('No derived item difficulties specified as delta found.')
-  # }
-  # if (any(str_detect(pars, 'alpha'))) {
-  #   alpha = TRUE
-  # }
-  # if (any(str_detect(pars, 'logitgamma'))) {
-  #   logitgamma = TRUE
-  # }
-  # if (any(pars == 'gamma')) {
-  #   gamma = TRUE
-  # }
-  # if (any(str_detect(pars, 'testlet'))) {
-  #   testlet = TRUE
-  # }
-  #
-  # print('extracting itempars')
-  #
-  # if (testlet) {
-  #   if (gamma) {
-  #     table_marg_pars_3PL_Testlets_tidy <- model %>%
-  #       spread_draws(marginalized_alpha[item_nr], marginalized_delta[item_nr], gamma[item_nr]) %>% mutate(item = unique(data_long$item)[item_nr])
-  #   } else if (logitgamma) {
-  #     warning('Modelle ohne abgeleiteten Parameter gamma werden nicht weiter unterstützt')
-  #     gamma_table <- model %>% spread_draws(r_item__logitgamma[item], b_logitgamma_Intercept) %>%
-  #       mutate(logitgamma = r_item__logitgamma + b_logitgamma_Intercept, gamma = inv_logit_scaled(logitgamma))
-  #     table_marg_pars_3PL_Testlets_tidy <- model %>%
-  #       spread_draws(marginalized_alpha[item_nr], marginalized_delta[item_nr]) %>% mutate(item = unique(data_long$item)[item_nr]) %>%
-  #       ungroup %>% mutate(gamma = gamma_table$gamma)
-  #   } else if (alpha) {
-  #     table_marg_pars_2PL_Testlets_tidy <- model %>%
-  #       spread_draws(marginalized_alpha[item_nr], marginalized_delta[item_nr]) %>% mutate(item = unique(data_long$item)[item_nr])
-  #   } else {
-  #     table_marg_pars_1PL_Testlets_tidy <- model %>%
-  #       spread_draws(marginalized_delta[item_nr]) %>% mutate(item = levels(data_long$item)[item_nr])
-  #   }
-  # } else {
-  #   # stop('Modelle ohne Testlet noch nicht implementiert')
-  #   if (gamma) {
-  #     table_marg_pars_3PL_tidy <- model %>%
-  #       spread_draws(delt[item_nr], alpha1[item_nr], gamma[item_nr]) %>% mutate(item = levels(data_long$item)[item_nr])
-  #   } else if (alpha) {
-  #     table_marg_pars_2PL_tidy <- model %>%
-  #       spread_draws(delt[item_nr], alpha1[item_nr]) %>% mutate(item = levels(data_long$item)[item_nr])
-  #   } else {
-  #     table_marg_pars_1PL_tidy <- model %>%
-  #       spread_draws(delt[item_nr]) %>% mutate(item = levels(data_long$item)[item_nr])
-  #   }
-  # }
+  r_person_vec <- str2lang(paste0({{r_person}},'[',{{person}},',]'))
 
-  print('datawrangling for ICCs')
+  message('datawrangling for ICCs')
 
   key <- get.scoregroup(model, num_groups = num_groups, table_person_values = table_person_values)
   yrep_item <- yrep_item %>% mutate(group_id = key[person.id,1], .before = 1) #%>% arrange(group_id, person.id, item, sample) # ist das arrange notwendig?
-  # table_person_values <- table_person_values %>% arrange(ID) %>% mutate(group_id = key$group_id, .before = 1) %>% arrange(group_id, ID) # schon in der Helperfunktion erledigt
-
-  r_person <- sym(paste0('r_',{{person}}))
-  r_person_vec <- str2lang(paste0({{r_person}},'[',{{person}},',]'))
 
   theta_post <- model %>% tidybayes::spread_draws(!!r_person_vec) %>% mutate(group_id = key[{{symperson}},1], .before = 1) %>%
     rename(theta = !!r_person) #%>% arrange(group_id, {{person}})
-
-  # if (testlet) {
-  #   theta_testlet_post <- model %>% spread_draws(r_ID__testlet[ID,testlet])
-  #
-  #   testlet_nr <- get.testlet.id(data_long)[[item_id]]
-  #   testlet_name <- unique(theta_testlet_post$testlet)[[testlet_nr]]
-  #   theta_testlet_post2 <- theta_testlet_post %>% filter(testlet == testlet_name) %>% ungroup()
-  #   theta_post2 <- theta_post %>% ungroup() %>% left_join(theta_testlet_post2) %>% mutate(theta_adj = theta + r_ID__testlet)
-  #   theta_post <- theta_post %>% ungroup() %>% mutate(theta = theta_post2$theta_adj)
-  # }
 
   temp <- data_long %>% filter(item.id == item_id) %>% select({{person}}, response)
 
@@ -142,69 +74,11 @@ ICC_check <- function(item_id = 1, model, num_groups = NULL, post_responses = NU
     rename(x = group_mean_x, y = group_mean_y, xerr = group_sd_x, yerr = group_sd_y)
 
   # Plot
-  print('plotting ICCs')
+  message('plotting ICCs')
 
-  if (testlet) {
-    if (logitgamma) {
-      gamma.median <- median(pull(filter(table_marg_pars_3PL_Testlets_tidy, item_nr == item_id), gamma))
-      delta.median <- median(pull(filter(table_marg_pars_3PL_Testlets_tidy, item_nr == item_id), marginalized_delta))
-      alpha.median <- median(pull(filter(table_marg_pars_3PL_Testlets_tidy, item_nr == item_id), marginalized_alpha))
-      alpha.median.adjust <- alpha.median*(1-gamma.median)
-      theta.5 <- (logit_scaled((0.5 - gamma.median)/(1 - gamma.median))-delta.median)/alpha.median
+  item_params <- table_marg_pars %>% filter(item_nr == item_id)
 
-      # gamma.median <- 0
-      # delta.median <- 1
-      # alpha.median <- 0.5
-      # alpha.median.adjust <- alpha.median*(1-gamma.median)
-
-
-      g <- plot_ICC_cont(delta = pull(filter(table_marg_pars_3PL_Testlets_tidy, item_nr == item_id), marginalized_delta),
-                         alpha = pull(filter(table_marg_pars_3PL_Testlets_tidy, item_nr == item_id), marginalized_alpha),
-                         gamma = pull(filter(table_marg_pars_3PL_Testlets_tidy, item_nr == item_id), gamma), print = FALSE)
-
-      # g <- plot_ICC_cont(delta = delta.median,
-      #                    alpha = alpha.median,
-      #                    gamma = gamma.median, print = FALSE)
-
-      g <- g + annotate("label", x = -4, y = .9, hjust = 0,
-                        label = c(paste0('Schwierigkeit: ', round(-delta.median, 3),
-                                         '\nTrennschärfe: ', round(alpha.median.adjust, 3),
-                                         '\nPseuderatew.: ', round(gamma.median, 3),
-                                         '\nTheta(p = 0.5): ', round(theta.5, 3),
-                                         '\nTheta(p = ', round((1+gamma.median)/2,3), '): ', round(-delta.median/alpha.median, 3))))
-
-      # g <- g + geom_hline(yintercept = gamma.median, linetype="dotted", alpha = .5) +
-      #   geom_hline(yintercept = (1+gamma.median)/2, linetype="dotted", alpha = .5) +
-      #   geom_vline(xintercept = -delta.median/alpha.median, linetype="dotted", alpha = .5)
-
-    } else if (alpha) {
-      delta.median <- median(pull(filter(table_marg_pars_2PL_Testlets_tidy, item_nr == item_id), marginalized_delta))
-      alpha.median <- median(pull(filter(table_marg_pars_2PL_Testlets_tidy, item_nr == item_id), marginalized_alpha))
-
-      g <- plot_ICC_cont(delta = pull(filter(table_marg_pars_2PL_Testlets_tidy, item_nr == item_id), marginalized_delta),
-                         alpha = pull(filter(table_marg_pars_2PL_Testlets_tidy, item_nr == item_id), marginalized_alpha),
-                         print = FALSE) # 2PL
-
-      # g <- g + geom_hline(yintercept = 1/2, linetype="dotted", alpha = .5) +
-      #   geom_vline(xintercept = -delta.median, linetype="dotted", alpha = .5)
-    } else {
-      g <- plot_ICC_cont(delta = pull(filter(table_marg_pars_1PL_Testlets_tidy, item_nr == item_id), marginalized_delta),
-                         print = FALSE) # 1PL
-    }
-  } else {
-    if (gamma) {
-      g <- plot_ICC_cont(delta = pull(filter(table_marg_pars_3PL_tidy, item_nr == item_id), delt),
-                         alpha = pull(filter(table_marg_pars_3PL_tidy, item_nr == item_id), alpha1),
-                         gamma = pull(filter(table_marg_pars_3PL_tidy, item_nr == item_id), gamma), print = FALSE) +
-        geom_hline(yintercept = median(pull(filter(table_marg_pars_3PL_tidy, item_nr == item_id), gamma)), linetype="dotted", alpha = .5)
-    } else if (alpha) {
-      g <- plot_ICC_cont(delta = pull(filter(table_marg_pars_2PL_tidy, item_nr == item_id), delt),
-                         alpha = pull(filter(table_marg_pars_2PL_tidy, item_nr == item_id), alpha1), print = FALSE) # 2PL
-    } else {
-      g <- plot_ICC_cont(delta = pull(filter(table_marg_pars_1PL_tidy, item_nr == item_id), delt),
-                         print = FALSE) # 1PL
-    }
-  }
+  g <- plot_ICC_cont(item_params[["delta"]], item_params[["alpha"]], item_params[["gamma"]], item_params[["psi"]], print = FALSE)
 
   g <- g + ggnewscale::new_scale_fill() +
     scale_fill_discrete(guide = guide_legend(title = "vorhergesagte Antwortquoten\nder Personen", nrow = 1,
@@ -212,14 +86,16 @@ ICC_check <- function(item_id = 1, model, num_groups = NULL, post_responses = NU
     scale_colour_discrete(guide = guide_legend(title = "vorhergesagte Antwortquoten\nder Personen", nrow = 1,
                                                title.position = "top", label.position = "bottom", label.hjust = 0.5))
 
-  # for (i in c(0.7, 0.95, 1.3, 2.05)) {
+  ellipse_cred_mass <- c(.51, .66, .81, .96)
+  # Forces ellipses axes to be parallel to the coordinate axes
+  # for (i in qnorm(0.5+0.5*ellipse_cred_mass)) {
   #   g <- g + geom_polygon(data = error_ellipses(mutate(data_gg_post_summary, xerr = i*xerr, yerr = i*yerr)),
   #                         aes(x = x, y = y, group = frame, fill = frame, colour = frame), alpha = .15, lty = 'dotted')
   # }
 
-  for (i in c(.51, .66, .81, .96)) {
+  for (i in ellipse_cred_mass) {
     g <- g + stat_ellipse(data = data_gg_post, geom = "polygon", mapping = aes(x = x, y = y, fill = factor(group_id), colour = factor(group_id)),
-                          alpha = .15, lty = 'dotted', level = i)
+                          alpha = .15, lty = 'dotted', level = i, type = "norm") # assumes data to be normal rather than t distributed
   }
 
   g <- g + geom_point(data = data_gg_post, aes(x = x, y = y, colour = factor(group_id)), pch=3)
@@ -243,14 +119,19 @@ ICC_check <- function(item_id = 1, model, num_groups = NULL, post_responses = NU
             subtitle = paste0('Itemnr. ', item_id, ' (', sum(!is.na(data_gg$item_score)), ' Beobachtungen)')) +
     xlab("Fähigkeit [logit]") + ylab("beobachtete Antwortquote / vorhergesagte Antwortwahrscheinlichkeit") +
     theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5),
-          plot.caption = ggtext::element_markdown(lineheight = 1.5, hjust = 0.5)) +
-    labs(caption="**Erklärung:** Die Kreise markieren die über die Rohsummengruppen gemittelten Antwortquoten und Fähigkeiten der Beobachtung.<br>
+          plot.caption = ggtext::element_markdown(lineheight = 1.5, hjust = 0.5))
+
+  if (is.null(caption)) {
+
+  } else if (caption == "de") {
+    g <- g +
+      labs(caption="**Erklärung:** Die Kreise markieren die über die Rohsummengruppen gemittelten Antwortquoten und Fähigkeiten der Beobachtung.<br>
          Die größe der Punkte entspricht dem Standardfehler der Fähigkeitsmittelwerte und ist damit proportional zu deren Streuung innerhalb der Gruppen.<br>
          Die kleinen Punkte repräsentieren die über alle Posteriosamples gemittelten vorhergesagten Antwortquoten und Fähigkeiten der Einzelpersonen.<br>
          Die Ellipsen repräsentieren die entsprechenden Wahrscheinlichkeitsdichten der Mittelwertverteilung der über die Rohsummengruppen aggregierten<br>
          Antwortquoten und Fähigkeiten. Deren Zentren sind jeweils mit einem Kreuz markiert.<br>
          Sie bilden somit das auf den Posteriorsamples basierende Pendant zu den auf den tatsächlichen Beobachtungen basierenden Kreisen.")
-
+  }
 
   return(g)
 }
@@ -261,6 +142,94 @@ get.item.id <- function(data_long) {
   names(key) <- unique(data_long$item)
   data_long %>% mutate(item.id = key[item], .after = item) %>% pull(item.id) %>%
     return()
+}
+
+get_postdata <- function(model = NULL, subset = NULL) {
+
+  message('loading post responses')
+  yrep <- posterior_predict(model, subset = subset)
+  message('loaded')
+
+  message('loading post probs')
+  ppe <- posterior_epred(model, subset = subset)
+  message('loaded')
+
+  return(list('yrep' = yrep, 'ppe' = ppe, 'subset' = subset))
+}
+
+getYrep <- function(model, data_long = NULL, yrep, item_id = 1) {
+  message('generating yrep')
+
+  person <- model$var_specs$person
+  # symperson <- sym(person)
+
+  n <- nrow(yrep)
+  long.rep <- yrep %>% t() %>% as.data.frame() %>% mutate({{person}} := data_long[[{{person}}]], item = data_long$item, item_id = data_long$item.id, .before = 1)
+  names(long.rep) <- c("person.id", "item", "item.id", c(1:n))
+
+  yrep <- long.rep %>% filter(item.id == item_id) %>% pivot_longer(cols = '1':colnames(.)[ncol(.)], names_to = 'sample', values_to = 'response')
+
+  message('finished')
+
+  return(yrep)
+}
+
+get.table_person_values <- function (model, num_groups = 5) {
+  person <- model$var_specs$person
+  symperson <- sym(person)
+
+  table_person_values <- model$data %>% group_by({{symperson}}) %>% summarise(score = sum(response), .groups = 'drop') %>% mutate(theta = ranef(model)[[{{person}}]][,1,1]) %>% arrange(score, {{person}}) %>%
+    mutate(order = 1:nrow(.), .before = 1)
+
+  key <- get.scoregroup(model, num_groups = num_groups, table_person_values = table_person_values)
+  table_person_values <- table_person_values %>% arrange({{symperson}}) %>% mutate(group_id = key$group_id, .before = 1) %>% arrange(group_id, {{symperson}})
+
+  return(table_person_values)
+}
+
+get.scoregroup <- function(model, num_groups = 5, table_person_values = NULL) {
+  person <- model$var_specs$person
+  symperson <- sym(person)
+
+  num_persons <- nrow(table_person_values)
+
+  breaks <- round(seq(1, num_persons, by = num_persons/num_groups)) %>% as.data.frame() %>% t() %>% as.data.frame() %>%
+    mutate(num_persons+1) %>% setNames(NULL) %>% t()
+
+  group_vec <- c(rep(NA, num_persons))
+  for (i in 2:length(breaks)) {
+    group_vec[breaks[i-1]:(breaks[i]-1)] <- c(rep(i-1, length(breaks[i-1]:(breaks[i]-1))))
+  }
+
+  key <- table_person_values %>% mutate(group_id = group_vec, .before = 1) %>% select(group_id, {{symperson}}) %>%
+    arrange({{symperson}}) %>% as.data.frame()
+  rownames(key) <- unique(table_person_values[[{{person}}]])
+
+  return(key)
+}
+
+plot_ICC_cont <- function (delta, alpha = NULL, gamma = NULL, psi = NULL, p_interval = 'median_qi', step_size = 0.1, print = TRUE, width = seq(0,0.96,0.12)) {
+  if (is.null(delta)) {
+    stop("Bitte geben sie für ein 1PL-Modell mindestens einen Vektor für die Itemleichtigkeit (delta) ein.")
+  }
+
+  data <- tibble(x = seq(from = -4.5, to = 4.5, by = step_size)) %>%  group_by_all()
+
+  data <- data %>% do(tibble(y = icc_function(.$x, delta = delta, alpha = alpha, gamma = gamma, psi = psi)))
+
+  g <- data  %>%  ggplot(aes(x = x, y = y)) +
+    tidybayes::stat_lineribbon(aes(fill = stat(.width)), .width = width, point_interval = p_interval, colour = 'white', size = .75) +
+    scale_fill_binned(low = "#1d1d1d", high = "#E1E1E1", limit = c(0, 0.96), show.limits = TRUE, breaks = seq(0.12, 0.84, by = 0.12),
+                      guide = guide_coloursteps(title = 'Glaubwürdigkeitsintervall in %', nrow = 1, title.position = "top", label.position = "bottom",
+                                                barwidth = 10, frame.colour = NULL), labels = scale100) +
+    theme(legend.position="bottom", legend.box = "horizontal") +
+    coord_cartesian(xlim = c(-4,4), ylim = c(0,1), expand = TRUE, default = FALSE, clip = "on")
+
+  if (print) {
+    print(g)
+  }
+
+  return(g)
 }
 
 icc_function <- function(x, delta = NULL, alpha = NULL, gamma = NULL, psi = NULL) {
@@ -281,66 +250,29 @@ icc_function <- function(x, delta = NULL, alpha = NULL, gamma = NULL, psi = NULL
     return()
 }
 
-get_postdata <- function(model = NULL, subset = NULL) {
-
-  print('loading post responses')
-  yrep <- posterior_predict(model, subset = subset)
-  print('loaded')
-
-  print('loading post probs')
-  ppe <- posterior_epred(model, subset = subset)
-  print('loaded')
-
-  return(list('yrep' = yrep, 'ppe' = ppe, 'subset' = subset))
+scale100 <- function (x) {
+  scales::number_format(accuracy = 1,
+                        scale = 100,
+                        suffix = "",
+                        big.mark = "")(x)
 }
 
-getYrep <- function(model, data_long = NULL, yrep, item_id = 1) {
-  print('generating yrep')
-
-  person <- model$var_specs$person
-  # symperson <- sym(person)
-
-  n <- nrow(yrep)
-  long.rep <- yrep %>% t() %>% as.data.frame() %>% mutate({{person}} := data_long[[{{person}}]], item = data_long$item, item_id = data_long$item.id, .before = 1)
-  names(long.rep) <- c("person.id", "item", "item.id", c(1:n))
-
-  yrep <- long.rep %>% filter(item.id == item_id) %>% pivot_longer(cols = '1':colnames(.)[ncol(.)], names_to = 'sample', values_to = 'response')
-
-  print('finished')
-
-  return(yrep)
+ellipses <- function(center = c(0, 0), axes = c(1, 1), npoints = 101){
+  tt <- seq(0,2*pi, length.out = npoints)
+  xx <- center[1] + axes[1] * cos(tt)
+  yy <- center[2] + axes[2] * sin(tt)
+  return(data.frame(x = xx, y = yy))
 }
 
-get.table_person_values <- function (model, num_groups = 5) {
-  symperson <- sym(model$var_specs$person)
-  person <- model$var_specs$person
+error_ellipses <- function(dd) {
+  dd$frame <- factor(seq(1:nrow(dd)))
 
-  table_person_values <- model$data %>% group_by({{symperson}}) %>% summarise(score = sum(response), .groups = 'drop') %>% mutate(theta = ranef(model)[[{{person}}]][,1,1]) %>% arrange(score, {{person}}) %>%
-    mutate(order = 1:nrow(.), .before = 1)
-
-  key <- get.scoregroup(model, num_groups = num_groups, table_person_values = table_person_values)
-  table_person_values <- table_person_values %>% arrange({{symperson}}) %>% mutate(group_id = key$group_id, .before = 1) %>% arrange(group_id, {{symperson}})
-
-  return(table_person_values)
-}
-
-get.scoregroup <- function(model, num_groups = 5, table_person_values = NULL) {
-  symperson <- sym(model$var_specs$person)
-  person <- model$var_specs$person
-
-  num_persons <- nrow(table_person_values)
-
-  breaks <- round(seq(1, num_persons, by = num_persons/num_groups)) %>% as.data.frame() %>% t() %>% as.data.frame() %>%
-    mutate(num_persons+1) %>% setNames(NULL) %>% t()
-
-  group_vec <- c(rep(NA, num_persons))
-  for (i in 2:length(breaks)) {
-    group_vec[breaks[i-1]:(breaks[i]-1)] <- c(rep(i-1, length(breaks[i-1]:(breaks[i]-1))))
+  ddEll <- data.frame()
+  for(k in levels(dd$frame)){
+    ddEll <- rbind(ddEll, cbind(as.data.frame(with(dd[dd$frame == k,],
+                                                   ellipses(center = c(x, y), axes = c(xerr, yerr), npoints = 101))),frame = k))
   }
 
-  key <- table_person_values %>% mutate(group_id = group_vec, .before = 1) %>% select(group_id, {{symperson}}) %>%
-    arrange({{symperson}}) %>% as.data.frame()
-  rownames(key) <- unique(table_person_values[[{{person}}]])
-
-  return(key)
+  ddEll %>% group_by(frame) %>%
+    return()
 }
