@@ -1,5 +1,5 @@
 ICC_check <- function(model, item_id = 1, num_groups = NULL, verbose = FALSE, post_responses = NULL,
-                      ellipse_type = "axisparallel") {
+                      ellipse_type = "axisparallel", plot_post_person_estimated = FALSE) {
   stopifnot(model$model_specs$response_type == 'dichotom')
   stopifnot(model$model_specs$add_common_dimension == FALSE)
   stopifnot(model$model_specs$dimensinality_type == 'unidimensional')
@@ -103,7 +103,9 @@ ICC_check <- function(model, item_id = 1, num_groups = NULL, verbose = FALSE, po
     }
   }
 
-  g <- g + geom_point(data = data_gg_post, aes(x = x, y = y, colour = factor(group_id)), pch=3)
+  if(plot_post_person_estimated) {
+    g <- g + geom_point(data = data_gg_post, aes(x = x, y = y, colour = factor(group_id)), pch=3)
+  }
   # g <- g + geom_point(data = data_gg, aes(x = theta, y = item_score, colour = factor(group_id)))
   # g <- g + geom_point(data = data_gg, aes(x = theta, y = inv_logit_scaled(theta), colour = factor(group_id)))
 
