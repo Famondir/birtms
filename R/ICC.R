@@ -1,4 +1,5 @@
-ICC_check <- function(model, item_id = 1, num_groups = NULL, caption = NULL, post_responses = NULL) {
+ICC_check <- function(model, item_id = 1, num_groups = NULL, verbose = FALSE, post_responses = NULL,
+                      ellipse_type = "axisparallel") {
   stopifnot(model$model_specs$response_type == 'dichotom')
   stopifnot(model$model_specs$add_common_dimension == FALSE)
   stopifnot(model$model_specs$dimensinality_type == 'unidimensional')
@@ -87,15 +88,18 @@ ICC_check <- function(model, item_id = 1, num_groups = NULL, caption = NULL, pos
                                                title.position = "top", label.position = "bottom", label.hjust = 0.5))
 
   ellipse_cred_mass <- c(.51, .66, .81, .96)
-  # Forces ellipses axes to be parallel to the coordinate axes
-  # for (i in qnorm(0.5+0.5*ellipse_cred_mass)) {
-  #   g <- g + geom_polygon(data = error_ellipses(mutate(data_gg_post_summary, xerr = i*xerr, yerr = i*yerr)),
-  #                         aes(x = x, y = y, group = frame, fill = frame, colour = frame), alpha = .15, lty = 'dotted')
-  # }
 
-  for (i in ellipse_cred_mass) {
-    g <- g + stat_ellipse(data = data_gg_post, geom = "polygon", mapping = aes(x = x, y = y, fill = factor(group_id), colour = factor(group_id)),
-                          alpha = .15, lty = 'dotted', level = i, type = "norm") # assumes data to be normal rather than t distributed
+  if (ellipse_type == "axisparallel") {
+    # Forces ellipses axes to be parallel to the coordinate axes
+    for (i in qnorm(0.5+0.5*ellipse_cred_mass)) {
+      g <- g + geom_polygon(data = error_ellipses(mutate(data_gg_post_summary, xerr = i*xerr, yerr = i*yerr)),
+                            aes(x = x, y = y, group = frame, fill = frame, colour = frame), alpha = .15, lty = 'dotted')
+    }
+  } else if ( ellipse_type %in% c("norm", "t")) {
+    for (i in ellipse_cred_mass) {
+      g <- g + stat_ellipse(data = data_gg_post, geom = "polygon", mapping = aes(x = x, y = y, fill = factor(group_id), colour = factor(group_id)),
+                            alpha = .15, lty = 'dotted', level = i, type = "norm") # assumes data to be normal rather than t distributed
+    }
   }
 
   g <- g + geom_point(data = data_gg_post, aes(x = x, y = y, colour = factor(group_id)), pch=3)
@@ -121,9 +125,7 @@ ICC_check <- function(model, item_id = 1, num_groups = NULL, caption = NULL, pos
     theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5),
           plot.caption = ggtext::element_markdown(lineheight = 1.5, hjust = 0.5))
 
-  if (is.null(caption)) {
-
-  } else if (caption == "de") {
+  if (verbose) {
     g <- g +
       labs(caption="**Erklärung:** Die Kreise markieren die über die Rohsummengruppen gemittelten Antwortquoten und Fähigkeiten der Beobachtung.<br>
          Die größe der Punkte entspricht dem Standardfehler der Fähigkeitsmittelwerte und ist damit proportional zu deren Streuung innerhalb der Gruppen.<br>
@@ -178,11 +180,13 @@ get.table_person_values <- function (model, num_groups = 5) {
   person <- model$var_specs$person
   symperson <- sym(person)
 
-  table_person_values <- model$data %>% group_by({{symperson}}) %>% summarise(score = sum(response), .groups = 'drop') %>% mutate(theta = ranef(model)[[{{person}}]][,1,1]) %>% arrange(score, {{person}}) %>%
+  table_person_values <- model$data %>% group_by({{symperson}}) %>% summarise(score = sum(response), .groups = 'drop') %>%
+    mutate(theta = ranef(model)[[{{person}}]][,1,1]) %>% arrange(score, {{person}}) %>%
     mutate(order = 1:nrow(.), .before = 1)
 
   key <- get.scoregroup(model, num_groups = num_groups, table_person_values = table_person_values)
-  table_person_values <- table_person_values %>% arrange({{symperson}}) %>% mutate(group_id = key$group_id, .before = 1) %>% arrange(group_id, {{symperson}})
+  table_person_values <- table_person_values %>% #arrange({{symperson}}) %>%
+    mutate(group_id = key$group_id, .before = 1) #%>% arrange(group_id, {{symperson}})
 
   return(table_person_values)
 }
@@ -201,8 +205,9 @@ get.scoregroup <- function(model, num_groups = 5, table_person_values = NULL) {
     group_vec[breaks[i-1]:(breaks[i]-1)] <- c(rep(i-1, length(breaks[i-1]:(breaks[i]-1))))
   }
 
-  key <- table_person_values %>% mutate(group_id = group_vec, .before = 1) %>% select(group_id, {{symperson}}) %>%
-    arrange({{symperson}}) %>% as.data.frame()
+  key <- table_person_values %>% arrange(order) %>% mutate(group_id = group_vec, .before = 1) %>% select(group_id, {{symperson}}) %>%
+    #arrange({{symperson}}) %>%
+    as.data.frame()
   rownames(key) <- unique(table_person_values[[{{person}}]])
 
   return(key)
