@@ -161,6 +161,8 @@ Nope. Is there another possibility to convert the names on the flow? No. Come on
 
 ### Alter the 'item' column name
 
+Attention: At the moment only the person column name can be handeled flexible. All evaluation functions do require the item column name in this version of `birtms`.
+
 What do you get from this example? The function checks for the existence of all columns in your input dataset but for the names `response` and `item`. So what about this names? You can choose them as you wish. (I know it's kinda inconsistent.) But wait! we never told the `birtms::compose_dataset` about the name `item`. Where did it came from? How can we alter is? We can alter it as folows:
 
 ```{r}

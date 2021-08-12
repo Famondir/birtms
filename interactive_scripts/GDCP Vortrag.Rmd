@@ -3,6 +3,8 @@ title: "Graphical Model Evaluation"
 author: "Simon Schäfer"
 date: "9 8 2021"
 output: html_document
+editor_options: 
+  chunk_output_type: inline
 ---
 
 ```{r setup, include=FALSE}
@@ -18,12 +20,12 @@ Lade unterschiedliche Datensätze.
 ```{r}
 data_spm <- rio::import("../data/data_spm.rda")
 
-eirtdata <- read_csv("https://raw.githubusercontent.com/danielbkatz/EIRT/master/eirtdata.csv")
-eirtdata <- eirtdata[-1]
-eirtdata <- eirtdata %>% mutate(treat = ifelse(treat==1, "treat", "not-treat"))
-eirtdata$treat <- as.factor(eirtdata$treat)
-eirtdata$proflevel <- as.factor(eirtdata$proflevel)
-eirtdata$abilcov <- as.factor(eirtdata$abilcov)
+data_eirt <- read_csv("https://raw.githubusercontent.com/danielbkatz/EIRT/master/eirtdata.csv")
+data_eirt <- data_eirt[-1]
+data_eirt <- data_eirt %>% mutate(treat = ifelse(treat==1, "treat", "not-treat"))
+data_eirt$treat <- as.factor(data_eirt$treat)
+data_eirt$proflevel <- as.factor(data_eirt$proflevel)
+data_eirt$abilcov <- as.factor(data_eirt$abilcov)
 
 data_tina <- rio::import("../inst/extdata/data_tina.xlsx")
 
@@ -57,16 +59,16 @@ priors_1d_1pl_id <- prior("normal(0, 3)", class = "sd", group = "id") +
   prior("normal(0, 3)", class = "sd", group = "item")
 
 # Ein Modell über alle Dimensionen hinweg konvergiert schlecht
-# fit_1d_1pl_eirt1 <- birtms::birtm_aio(response_data = eirtdata, 
+# fit_1d_1pl_eirt1 <- birtms::birtm_aio(response_data = data_eirt, 
 #                                       response_columns = Math.1:MathWordProb.1,
 #                                       prior = priors_1d_1pl_id,
 #                                       file = "../inst/extdata/fit_1d_1pl_eirt1",
 #                                       variable_specifications = list(person = 'id'),
 #                                       refit = glob_refit)
-fit_1d_1pl_eirt_science1 <- birtms::birtm_aio(response_data = eirtdata, 
+fit_1d_1pl_eirt_science1 <- birtms::birtm_aio(response_data = data_eirt, 
                                       response_columns = Science.1:Science.10,
                                       prior = priors_1d_1pl_id,
-                                      file = "../inst/extdata/fit_1d_1pl_eirt_science1",
+                                      file = "../inst/extdata/fit_1d_1pl_eirt_science1b",
                                       variable_specifications = list(person = 'id'),
                                       refit = glob_refit)
 
@@ -145,10 +147,10 @@ priors_1d_2pl_id <- prior("normal(0, 3)", nlpar = "skillintercept") +
   prior("normal(0, 3)", class = "sd", group = "item", nlpar = "beta") +
   prior("normal(0, 1)", class = "sd", group = "item", nlpar = "logalpha")
 
-fit_1d_2pl_eirt1 <- birtms::birtm_aio(response_data = eirtdata, 
+fit_1d_2pl_eirt1 <- birtms::birtm_aio(response_data = data_eirt, 
                                       Science.1:Science.10,
                                       prior = priors_1d_2pl_id,
-                                      file = "../inst/extdata/fit_1d_2pl_eirt_science1",
+                                      file = "../inst/extdata/fit_1d_2pl_eirt_science1b",
                                       variable_specifications = list(person = 'id'),
                                       model_specifications = list(item_parameter_number = 2),
                                       refit = glob_refit)
@@ -162,4 +164,41 @@ mll_spm_2pl <- marginal_loglik(fit_1d_2pl_spm_full1) # bessere pareto k Werte al
 mll_simon_2pl <- marginal_loglik(fit_1d_2pl_simon1)
 mll_tina_2pl <- marginal_loglik(fit_1d_2pl_tina1)
 mll_eirt_2pl <- marginal_loglik(fit_1d_2pl_eirt1) # <- 1pl model generalises better!
+```
+
+## ICC plots    
+
+```{r}
+posterior_responses_eirt_1pl <- get_postdata(fit_1d_1pl_eirt_science1)
+(g_eirt_1pl <- ICC_check(fit_1d_1pl_eirt_science1, post_responses = posterior_responses_eirt_1pl, num_groups = 6,
+                         #ellipse_type = "norm"
+                         ))
+
+posterior_responses_eirt_2pl <- get_postdata(fit_1d_2pl_eirt1)
+(g_eirt_2pl <- ICC_check(fit_1d_2pl_eirt1, post_responses = posterior_responses_eirt_2pl, num_groups = 6,
+                         ellipse_type = "norm"))
+
+posterior_responses_spm_1pl <- get_postdata(fit_1d_1pl_spm_full1)
+(g_spm_1pl <- ICC_check(fit_1d_1pl_spm_full1, post_responses = posterior_responses_spm_1pl, num_groups = 6,
+                         #ellipse_type = "norm"
+                         ))
+
+posterior_responses_spm_2pl <- get_postdata(fit_1d_2pl_spm_full1)
+(g_spm_2pl <- ICC_check(fit_1d_2pl_spm_full1, post_responses = posterior_responses_spm_2pl, num_groups = 6,
+                         #ellipse_type = "norm"
+                         ))
+
+posterior_responses_simon_1pl <- get_postdata(fit_1d_1pl_simon1)
+(g_simon_1pl <- ICC_check(fit_1d_1pl_simon1, post_responses = posterior_responses_simon_1pl, item_id = 2,
+                          ellipse_type = "axisparallel"))
+
+posterior_responses_simon_2pl <- get_postdata(fit_1d_2pl_simon1)
+(g_simon_2pl <- ICC_check(fit_1d_2pl_simon1, post_responses = posterior_responses_simon_2pl, item_id = 2,
+                          ellipse_type = "norm"))
+
+posterior_responses_tina_1pl <- get_postdata(fit_1d_1pl_tina1)
+(g_tina_1pl <- ICC_check(fit_1d_1pl_tina1, post_responses = posterior_responses_tina_1pl, item_id = 1, num_groups = 6))
+
+posterior_responses_tina_2pl <- get_postdata(fit_1d_2pl_tina1)
+(g_tina_2pl <- ICC_check(fit_1d_2pl_tina1, post_responses = posterior_responses_tina_2pl, item_id = 7, num_groups = 6))
 ```
