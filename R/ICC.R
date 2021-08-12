@@ -45,7 +45,8 @@ ICC_check <- function(model, item_id = 1, num_groups = NULL, verbose = FALSE, po
   key <- get.scoregroup(model, num_groups = num_groups, table_person_values = table_person_values)
   yrep_item <- yrep_item %>% mutate(group_id = key[person.id,1], .before = 1) #%>% arrange(group_id, person.id, item, sample) # ist das arrange notwendig?
 
-  theta_post <- model %>% tidybayes::spread_draws(!!r_person_vec) %>% mutate(group_id = key[{{symperson}},1], .before = 1) %>%
+  theta_post <- model %>% tidybayes::spread_draws(!!r_person_vec) %>% mutate({{symperson}} := as.character({{symperson}}),
+                                                                             group_id = key[{{symperson}},1], .before = 1) %>%
     rename(theta = !!r_person) #%>% arrange(group_id, {{person}})
 
   temp <- data_long %>% filter(item.id == item_id) %>% select({{person}}, response)
@@ -60,7 +61,7 @@ ICC_check <- function(model, item_id = 1, num_groups = NULL, verbose = FALSE, po
 
   data_gg_post <- yrep_item %>% group_by(group_id, person.id) %>%
     summarise(person_mean = mean(response, na.rm = T), person_sd = sd(response, na.rm = T), n = sum(!is.na(response)), se = person_sd/sqrt(n), .groups = 'drop') %>%
-    rename(y = person_mean, yerr = person_sd, se_x = se, n_x = n) %>% ungroup() %>% arrange(group_id, person.id)
+    rename(y = person_mean, yerr = person_sd, se_x = se, n_x = n) %>% ungroup() #%>% arrange(group_id, person.id)
 
   temp2 <- theta_post %>% group_by(group_id, {{symperson}}) %>% #filter({{symperson}} %in% unique(yrep_item$person.id)) %>% # später filtern viel schneller!
     summarise(person_mean = mean(theta, na.rm = T), person_sd = sd(theta, na.rm = T), n = sum(!is.na(theta)), se = person_sd/sqrt(n), .groups = 'drop') %>%

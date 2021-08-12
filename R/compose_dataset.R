@@ -84,7 +84,8 @@ compose_dataset <- function(response_data, response_columns, variable_specificat
     dataset <- dataset %>% dplyr::left_join(situation_data, by = c(variable_specifications$person, variable_specifications$item))
   }
 
-  dataset <- dataset[which(!is.na(dataset[variable_specifications$response])),]
+  symperson <- sym(variable_specifications$person)
+  dataset <- dataset[which(!is.na(dataset[variable_specifications$response])),] %>% mutate({{symperson}} := as.character({{symperson}}))
 
   # correct_names <- c(variable_specifications$item, variable_specifications$response, variable_specifications$person,
   #                    person_covariables, item_covariables, situation_covariables)
