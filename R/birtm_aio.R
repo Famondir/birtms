@@ -33,7 +33,7 @@ birtm_aio <- function(response_data, response_columns, person_data = NULL, item_
                       variable_specifications = NULL, model_specifications = NULL,
                       prior = NULL, cores = 4, file = NULL,
                       check_prior_influence = FALSE, preparing_bf = FALSE,
-                      add_waic = TRUE, add_loo = TRUE, refit = FALSE, ...) {
+                      add_waic = FALSE, add_loo = FALSE, refit = FALSE, ...) {
 
   response_columns <- tryCatch(
     error = function(cnd) {
