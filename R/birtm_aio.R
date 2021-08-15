@@ -51,7 +51,7 @@ birtm_aio <- function(response_data, response_columns, person_data = NULL, item_
   formula <- build_formula(variable_specifications = variable_specifications, model_specifications = model_specifications)
 
   fit <- birtm(data = data, formula = formula, prior = prior, cores = cores, file = file, refit = refit,
-               check_prior_influence = check_prior_influence, preparing_bf = preparing_bf, add_waic = add_waic, add_loo = TRUE,
+               check_prior_influence = check_prior_influence, preparing_bf = preparing_bf, add_waic = add_waic, add_loo = add_loo,
                variable_specifications = variable_specifications, model_specifications = model_specifications, ...)
 
   return(fit)
