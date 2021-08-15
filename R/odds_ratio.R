@@ -46,15 +46,17 @@ calculate_odds_ratio <- function(y_rep = NULL, y = NULL, zero_correction = 'none
   if(!(zero_correction %in% c('none', 'Haldane', 'Bayes'))) stop('Invalid zero correction method.')
   if(!(ci_method %in% c('Woolf', 'unconditional', 'BayesEqTails', 'BayesHDI', 'compromise'))) stop('Invalid CI method.')
 
+  #browser()
+
   if(!is.null(y)) y_rep <- y # function only uses y_rep
   if(!is.array(y_rep)) {
     if(!is.list(y_rep[[1]])) y_rep <- birtms::list2array(list(y_rep)) # make pseudo three dimensional array from dataframe
     else y_rep <- birtms::list2array(y_rep) # make three dimensional array from dataframe list
   }
   if(dim(y_rep)[3] == 1) {
-    sum_fct <- function(x) sum(x)
+    sum_fct <- function(x) sum(x, na.rm = TRUE)
   } else {
-    sum_fct <- function(x) colSums(x)
+    sum_fct <- function(x) colSums(x, na.rm = TRUE)
   }
 
   .draw <- NULL
@@ -76,7 +78,10 @@ calculate_odds_ratio <- function(y_rep = NULL, y = NULL, zero_correction = 'none
   }
   percent <- 0.1
 
+  # browser()
+
   for (j in seq_len(J)) {
+    # print(j)
     i <- 1
 
     while (i<j) {
@@ -84,6 +89,11 @@ calculate_odds_ratio <- function(y_rep = NULL, y = NULL, zero_correction = 'none
       n[2,] <- sum_fct(y_rep[, i, ] == 0 & y_rep[, j, ] == 0)
       n[3,] <- sum_fct(y_rep[, i, ] == 1 & y_rep[, j, ] == 0)
       n[4,] <- sum_fct(y_rep[, i, ] == 0 & y_rep[, j, ] == 1)
+
+      # should filter out itempairs that have never occured together in multimatrix design
+      if (sum(rowSums(n)) == 0) {
+        n <- n+NA
+      }
 
       if (zero_correction == 'Haldane') {
         corr <- 0.5
@@ -180,12 +190,19 @@ get_or <- function(model, n_samples = NULL, ci_width = .89, zero_correction = 'n
   y <- make_responsedata_wider(model) %>% select(-dplyr::any_of(unlist(model$var_specs)))
   itemnames <- colnames(y)
 
+  # time scales linear
   yrep <- posterior_predict_long(model, n_samples) %>%
     select({{person}}, {{item}}, .draw, yrep) %>%
     tidyr::pivot_wider(names_from = {{item}}, values_from = 'yrep') %>%
-    select(-{{person}})%>% mutate(.draw = as.numeric(.draw)) %>%
-    dplyr::group_by(.draw) %>% dplyr::group_split(.keep = TRUE) %>%
-    list2array()
+    select(-{{person}}) #%>% mutate(.draw = as.numeric(.draw))
+
+  # message("Splitting dataframe by group into 3D array. May take a while.") # time scales linear; problem with missings?
+  #yrep <- yrep %>% dplyr::group_by(.draw) %>% dplyr::group_split(.keep = TRUE) %>% list2array()
+  # in this way (base functions; no tidyr) it just need 0.37 s instead of 11 s !!! But still slower when there are many NAs
+  yrep_arr <- yrep %>% arrange(.draw) %>% as.matrix() %>%
+    array(dim=c(dim(yrep)[[1]]/brms::nsamples(model),brms::nsamples(model),dim(yrep)[[2]])) %>% aperm(c(1,3,2))
+  dimnames(yrep_arr)[[2]] <- names(yrep)
+  yrep <- yrep_arr
 
   message('Calculating posterior odds ratio')
   if(comp) zero_correction <- 'Haldane'
@@ -244,27 +261,31 @@ get_or <- function(model, n_samples = NULL, ci_width = .89, zero_correction = 'n
 #' or_data <- get_or(fit, n_samples = 500)
 #' plot_ppmc_or_heatmap(or_data)
 #' }
-plot_ppmc_or_heatmap <- function(or_data, alternative_color = FALSE) {
+plot_ppmc_or_heatmap <- function(or_data, alternative_color = FALSE, itemrange = NULL) {
   # unite boolean columns that check if HDI includes zero for multimodal distributions
   or_data <- or_data %>% tidyr::unnest(or_dif_ci, keep_empty = TRUE) %>% tidyr::unnest(or_act_ci, names_sep = "") %>%
     dplyr::mutate(above_zero = .lower > 0, beneath_zero = .upper < 0,
-                  inside_or_act_ci = .lower > (or_act_ci.lower- or_act) &  .upper < (or_act_ci.upper - or_act)) %>%
+                  inside_or_act_ci = .lower > (or_act_ci.lower - or_act) & .upper < (or_act_ci.upper - or_act)) %>%
     dplyr::select(item1, item2, or_dif_median, above_zero, beneath_zero, inside_or_act_ci) %>%
     dplyr::group_by(item1, item2) %>% dplyr::summarise_all(~mean(.x, na.rm = FALSE)) %>%
     dplyr::mutate_at(c('above_zero', 'beneath_zero'), ~ifelse(. != 0, TRUE, FALSE)) %>%
     dplyr::mutate_at(c('inside_or_act_ci'), ~ifelse(. == 1, TRUE, FALSE)) %>%
     dplyr::ungroup()
 
+  if (!is.null(itemrange)) or_data <- or_data %>% filter(item1 <= itemrange[2], item2 <= itemrange[2],
+                                                         item1 >= itemrange[1], item2 >= itemrange[1])
 
   above <- or_data$above_zero
   beneath <- or_data$beneath_zero
-  cap <- '**Interpretation:** The grey fields represent items for which the HDI does not contain a odds ratio difference of 0.<br>'
-  cap2 <- '**Interpretation:** The colored fields represent items for which the HDI does not contain a odds ratio difference 0.<br>'
+  cap <- '**Interpretation:** The grey fields represent itempairs for which the HDI does not contain a odds ratio difference of 0.<br>'
+  cap2 <- '**Interpretation:** The red and blue fields represent itempairs for which the HDI does not contain a odds ratio difference 0.<br>'
 
-  cap <- paste0(cap, 'Fields with an *L* represent items where predicted odds ratio is lower than actual observed odds ratio.<br>
-    Fields with an *H* represent items where predicted odds ratio is higher than actual observed odds ratio.')
-  cap2 <- paste0(cap2, '*Blue* fields represent items where predicted odds ratio is lower than actual observed odds ratio.<br>
-    *Red* fields represent items where predicted odds ratio is higher than actual observed odds ratio.')
+  cap <- paste0(cap, 'Fields with an *L* represent itempairs where predicted odds ratio is lower than actual observed odds ratio.<br>
+    Fields with an *H* represent itempairs where predicted odds ratio is higher than actual observed odds ratio.')
+  cap2 <- paste0(cap2, '*Blue* fields represent itempairs where predicted odds ratio is lower than actual observed odds ratio.<br>
+    *Red* fields represent itempairs where predicted odds ratio is higher than actual observed odds ratio.<br>
+    *Green* fields represent itempairs where the predicted odds ratio CI is within the observed odds ratio CI.<br>
+    *Cyan* fields represent itempairs that have never been observed. Tus the odds ratio value is missing.')
 
   or_data <- or_data %>% dplyr::mutate(z_or_dif_median = scale(or_dif_median),
                                        z_or_dif_median_highlighted = ifelse(above | beneath, NA, z_or_dif_median))
@@ -281,7 +302,7 @@ plot_ppmc_or_heatmap <- function(or_data, alternative_color = FALSE) {
   if(alternative_color) {
     g <- g + ggplot2::scale_fill_gradient2(low = "#0571b0", high = "#ca0020", mid = "#f7f7f7",
                                            midpoint = 0, limit = c(-1, 1), name = "z(\u0394OR)",
-                                           oob = scales::squish, na.value = '#00ff00') +
+                                           oob = scales::squish, na.value = '#00ffff') +
       ggplot2::labs(caption = cap)
 
     if(sum(above, na.rm = TRUE) > 0) { # otherwise the empty subset throws an error
@@ -296,7 +317,7 @@ plot_ppmc_or_heatmap <- function(or_data, alternative_color = FALSE) {
     or_data <- or_data %>% dplyr::mutate(z_or_dif_median = scale(or_dif_median), z_or_dif_median_highlighted = ifelse(above | beneath, NA, abs(z_or_dif_median)))
 
     g <- g + ggplot2::scale_fill_gradient(low = "white", high = "grey50", limit = c(0, 1), oob = scales::squish,
-                                          na.value = '#00ff00', name = "\u007C z(\u0394OR) \u007C") +
+                                          na.value = '#00ffff', name = "\u007C z(\u0394OR) \u007C") +
       ggplot2::labs(caption = cap2)
 
     fillings <- NULL
@@ -346,10 +367,14 @@ plot_ppmc_or_heatmap <- function(or_data, alternative_color = FALSE) {
 #' or_data <- get_or(fit, n_samples = 500)
 #' plot_or_heatmap(or_data)
 #' }
-plot_or_heatmap <- function(or_data, model = NULL, a = 1, sigma = 1, median_centered_colorscale = TRUE, bayesian = FALSE, nsim_ci = 1000000, ci_width = .89) {
+plot_or_heatmap <- function(or_data, model = NULL, itemrange = NULL,
+                            a = 1, sigma = 1, median_centered_colorscale = TRUE, bayesian = FALSE, nsim_ci = 1000000, ci_width = .89) {
   # check if odds are out of bonds
   or_data <- or_data %>% mutate(ll_low = NA_real_, ll_up = NA_real_, ul_low = NA_real_, ul_up = NA_real_, or_act_scaled = NA_real_) %>%
     mutate(or_act = ifelse(is.infinite(or_act) | is.nan(or_act), NA, or_act))
+
+  if (!is.null(itemrange)) or_data <- or_data %>% filter(item1 <= itemrange[2], item2 <= itemrange[2],
+                                                         item1 >= itemrange[1], item2 >= itemrange[1])
 
   if(is.null(model)) {
     if (bayesian) stop('Bayesian method needs acompanying model.')
