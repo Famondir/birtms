@@ -1,0 +1,62 @@
+---
+title: "Bayse'sche Item-Reponse-Modellierung mit R"
+author: "Simon Schäfer"
+date: "15 8 2021"
+output: ioslides_presentation
+widescreen: true
+incremental: true
+logo: Hu_Logo_small.png
+css: ioslidesstyle.css
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.2/jquery.min.js"></script>
+
+<script>
+    $(document).ready(function() {
+      $('slide:not(.title-slide, .backdrop, .segue)').append('<footer label=\"Simon Schäfer, HU-Berlin\"></footer>');    
+    })
+</script>
+
+## Überblick
+
+<div style="float: left; width: 40%;">
+### Was 
+
+1. Hallo
+1. Nein
+</div>
+
+<div style="float: right; width: 60%;">
+### Was nicht
+
+bla
+</div>
+
+## R Markdown
+
+This is an R Markdown presentation. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document.
+
+## Slide with Bullets
+
+>- Bullet 1
+>- Bullet 2
+>- Bullet 3
+
+## Slide with R Output
+
+```{r cars, echo = TRUE}
+summary(cars)
+```
+
+## Slide with Plot
+
+```{r pressure}
+plot(pressure)
+```
+

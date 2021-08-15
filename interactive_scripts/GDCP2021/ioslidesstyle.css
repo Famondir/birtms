@@ -1,0 +1,37 @@
+.gdbar img {
+  width: 150px !important;
+  height: 150px !important;
+  margin: 8px 8px;
+}
+
+.gdbar {
+  width: 250px !important;
+  height: 170px !important;
+}
+
+aside.gdbar {
+  left: initial;
+  right: 0px;
+  border-top-left-radius: 10px;
+  border-top-right-radius: 0px;
+  border-bottom-right-radius: 0px;
+  border-bottom-left-radius: 10px;
+  background-position: right;
+}
+
+slides > slide:not(.nobackground):before {
+  width: 75px;
+  height: 75px;
+  background-size: 75px 75px;
+}
+
+footer:after {
+  content: attr(label);
+  font-size: 12pt;
+  position: absolute;
+  bottom: 20px;
+  left: 0px;
+  line-height: 1.9;
+  text-align: center;
+  width: 100%;
+}

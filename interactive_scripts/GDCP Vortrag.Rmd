@@ -42,7 +42,7 @@ priors_1d_1pl <- prior("normal(0, 3)", class = "sd", group = "person") +
 
 fit_1d_1pl_spm_full1 <- birtms::birtm_aio(response_data = data_spm, response_columns = i1:i12,
                                           prior = priors_1d_1pl,
-                                          file = "../inst/extdata/fit_1d_1pl_spm_full1",
+                                          file = "../inst/extdata/fit_1d_1pl_spm_full1b",
                                           refit = glob_refit)
 
 priors_1d_1pl_token <- prior("normal(0, 3)", class = "sd", group = "token") +
@@ -111,7 +111,7 @@ priors_1d_2pl <- prior("normal(0, 3)", nlpar = "skillintercept") +
 fit_1d_2pl_spm_full1 <- birtms::birtm_aio(response_data = data_spm, response_columns = i1:i12,
                                           prior = priors_1d_2pl,
                                           model_specifications = list(item_parameter_number = 2),
-                                          file = "../inst/extdata/fit_1d_2pl_spm_full1",
+                                          file = "../inst/extdata/fit_1d_2pl_spm_full1b",
                                           refit = glob_refit)
 
 priors_1d_2pl_Usercode <- prior("normal(0, 3)", nlpar = "skillintercept") +
@@ -201,4 +201,21 @@ posterior_responses_tina_1pl <- get_postdata(fit_1d_1pl_tina1)
 
 posterior_responses_tina_2pl <- get_postdata(fit_1d_2pl_tina1)
 (g_tina_2pl <- ICC_check(fit_1d_2pl_tina1, post_responses = posterior_responses_tina_2pl, item_id = 7, num_groups = 6))
+```
+
+```{r}
+or_data <- birtms::get_or(fit_1d_1pl_spm_full1, zero_correction = 'Haldane')#, n_samples = 100) # 2 s for 100 samples
+or_data %>% birtms::plot_ppmc_or_heatmap(itemrange = c(1,20))
+
+or_data2 <- birtms::get_or(fit_1d_1pl_tina1, zero_correction = 'Haldane', n_samples = 1000) # 24.4 s for 50 samples, 33.3 s for 100
+or_data2 %>% birtms::plot_ppmc_or_heatmap(itemrange = c(1,20))
+
+or_data3 <- birtms::get_or(fit_1d_2pl_tina1, zero_correction = 'Haldane', n_samples = 50)
+or_data3 %>% birtms::plot_ppmc_or_heatmap(itemrange = c(1,20))
+
+or_data4 <- birtms::get_or(fit_1d_1pl_simon1, zero_correction = 'Haldane', n_samples = 100)
+# 596.5 s für 50, 867.3 s für 100, 691.6 s für 200, 738 s für 400 samples
+or_data4 %>% birtms::plot_ppmc_or_heatmap(itemrange = c(1,20))
+
+or_data %>% plot_or_heatmap()
 ```
