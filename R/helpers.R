@@ -178,3 +178,9 @@ aggregate_warnings <- function(expr) {
     warning(w)
   }
 }
+
+timeit <- function(expr) {
+  tictoc::tic()
+  expr
+  tictoc::toc()
+}
