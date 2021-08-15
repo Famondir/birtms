@@ -13,7 +13,8 @@ get_or(
   zero_correction = "none",
   ci_method = "Woolf",
   nsim_ci = 1e+07,
-  nsim_median = 1e+05
+  nsim_median = 1e+05,
+  cores = 4
 )
 }
 \arguments{

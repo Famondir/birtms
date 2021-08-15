@@ -217,5 +217,5 @@ or_data4 <- birtms::get_or(fit_1d_1pl_simon1, zero_correction = 'Haldane', n_sam
 # 596.5 s für 50, 867.3 s für 100, 691.6 s für 200, 738 s für 400 samples
 or_data4 %>% birtms::plot_ppmc_or_heatmap(itemrange = c(1,20))
 
-or_data %>% plot_or_heatmap()
+or_data %>% birtms::plot_or_heatmap()
 ```

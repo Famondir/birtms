@@ -558,7 +558,7 @@ plot_ppmc_or_heatmap <- function(or_data, alternative_color = FALSE, itemrange =
 #' plot_or_heatmap(or_data)
 #' }
 plot_or_heatmap <- function(or_data, model = NULL, itemrange = NULL,
-                            a = 1, sigma = 1, median_centered_colorscale = TRUE, bayesian = FALSE, nsim_ci = 1000000, ci_width = .89) {
+                            a = 1, sigma = 1, median_centered_colorscale = FALSE, bayesian = FALSE, nsim_ci = 1000000, ci_width = .89) {
   # check if odds are out of bonds
   or_data <- or_data %>% mutate(ll_low = NA_real_, ll_up = NA_real_, ul_low = NA_real_, ul_up = NA_real_, or_act_scaled = NA_real_) %>%
     mutate(or_act = ifelse(is.infinite(or_act) | is.nan(or_act), NA, or_act))

@@ -14,7 +14,7 @@ plot_or_heatmap(
   itemrange = NULL,
   a = 1,
   sigma = 1,
-  median_centered_colorscale = TRUE,
+  median_centered_colorscale = FALSE,
   bayesian = FALSE,
   nsim_ci = 1e+06,
   ci_width = 0.89
