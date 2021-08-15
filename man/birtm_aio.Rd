@@ -17,8 +17,8 @@ birtm_aio(
   file = NULL,
   check_prior_influence = FALSE,
   preparing_bf = FALSE,
-  add_waic = TRUE,
-  add_loo = TRUE,
+  add_waic = FALSE,
+  add_loo = FALSE,
   refit = FALSE,
   ...
 )

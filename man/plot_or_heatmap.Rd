@@ -11,6 +11,7 @@ for 1PL and 2PL models.}
 plot_or_heatmap(
   or_data,
   model = NULL,
+  itemrange = NULL,
   a = 1,
   sigma = 1,
   median_centered_colorscale = TRUE,
