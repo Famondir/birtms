@@ -46,8 +46,6 @@ calculate_odds_ratio <- function(y_rep = NULL, y = NULL, zero_correction = 'none
   if(!(zero_correction %in% c('none', 'Haldane', 'Bayes'))) stop('Invalid zero correction method.')
   if(!(ci_method %in% c('Woolf', 'unconditional', 'BayesEqTails', 'BayesHDI', 'compromise'))) stop('Invalid CI method.')
 
-  #browser()
-
   if(!is.null(y)) y_rep <- y # function only uses y_rep
   if(!is.array(y_rep)) {
     if(!is.list(y_rep[[1]])) y_rep <- birtms::list2array(list(y_rep)) # make pseudo three dimensional array from dataframe
@@ -169,7 +167,8 @@ get_or <- function(model, n_samples = NULL, ci_width = .89, zero_correction = 'n
   if(model$model_specs$response_type != 'dichotom') stop('Odds ratios are only implemented for dichotomous models.')
 
   seperate_itempairs <- function(x) {
-    x <- x %>% mutate(itempair = stringr::str_remove(itempair, 'ItemPair')) %>% tidyr::separate(itempair, into = c('item1', 'item2'), convert = TRUE)
+    x <- x %>% mutate(itempair = stringr::str_remove(itempair, 'ItemPair')) %>%
+      tidyr::separate(itempair, into = c('item1', 'item2'), convert = TRUE)
 
     return(x)
   }
@@ -204,7 +203,7 @@ get_or <- function(model, n_samples = NULL, ci_width = .89, zero_correction = 'n
   dimnames(yrep_arr)[[2]] <- names(yrep)
   yrep <- yrep_arr
 
-  message('Calculating posterior odds ratio')
+  message('Calculating posterior odds ratio') # time increases quadratic in number of items
   if(comp) zero_correction <- 'Haldane'
   or_rep <- calculate_odds_ratio(yrep, zero_correction = zero_correction, nsim_median = nsim_median, nsim_ci = nsim_ci)$or # calculates odds ratio for posterior samples
 
@@ -213,6 +212,8 @@ get_or <- function(model, n_samples = NULL, ci_width = .89, zero_correction = 'n
   or_list <- calculate_odds_ratio(y, zero_correction = zero_correction, ci_method = ci_method, nsim_median = nsim_median, nsim_ci = nsim_ci) # calculates odds ratio for actual sample/data
   or_act <- or_list$or %>% mutate(.draw = 0, .before = 1)
 
+  browser()
+  message('Aggregate and join data')
   or_act_ci <- or_list$ci %>% t() %>% tibble::as_tibble(rownames = "itempair") %>% seperate_itempairs() %>%
     dplyr::mutate(.width = ci_width, .zero_correction = zero_correction, .interval = ci_method) %>%
     dplyr::group_by(item1, item2) %>% tidyr::nest(or_act_ci = c(.lower, .upper, .width, .zero_correction, .interval))
