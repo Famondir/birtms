@@ -40,7 +40,7 @@ if(getRversion() >= "2.15.1")  utils::globalVariables(c('itempair', '.draw', 'it
 #' 1, 0
 #' ) %>% calculate_odds_ratio() # equals 0.5
 calculate_odds_ratio <- function(y_rep = NULL, y = NULL, zero_correction = 'none', ci_method = 'Woolf', ci_width = .89,
-                                 nsim_ci = 10000000, nsim_median = 100000) {
+                                 nsim_ci = 10000000, nsim_median = 100000, cores = 4) {
   if(is.null(y_rep) & is.null(y)) stop('Missing data argument! Use either y_rep or y.')
   if(!is.null(y_rep) & !is.null(y)) stop('Too many data arguments! Use either y_rep or y.')
   if(!(zero_correction %in% c('none', 'Haldane', 'Bayes'))) stop('Invalid zero correction method.')
@@ -75,8 +75,6 @@ calculate_odds_ratio <- function(y_rep = NULL, y = NULL, zero_correction = 'none
     rownames(or_ci) <- c('.lower', '.upper')
   }
   percent <- 0.1
-
-  # browser()
 
   for (j in seq_len(J)) {
     # print(j)
@@ -141,6 +139,185 @@ calculate_odds_ratio <- function(y_rep = NULL, y = NULL, zero_correction = 'none
   return(list(or = or, ci = or_ci))
 }
 
+#' Odds ratio parallel
+#' Calculates the odds ratio for the posterior samples or the original responses
+#' adjusted from Anna Scharl and Timo Gnambs (https://www.tqmp.org/RegularArticles/vol15-2/p075/p075.pdf)
+#'
+#' During Haldane zero-correction a value close to 0 is added to all cells
+#' (https://www.oxfordreference.com/view/10.1093/acref/9780199976720.001.0001/acref-9780199976720-e-1977).
+#' Most common is 0.5. This value eliminates the first order bias term.
+#'
+#' Bayesian functions not checked for correct implementation with parallel function
+#'
+#' @param y_rep (pers) x (item) x (rep) array; replicated data (can handle response data as dataframe or lists of dataframes as well)
+#' @param y (pers) x (item) dataframe; response data
+#' @param zero_correction character; 'none', 'Haldane', or 'Bayes'
+#' @param ci_method character; 'Woolf', 'unconditional', 'compromise', 'BayesEqTails' or 'BayesHDI'
+#' @param nsim_ci integer; number of draws used to get a distribution of the odds ratio value to calculate CIs
+#' @param nsim_median integer; number of draws used to get a distribution of the odds ratio value to calculate the median
+#' @param ci_width double
+#' @param cores int
+#'
+#' @return tibble
+#' @export
+#'
+#' @examples
+#' tibble::tribble(
+#' ~x, ~y,
+#' 0, 1,
+#' 1, 0,
+#' 1, 1,
+#' 0, 0,
+#' 1, 0
+#' ) %>% calculate_odds_ratio() # equals 0.5
+calculate_odds_ratio_parallel <- function(y_rep = NULL, y = NULL, zero_correction = 'none', ci_method = 'Woolf', ci_width = .89,
+                                          nsim_ci = 10000000, nsim_median = 100000, cores = 4) {
+  # or_ci_woolf <- function(or, counts, corr = 0.5, ci_width = .89) {
+  #   counts <- c(counts)
+  #   z <- stats::qnorm(ci_width + (1 - ci_width)/2)
+  #   se <- sqrt(1/(counts[1]+corr)+1/(counts[2]+corr)+1/(counts[3]+corr)+1/(counts[4]+corr))
+  #   upper <- exp(log(or)+z*se)
+  #   lower <- exp(log(or)-z*se)
+  #
+  #   return(list(lower = lower, upper = upper))
+  # }
+
+  or_ci_woolf <- or_ci_woolf # foreach does not find the methods otherwise :()
+  or_ci_uncond <- or_ci_uncond
+  or_ci_bayes <- or_ci_bayes
+
+  if(is.null(y_rep) & is.null(y)) stop('Missing data argument! Use either y_rep or y.')
+  if(!is.null(y_rep) & !is.null(y)) stop('Too many data arguments! Use either y_rep or y.')
+  if(!(zero_correction %in% c('none', 'Haldane', 'Bayes'))) stop('Invalid zero correction method.')
+  if(!(ci_method %in% c('Woolf', 'unconditional', 'BayesEqTails', 'BayesHDI', 'compromise'))) stop('Invalid CI method.')
+
+  if(!is.null(y)) y_rep <- y # function only uses y_rep
+  if(!is.array(y_rep)) {
+    if(!is.list(y_rep[[1]])) y_rep <- birtms::list2array(list(y_rep)) # make pseudo three dimensional array from dataframe
+    else y_rep <- birtms::list2array(y_rep) # make three dimensional array from dataframe list
+  }
+  if(dim(y_rep)[3] == 1) {
+    sum_fct <- function(x) sum(x, na.rm = TRUE)
+  } else {
+    sum_fct <- function(x) colSums(x, na.rm = TRUE)
+  }
+
+  .draw <- NULL
+  if(dimnames(y_rep)[[2]][[1]] == '.draw') {
+    .draw <- y_rep[1,1,]
+    y_rep <- y_rep[,-1,, drop = FALSE]
+  }
+
+  rep <- dim(y_rep)[3] # number of (post) samples
+  J <- dim(y_rep)[2] # number of items
+  n <- matrix(0, 4, rep)
+  n_pairs <- (J^2 - J)/2
+  # count <- 1
+  or_ci_all <- NULL
+  # if (rep == 1) {
+  #   or_all <- matrix(data = NA, nrow = 3, ncol = n_pairs) %>% as.data.frame()
+  #   # rownames(or_all) <- c('or', '.lower', '.upper')
+  # } else or_all <- matrix(data = NA, nrow = rep, ncol = n_pairs) %>% as.data.frame()
+  percent <- 0.1
+
+  # ----- create a temporary logging file ----
+  logFile <- tempfile()
+  viewer <- getOption("viewer")
+  viewer(logFile)
+
+  # ----- initialise multiple workers ----
+  cl <- parallel::makeCluster(cores, outfile = logFile)
+  doParallel::registerDoParallel(cl)
+  on.exit(parallel::stopCluster(cl)) # terminate workes when finished
+
+  # browser()
+
+  or_all <- foreach::`%dopar%`(foreach::foreach(j = seq_len(J)[-1], .combine = cbind,
+                                                .packages = c("matrixStats", "dplyr")
+  ),
+  {
+
+    # for (j in seq_len(J)) {
+    print(paste(j, "/", J, ":", strptime(Sys.time(), "%Y-%m-%d %H:%M:%OS") ))
+    i <- 1
+    or <- matrix(data = NA, nrow = rep, ncol = j-1) %>% as.data.frame()
+    if(rep == 1) or_ci <- matrix(data = NA, nrow = 2, ncol = j-1) %>% as.data.frame()
+
+    while (i<j) {
+      n[1,] <- sum_fct(y_rep[, i, ] == 1 & y_rep[, j, ] == 1)
+      n[2,] <- sum_fct(y_rep[, i, ] == 0 & y_rep[, j, ] == 0)
+      n[3,] <- sum_fct(y_rep[, i, ] == 1 & y_rep[, j, ] == 0)
+      n[4,] <- sum_fct(y_rep[, i, ] == 0 & y_rep[, j, ] == 1)
+
+      # should filter out itempairs that have never occured together in multimatrix design
+      if (sum(rowSums(n)) == 0) {
+        n <- n+NA
+      }
+
+      if (zero_correction == 'Haldane') {
+        corr <- 0.5
+        n <- n + corr
+      } else corr <- 0
+
+      or[, i] <- (n[1,]*n[2,])/(n[3,]*n[4,])
+
+      if (zero_correction == 'Bayes') {
+        for(col_index in seq_len(ncol(n))) {
+          # if(j == 262) print(paste0("Error at ",i,", ",j,"?:", min(n[,col_index])))
+          if (is.na(min(n[,col_index]))) {
+            # skip this
+          } else if (min(n[,col_index]) == 0) {
+            or[col_index, i] <- stats::median(get_or_distribution(n[,col_index], nsim = nsim_median))
+          }
+        }
+      }
+
+      if(rep == 1) {
+        if (ci_method == 'Woolf') or_ci[, i] <- or_ci_woolf(or[, i], n, corr, ci_width) %>% unlist()
+        else if (ci_method == 'unconditional') or_ci[, i] <- or_ci_uncond(n, ci_width)
+        else if (ci_method == 'BayesEqTails') or_ci[, i] <- or_ci_bayes(n, ci_width, nsim = nsim_ci, hdi = FALSE)
+        else if (ci_method == 'BayesHDI') or_ci[, i] <- or_ci_bayes(n, ci_width, nsim = nsim_ci, hdi = TRUE)
+        else if (ci_method == 'compromise') {
+          if (min(n) == 0) or_ci[, i] <- or_ci_bayes(n, ci_width, nsim = nsim_ci, hdi = FALSE)
+          else or_ci[, i] <- or_ci_uncond(n, ci_width)
+        }
+
+        colnames(or_ci)[i] <- paste0('ItemPair', i, '_', j)
+      }
+
+      colnames(or)[i] <- paste0('ItemPair', i, '_', j)
+      # count <- count + 1
+      i <- i + 1
+
+      # if (ci_method %in% c('BayesEqTails', 'BayesHDI') | zero_correction == 'Bayes') {
+      #   if (i/n_pairs > percent) {
+      #     print(paste(100*percent, '% finished'))
+      #     percent <- percent + 0.1
+      #   }
+      # }
+
+    }
+
+
+    # print(or_ci[,1])
+    if(rep == 1) or <- rbind(or, or_ci)
+    # print(or[,1])
+    or
+  })
+
+  if(rep == 1) {
+    or_ci_all <- or_all[2:3,]
+    rownames(or_ci_all) <- c('.lower', '.upper')
+    or_all <- or_all[1,]
+  }
+
+  if(!is.null(.draw)) {
+    or_all <- cbind(.draw, or_all)
+  }
+
+  return(list(or = or_all, ci = or_ci_all))
+}
+
 #' Summarises Odds Ratio statistic
 #' Returns odds ratio values for actual dataset and posterior predictions.
 #' Summarises the median and HDI of their difference and returns the ppp-value.
@@ -163,7 +340,8 @@ calculate_odds_ratio <- function(y_rep = NULL, y = NULL, zero_correction = 'none
 #' \dontrun{
 #' get_or(fit, n_samples = 500)
 #' }
-get_or <- function(model, n_samples = NULL, ci_width = .89, zero_correction = 'none', ci_method = 'Woolf', nsim_ci = 10000000, nsim_median = 100000) {
+get_or <- function(model, n_samples = NULL, ci_width = .89, zero_correction = 'none', ci_method = 'Woolf',
+                   nsim_ci = 10000000, nsim_median = 100000, cores = 4) {
   if(model$model_specs$response_type != 'dichotom') stop('Odds ratios are only implemented for dichotomous models.')
 
   seperate_itempairs <- function(x) {
@@ -209,14 +387,17 @@ get_or <- function(model, n_samples = NULL, ci_width = .89, zero_correction = 'n
     array(dim=c(dim(yrep)[[1]]/div,div,dim(yrep)[[2]])) %>% aperm(c(1,3,2))
   dimnames(yrep_arr)[[2]] <- names(yrep)
   yrep <- yrep_arr
+  rm("yrep_arr")
 
   message('Calculating posterior odds ratio') # time increases quadratic in number of items
   if(comp) zero_correction <- 'Haldane'
-  or_rep <- calculate_odds_ratio(yrep, zero_correction = zero_correction, nsim_median = nsim_median, nsim_ci = nsim_ci)$or # calculates odds ratio for posterior samples
+  or_rep <- calculate_odds_ratio_parallel(yrep, zero_correction = zero_correction, cores = cores,
+                                          nsim_median = nsim_median, nsim_ci = nsim_ci)$or # calculates odds ratio for posterior samples
 
   message('Calculating actual odds ratio')
   if(comp) zero_correction <- 'Bayes'
-  or_list <- calculate_odds_ratio(y, zero_correction = zero_correction, ci_method = ci_method, nsim_median = nsim_median, nsim_ci = nsim_ci) # calculates odds ratio for actual sample/data
+  or_list <- calculate_odds_ratio_parallel(y, zero_correction = zero_correction, ci_method = ci_method, cores = cores,
+                                           nsim_median = nsim_median, nsim_ci = nsim_ci) # calculates odds ratio for actual sample/data
   or_act <- or_list$or %>% mutate(.draw = 0, .before = 1)
 
   message('Aggregate and join data')
@@ -237,7 +418,7 @@ get_or <- function(model, n_samples = NULL, ci_width = .89, zero_correction = 'n
     dplyr::rename(or_ppp = value)
 
   or_dif_hdi <- or %>% tidyr::unnest() %>% dplyr::filter(is.finite(or_dif)) %>%
-    tidybayes::median_hdi(or_dif, .width = ci_width) %>%
+    med_hdci(.width = ci_width) %>% # tidybayes::median_hdi was to slow
     dplyr::rename(or_dif_median = or_dif) %>%
     tidyr::nest(or_dif_ci = c(.lower, .upper, .width, .point, .interval))
 
@@ -783,4 +964,30 @@ count_for_itempair_or <- function(x, y) {
   n[4] <- sum(x == 0 & y == 1)
 
   return(n)
+}
+
+med_qi <- function(x, .width = .89) {
+  x2 <- x %>% ungroup %>% select(-c("itemname1", "itemname2")) %>%
+    pivot_wider(values_from = "or_dif", names_glue = "{item1}_{item2}", names_from = c("item1", "item2")) %>%
+    select(-".draw") %>% apply(2, ggdist::median_qi, .width = .width)
+  x3 <- data.frame(matrix(unlist(x2), nrow=length(x2), byrow=TRUE)) %>% setNames(names(x2[[1]]))
+  y <- cbind(str_split(names(x2), "_"))
+  y2 <- data.frame(matrix(unlist(y), nrow=length(y), byrow=TRUE)) %>% setNames(c("item1", "item2"))
+  x4 <- cbind(y2,x3) %>% as_tibble() %>% mutate_at(c(1,2), as.integer) %>% mutate_at(c(3:6), as.numeric) %>%
+    rename(or_dif = y, .lower = ymin, .upper = ymax)
+
+  return(x4)
+}
+
+med_hdci <- function(x, .width = .89) {
+  x2 <- x %>% ungroup %>% select(-c("itemname1", "itemname2")) %>%
+    pivot_wider(values_from = "or_dif", names_glue = "{item1}_{item2}", names_from = c("item1", "item2")) %>%
+    select(-".draw") %>% apply(2, ggdist::median_hdci, .width = .width)
+  x3 <- data.frame(matrix(unlist(x2), nrow=length(x2), byrow=TRUE)) %>% setNames(names(x2[[1]]))
+  y <- cbind(str_split(names(x2), "_"))
+  y2 <- data.frame(matrix(unlist(y), nrow=length(y), byrow=TRUE)) %>% setNames(c("item1", "item2"))
+  x4 <- cbind(y2,x3) %>% as_tibble() %>% mutate_at(c(1,2), as.integer) %>% mutate_at(c(3:6), as.numeric) %>%
+    rename(or_dif = y, .lower = ymin, .upper = ymax)
+
+  return(x4)
 }
