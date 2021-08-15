@@ -174,11 +174,16 @@ get_or <- function(model, n_samples = NULL, ci_width = .89, zero_correction = 'n
   }
 
   gather_or <- function(x, name) {
-    x <- x %>% tidyr::pivot_longer(names_to = 'itempair', values_to = {{name}}, cols = -.draw) %>%
-      seperate_itempairs()
+    # x <- x %>% tidyr::pivot_longer(names_to = 'itempair', values_to = {{name}}, cols = -.draw) %>%
+    #   seperate_itempairs()
+
+    x <- x %>% tidyr::pivot_longer(names_to = c('item1', 'item2'), names_sep = "_", names_prefix = "ItemPair",
+                                   names_transform = list(item1 = as.integer, item2 = as.integer), values_to = {{name}}, cols = -.draw)
 
     return(x)
   }
+
+  # browser()
 
   comp <- FALSE
   if(zero_correction == 'compromise') comp <- TRUE
@@ -195,11 +200,13 @@ get_or <- function(model, n_samples = NULL, ci_width = .89, zero_correction = 'n
     tidyr::pivot_wider(names_from = {{item}}, values_from = 'yrep') %>%
     select(-{{person}}) #%>% mutate(.draw = as.numeric(.draw))
 
+  div <- ifelse(is.null(n_samples), brms::nsamples(model), n_samples)
+
   # message("Splitting dataframe by group into 3D array. May take a while.") # time scales linear; problem with missings?
   #yrep <- yrep %>% dplyr::group_by(.draw) %>% dplyr::group_split(.keep = TRUE) %>% list2array()
   # in this way (base functions; no tidyr) it just need 0.37 s instead of 11 s !!! But still slower when there are many NAs
   yrep_arr <- yrep %>% arrange(.draw) %>% as.matrix() %>%
-    array(dim=c(dim(yrep)[[1]]/brms::nsamples(model),brms::nsamples(model),dim(yrep)[[2]])) %>% aperm(c(1,3,2))
+    array(dim=c(dim(yrep)[[1]]/div,div,dim(yrep)[[2]])) %>% aperm(c(1,3,2))
   dimnames(yrep_arr)[[2]] <- names(yrep)
   yrep <- yrep_arr
 
@@ -212,7 +219,6 @@ get_or <- function(model, n_samples = NULL, ci_width = .89, zero_correction = 'n
   or_list <- calculate_odds_ratio(y, zero_correction = zero_correction, ci_method = ci_method, nsim_median = nsim_median, nsim_ci = nsim_ci) # calculates odds ratio for actual sample/data
   or_act <- or_list$or %>% mutate(.draw = 0, .before = 1)
 
-  browser()
   message('Aggregate and join data')
   or_act_ci <- or_list$ci %>% t() %>% tibble::as_tibble(rownames = "itempair") %>% seperate_itempairs() %>%
     dplyr::mutate(.width = ci_width, .zero_correction = zero_correction, .interval = ci_method) %>%
@@ -264,6 +270,8 @@ get_or <- function(model, n_samples = NULL, ci_width = .89, zero_correction = 'n
 #' }
 plot_ppmc_or_heatmap <- function(or_data, alternative_color = FALSE, itemrange = NULL) {
   # unite boolean columns that check if HDI includes zero for multimodal distributions
+  # browser()
+
   or_data <- or_data %>% tidyr::unnest(or_dif_ci, keep_empty = TRUE) %>% tidyr::unnest(or_act_ci, names_sep = "") %>%
     dplyr::mutate(above_zero = .lower > 0, beneath_zero = .upper < 0,
                   inside_or_act_ci = .lower > (or_act_ci.lower - or_act) & .upper < (or_act_ci.upper - or_act)) %>%
