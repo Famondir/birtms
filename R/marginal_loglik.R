@@ -5,7 +5,7 @@
 #' @param n_nodes
 #' @param cores
 #'
-#' @return
+#' @returnbrms::loo(ll_marginal$ll)
 #' @export
 #'
 #' @examples
@@ -13,6 +13,12 @@ marginal_loglik <- function(fit, n_nodes = 11, cores = 4) {
   mll_fun <- choose_mll_fun(fit)
 
   mll_fun(fit = fit, n_nodes = n_nodes, cores = cores)
+}
+
+loo_marginal <- function(fit, ...) {
+  ll_marginal <- marginal_loglik(fit, ...)
+
+  return(brms::loo(ll_marginal$ll, r_eff = loo::relative_eff(ll_marginal$ll, ll_marginal$chain)))
 }
 
 choose_mll_fun <- function(fit) {
@@ -133,10 +139,12 @@ mll_parallel_brms_1pl <- function(fit, n_nodes = 11, best_only = FALSE, cores = 
 
   })
 
+  chain <- fit %>% tidybayes::spread_draws({{sd_person__Intercept}}) %>% dplyr::pull(.chain)
+
   if(best_only) {
     return(ll[nrow(ll), ])
   } else {
-    return(list(ll = ll[-nrow(ll), ], best_ll = ll[nrow(ll), ]))
+    return(list(ll = ll[-nrow(ll), ], best_ll = ll[nrow(ll), ], chain = chain))
   }
 
 }
@@ -266,10 +274,12 @@ mll_parallel_brms_2pl <- function(fit, MFUN, n_nodes = 11, best_only = FALSE, co
 
   })
 
+  chain <- fit %>% tidybayes::spread_draws({{sd_person__Intercept}}) %>% dplyr::pull(.chain)
+
   if(best_only) {
     return(ll[nrow(ll), ])
   } else {
-    return(list(ll = ll[-nrow(ll), ], best_ll = ll[nrow(ll), ]))
+    return(list(ll = ll[-nrow(ll), ], best_ll = ll[nrow(ll), ], chain = chain))
   }
 }
 
