@@ -86,10 +86,12 @@ fit_1d_1pl_simon1 <- birtms::birtm_aio(response_data = data_simon,
 Berechne marginale Loglikelihood und marginal-loo-cv:
 
 ```{r}
-mll_spm <- marginal_loglik(fit_1d_1pl_spm_full1, n_nodes = 3) # check_n_nodes ist hier nicht nötig (bereits mit 5 nodes konvergiert)
-mll_simon <- marginal_loglik(fit_1d_1pl_simon1) # braucht 17 - 33 nodes; schlechtere pareto k Werte als beim 1pl
-mll_tina <- marginal_loglik(fit_1d_1pl_tina1)
-mll_eirt <- marginal_loglik(fit_1d_1pl_eirt_science1)
+# mll_spm <- marginal_loglik(fit_1d_1pl_spm_full1, n_nodes = 3) # check_n_nodes ist hier nicht nötig (bereits mit 5 nodes konvergiert)
+# mll_simon <- marginal_loglik(fit_1d_1pl_simon1) # braucht 17 - 33 nodes; schlechtere pareto k Werte als beim 1pl
+# mll_tina <- marginal_loglik(fit_1d_1pl_tina1)
+# mll_eirt <- marginal_loglik(fit_1d_1pl_eirt_science1)
+
+loo_spm_1pl <- loo_marginal(fit_1d_1pl_spm_full1)
 ```
 
 ## 2PL
@@ -160,10 +162,12 @@ fit_1d_2pl_eirt1 <- birtms::birtm_aio(response_data = data_eirt,
 Berechne marginale Loglikelihood und marginal-loo-cv:
 
 ```{r}
-mll_spm_2pl <- marginal_loglik(fit_1d_2pl_spm_full1) # bessere pareto k Werte als das 1pl Modell
-mll_simon_2pl <- marginal_loglik(fit_1d_2pl_simon1)
-mll_tina_2pl <- marginal_loglik(fit_1d_2pl_tina1)
-mll_eirt_2pl <- marginal_loglik(fit_1d_2pl_eirt1) # <- 1pl model generalises better!
+# mll_spm_2pl <- marginal_loglik(fit_1d_2pl_spm_full1) # bessere pareto k Werte als das 1pl Modell
+# mll_simon_2pl <- marginal_loglik(fit_1d_2pl_simon1)
+# mll_tina_2pl <- marginal_loglik(fit_1d_2pl_tina1)
+# mll_eirt_2pl <- marginal_loglik(fit_1d_2pl_eirt1) # <- 1pl model generalises better!
+
+loo_spm_2pl <- loo_marginal(fit_1d_2pl_spm_full1)
 ```
 
 ## ICC plots    
