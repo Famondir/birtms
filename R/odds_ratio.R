@@ -579,13 +579,17 @@ plot_or_heatmap <- function(or_data, model = NULL, itemrange = NULL,
       warning('The limits used to color code the item pairs were derived only for unidimensional models.')
     }
 
+    person <- sym(model$var_specs$person)
+
     if (model$model_specs$item_parameter_number == 1) {
-      sigma <- model %>% tidybayes::spread_draws(sd_person__Intercept) %>% dplyr::pull(sd_person__Intercept)
+      sd_person__Intercept <- sym(paste0('sd_', {{person}}, '__Intercept'))
+      sigma <- model %>% tidybayes::spread_draws({{sd_person__Intercept}}) %>% dplyr::pull({{sd_person__Intercept}})
     } else if (model$model_specs$item_parameter_number == 2) {
       key <- tibble::tibble(itemname = c(or_data$itemname1, or_data$itemname2), item = c(or_data$item1, or_data$item2)) %>%
         dplyr::group_by(itemname) %>% dplyr::summarise(item = stats::median(item))
 
-      sigma <- model %>% tidybayes::spread_draws(sd_person__theta_Intercept) %>% dplyr::pull(sd_person__theta_Intercept)
+      sd_person__Intercept <- sym(paste0('sd_', {{person}}, '__theta_Intercept'))
+      sigma <- model %>% tidybayes::spread_draws({{sd_person__Intercept}}) %>% dplyr::pull({{sd_person__Intercept}})
       alphas <- model %>% tidybayes::spread_draws(b_logalpha_Intercept, r_item__logalpha[itemname,])
       alphas <- alphas %>% mutate(alpha = exp(b_logalpha_Intercept + r_item__logalpha)) %>% dplyr::group_by(itemname) %>%
         select(alpha, itemname) %>% tidyr::nest() %>% left_join(key, by = c('itemname')) %>% dplyr::arrange(item)
