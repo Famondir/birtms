@@ -55,6 +55,46 @@ fit_1d_1pl_tina1 <- birtms::birtm_aio(response_data = data_tina,
                                       variable_specifications = list(person = 'token'),
                                       refit = glob_refit)
 
+# priors_1d_1pl_token <- prior("normal(0, 3)", class = "sd", group = "token") +
+#   prior("normal(0, 3)", class = "sd", group = "item")
+
+fit_1d_1pl_tina1_fw_kft <- 
+  birtms::birtm_aio(response_data = data_tina, 
+                                      response_columns = SuHT3.binary:KaKST1.binary,
+                                      prior = priors_1d_1pl_token,
+                                      iter = 6000, warmup = 1000,
+                                      thin = 2,
+                                      file = "../inst/extdata/fit_1d_1pl_tina1_fw_kft",
+                    variable_specifications = list(person = 'token',
+                                                   person_covariables_main_effect = c('KFT.2pl.WLE.theta',
+                                                                                      'FW.2pl.WLE.theta')
+                                                   ),
+                                      refit = glob_refit)
+
+fit_1d_1pl_tina1_kft <- 
+  birtms::birtm_aio(response_data = data_tina, 
+                                      response_columns = SuHT3.binary:KaKST1.binary,
+                                      prior = priors_1d_1pl_token,
+                                      iter = 6000, warmup = 1000,
+                                      thin = 2,
+                                      file = "../inst/extdata/fit_1d_1pl_tina1_kft",
+                    variable_specifications = list(person = 'token',
+                                                   person_covariables_main_effect = c('KFT.2pl.WLE.theta')
+                                                   ),
+                                      refit = glob_refit)
+
+fit_1d_1pl_tina1_fw <- 
+  birtms::birtm_aio(response_data = data_tina, 
+                                      response_columns = SuHT3.binary:KaKST1.binary,
+                                      prior = priors_1d_1pl_token,
+                                      iter = 6000, warmup = 1000,
+                                      thin = 2,
+                                      file = "../inst/extdata/fit_1d_1pl_tina1_fw",
+                    variable_specifications = list(person = 'token',
+                                                   person_covariables_main_effect = c('FW.2pl.WLE.theta')
+                                                   ),
+                                      refit = glob_refit)
+
 priors_1d_1pl_id <- prior("normal(0, 3)", class = "sd", group = "id") +
   prior("normal(0, 3)", class = "sd", group = "item")
 
@@ -91,7 +131,10 @@ Berechne marginale Loglikelihood und marginal-loo-cv:
 # mll_tina <- marginal_loglik(fit_1d_1pl_tina1)
 # mll_eirt <- marginal_loglik(fit_1d_1pl_eirt_science1)
 
-loo_spm_1pl <- loo_marginal(fit_1d_1pl_spm_full1)
+loo_tina_1pl <- loo_marginal(fit_1d_1pl_tina1)
+loo_tina_1pl_fw_kft <- loo_marginal(fit_1d_1pl_tina1_fw_kft)
+loo_tina_1pl_fw <- loo_marginal(fit_1d_1pl_tina1_fw)
+loo_tina_1pl_kft <- loo_marginal(fit_1d_1pl_tina1_kft)
 ```
 
 ## 2PL
@@ -141,6 +184,19 @@ fit_1d_2pl_tina1 <- birtms::birtm_aio(response_data = data_tina,
                                       model_specifications = list(item_parameter_number = 2),
                                       file = "../inst/extdata/fit_1d_2pl_tina1",
                                       variable_specifications = list(person = 'token'),
+                                      refit = glob_refit)
+
+fit_1d_2pl_tina1_kft <- 
+  birtms::birtm_aio(response_data = data_tina, 
+                                      response_columns = SuHT3.binary:KaKST1.binary,
+                                      prior = priors_1d_2pl_token,
+                                      iter = 6000, warmup = 1000,
+                                      thin = 2,
+                                      file = "../inst/extdata/fit_1d_1pl_tina1_kft",
+                    model_specifications = list(item_parameter_number = 2),
+                    variable_specifications = list(person = 'token',
+                                                   person_covariables_main_effect = c('KFT.2pl.WLE.theta')
+                                                   ),
                                       refit = glob_refit)
 
 priors_1d_2pl_id <- prior("normal(0, 3)", nlpar = "skillintercept") +
@@ -203,6 +259,10 @@ posterior_responses_simon_2pl <- get_postdata(fit_1d_2pl_simon1)
 posterior_responses_tina_1pl <- get_postdata(fit_1d_1pl_tina1)
 (g_tina_1pl <- ICC_check(fit_1d_1pl_tina1, post_responses = posterior_responses_tina_1pl, item_id = 1, num_groups = 6))
 
+posterior_responses_tina_1pl_fw_kft <- get_postdata(fit_1d_1pl_tina1_fw_kft)
+(g_tina_1pl <- ICC_check(fit_1d_1pl_tina1_fw_kft, post_responses = posterior_responses_tina_1pl_fw_kft, item_id = 1, num_groups = 6))
+
+
 posterior_responses_tina_2pl <- get_postdata(fit_1d_2pl_tina1)
 (g_tina_2pl <- ICC_check(fit_1d_2pl_tina1, post_responses = posterior_responses_tina_2pl, item_id = 7, num_groups = 6))
 ```
@@ -211,8 +271,13 @@ posterior_responses_tina_2pl <- get_postdata(fit_1d_2pl_tina1)
 or_data <- birtms::get_or(fit_1d_1pl_spm_full1, zero_correction = 'Haldane')#, n_samples = 100) # 2 s for 100 samples
 or_data %>% birtms::plot_ppmc_or_heatmap(itemrange = c(1,20))
 
+or_data_2pl <- birtms::get_or(fit_1d_2pl_spm_full1, zero_correction = 'Haldane')
+
 or_data2 <- birtms::get_or(fit_1d_1pl_tina1, zero_correction = 'Haldane', n_samples = 1000) # 24.4 s for 50 samples, 33.3 s for 100
 or_data2 %>% birtms::plot_ppmc_or_heatmap(itemrange = c(1,20))
+
+or_data2b <- birtms::get_or(fit_1d_1pl_tina1_fw_kft, zero_correction = 'Haldane', n_samples = 1000) # Fehler!
+or_data2b %>% birtms::plot_ppmc_or_heatmap(itemrange = c(1,20))
 
 or_data3 <- birtms::get_or(fit_1d_2pl_tina1, zero_correction = 'Haldane', n_samples = 50)
 or_data3 %>% birtms::plot_ppmc_or_heatmap(itemrange = c(1,20))
@@ -222,4 +287,6 @@ or_data4 <- birtms::get_or(fit_1d_1pl_simon1, zero_correction = 'Haldane', n_sam
 or_data4 %>% birtms::plot_ppmc_or_heatmap(itemrange = c(1,20))
 
 or_data %>% birtms::plot_or_heatmap()
+or_data %>% birtms::plot_or_heatmap(model = fit_1d_1pl_spm_full1)
+or_data_2pl %>% birtms::plot_or_heatmap(model = fit_1d_2pl_spm_full1)
 ```
