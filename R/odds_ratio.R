@@ -230,8 +230,6 @@ calculate_odds_ratio_parallel <- function(y_rep = NULL, y = NULL, zero_correctio
   doParallel::registerDoParallel(cl)
   on.exit(parallel::stopCluster(cl)) # terminate workes when finished
 
-  # browser()
-
   or_all <- foreach::`%dopar%`(foreach::foreach(j = seq_len(J)[-1], .combine = cbind,
                                                 .packages = c("matrixStats", "dplyr")
   ),
@@ -362,8 +360,6 @@ get_or <- function(model, n_samples = NULL, ci_width = .89, zero_correction = 'n
 
     return(x)
   }
-
-  # browser()
 
   comp <- FALSE
   if(zero_correction == 'compromise') comp <- TRUE

@@ -149,8 +149,9 @@ rep_dataframe <-  function(x, ...) {
 make_responsedata_wider <- function(model) {
   item <- model$var_specs$item
   response <- model$var_specs$response
+  person <- model$var_specs$person
 
-  data_wide <- model$data %>% tidyr::pivot_wider(names_from = {{item}}, values_from = {{response}})
+  data_wide <- model$data %>% select(item, response, person) %>% tidyr::pivot_wider(names_from = {{item}}, values_from = {{response}})
 
   return(data_wide)
 }
