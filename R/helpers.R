@@ -98,15 +98,16 @@ posterior_predictive_values_long <- function(model, n_samples = NULL, f) {
 
   if(multiple_ppvs) stop("Function currently only implemented for univariate dichotomous responses. Can't handle ordinal data yet.")
 
-  data <- model$data %>% mutate(.response_number = dplyr::row_number())
+  item <- model$var_specs$item
+  person <- model$var_specs$person
+  response <- model$var_specs$response
+
+  data <- model$data %>% select({{person}}, {{item}}, {{response}}) %>% mutate(.response_number = dplyr::row_number())
   # ppv <- ppv %>% left_join(data, by = '.response_number')
   ppv <- ppv %>% t() %>% as.data.frame() %>% cbind(data)
 
-  item <- model$var_specs$item
-  person <- model$var_specs$person
-
   ppv <- ppv %>% tidyr::pivot_longer(names_to = '.draw', names_transform = list(.draw = as.integer), names_prefix = 'V',
-                                     values_to = 'ppv', cols = !c({{person}}, {{item}}, "response", ".response_number"))
+                                     values_to = 'ppv', cols = !c({{person}}, {{item}}, {{response}}, ".response_number"))
 
   return(ppv)
 }
