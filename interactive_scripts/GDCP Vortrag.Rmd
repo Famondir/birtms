@@ -274,10 +274,26 @@ fit_1d_2pl_tina1_fw <-
                                                    ),
                                       refit = glob_refit)
 
+formula_tina_2pl_covs <- birtms::build_formula(model_specifications = list(item_parameter_number = 2),
+                    variable_specifications = list(person = 'token',
+                                                   person_covariables_main_effect = c('KFT.2pl.WLE.theta'),
+                                                   item_covariables_intercept = c('itemtype_kontext')
+                                                   ))
+
+data_tina_long_covs <- birtms::compose_dataset(data_tina, response_columns = SuHT3.binary:KaKST1.binary, 
+                                          item_data = items_tina,
+                        variable_specifications = list(person = 'token',
+                                                       person_covariables_main_effect = c('KFT.2pl.WLE.theta'),
+                                                   item_covariables_intercept = c('itemtype_kontext')
+                                                   ))
+
+brms::get_prior(formula_tina_2pl_covs, data_tina_long_covs)
+
 priors_1d_2pl_token_covs <- prior("normal(0, 3)", nlpar = "skillintercept") +
   prior("normal(0, 1)", class = "b", nlpar = "logalpha") +
   prior("normal(0, 5)", class = "b", nlpar = "personcovars") +
   prior("normal(0, 5)", class = "b", nlpar = "itemcovars") +
+  prior("constant(0)", class = "b", nlpar = "itemcovars", coef = "itemtype_kontextT1") + # wichtig, dass ein Level der nominalen covs je subformel (person, item, situation) 0 gesetzt wird (so es nominale covs gibt)
   prior("constant(1)", class = "sd", group = "token", nlpar = "theta") +
   prior("normal(0, 3)", class = "sd", group = "item", nlpar = "beta") +
   prior("normal(0, 1)", class = "sd", group = "item", nlpar = "logalpha")
@@ -287,7 +303,7 @@ fit_1d_2pl_tina1_kft_kontext <-
                     item_data = items_tina,
                                       response_columns = SuHT3.binary:KaKST1.binary,
                                       prior = priors_1d_2pl_token_covs,
-                                      iter = 6000, warmup = 1000,
+                                      iter = 4000, warmup = 1000,
                                       thin = 2,
                                       file = "../inst/extdata/fit_1d_2pl_tina1_kft_kontext",
                     model_specifications = list(item_parameter_number = 2),
@@ -377,6 +393,8 @@ posterior_responses_tina_1pl <- get_postdata(fit_1d_1pl_tina1)
 posterior_responses_tina_1pl_fw_kft <- get_postdata(fit_1d_1pl_tina1_fw_kft)
 (g_tina_1pl <- ICC_check(fit_1d_1pl_tina1_fw_kft, post_responses = posterior_responses_tina_1pl_fw_kft, item_id = 1, num_groups = 6))
 
+posterior_responses_tina_1pl_kontext <- get_postdata(fit_1d_1pl_tina1_kontext)
+(g_tina_1pl <- ICC_check(fit_1d_1pl_tina1_kontext, post_responses = posterior_responses_tina_1pl_kontext, item_id = 1, num_groups = 6)) # Itemcovars müssen zu den Itemlocations hinzuaddiert werden
 
 posterior_responses_tina_2pl <- get_postdata(fit_1d_2pl_tina1)
 (g_tina_2pl <- ICC_check(fit_1d_2pl_tina1, post_responses = posterior_responses_tina_2pl, item_id = 7, num_groups = 6))
@@ -393,8 +411,11 @@ or_data_2pl <- birtms::get_or(fit_1d_2pl_spm_full1, zero_correction = 'Haldane')
 or_data2 <- birtms::get_or(fit_1d_1pl_tina1, zero_correction = 'Haldane', n_samples = 1000) # 24.4 s for 50 samples, 33.3 s for 100
 or_data2 %>% birtms::plot_ppmc_or_heatmap(itemrange = c(1,20))
 
-or_data2b <- birtms::get_or(fit_1d_1pl_tina1_fw_kft, zero_correction = 'Haldane', n_samples = 1000) # Fehler!
+or_data2b <- birtms::get_or(fit_1d_1pl_tina1_fw_kft, zero_correction = 'Haldane', n_samples = 1000)
 or_data2b %>% birtms::plot_ppmc_or_heatmap(itemrange = c(1,20))
+
+or_data2c <- birtms::get_or(fit_1d_1pl_tina1_kontext, zero_correction = 'Haldane', n_samples = 1000)
+or_data2c %>% birtms::plot_ppmc_or_heatmap(itemrange = c(1,20))
 
 or_data3 <- birtms::get_or(fit_1d_2pl_tina1, zero_correction = 'Haldane', n_samples = 50)
 or_data3 %>% birtms::plot_ppmc_or_heatmap(itemrange = c(1,20))
@@ -406,4 +427,26 @@ or_data4 %>% birtms::plot_ppmc_or_heatmap(itemrange = c(1,20))
 or_data %>% birtms::plot_or_heatmap()
 or_data %>% birtms::plot_or_heatmap(model = fit_1d_1pl_spm_full1)
 or_data_2pl %>% birtms::plot_or_heatmap(model = fit_1d_2pl_spm_full1)
+```
+## Wrightmap erstellen
+
+```{r}
+fit_1d_1pl_tina1_fw_kft %>% plot_wrightmap()
+fit_1d_1pl_tina1_fw_kft %>% plot_wrightmap(classic = FALSE, labsize = 2, bins = 26,
+                                           namefun = function(x) gsub("\\..*", "", x),
+                                           groupfun =  function(x) gsub("[0-9]*", "", x),
+                                           lims = c(-1.8,1.3))
+```
+## Itemparameter graphisch prüfen
+
+```{r}
+plot_itemparameter(fit_1d_2pl_tina1, pars = "slope", style = "halfeye", items = c(2,7), alphacut = c(.4, .6, 2))
+plot_itemparameter(fit_1d_2pl_tina1, pars = "easyness", style = "halfeye", thresholds = c(-2,2))
+plot_itemparameter(fit_1d_2pl_tina1, pars = "difficulty", style = "halfeye", thresholds = c(-2,2))
+```
+## Personresponsefunctions
+
+```{r}
+respfuncdata_1d_1pl_tina <- calc.personresponsefunction(fit_1d_1pl_tina1, post_responses =  posterior_responses_tina_1pl)
+plot_personresponsefunction(fit_1d_1pl_tina1, respfuncdata_1d_1pl_tina, id = c(1:5))
 ```
