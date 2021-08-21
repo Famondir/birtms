@@ -27,15 +27,41 @@ R2_latent <- function(birtms_fit, fast = TRUE) {
   person_covars <- fit$var_specs[stringr::str_detect(names(fit$var_specs), 'person_covariables') | stringr::str_detect(names(fit$var_specs), 'situation_covariables')] %>% unlist(use.names = FALSE)
   item_covars <- fit$var_specs[stringr::str_detect(names(fit$var_specs), 'item_covariables') | stringr::str_detect(names(fit$var_specs), 'situation_covariables')] %>% unlist(use.names = FALSE)
 
-  beta_person <- beta_all %>% tibble::as_tibble() %>% dplyr::select(Intercept, purrr::map(person_covars, tidyselect::starts_with, vars = colnames(.data)) %>% unlist()) %>% as.matrix()
-  Y_person <- tibble::tibble({{person}} := fit$data[[person]]) %>% dplyr::mutate(as.data.frame(brms::make_standata(data = fit$data, formula = fit$formula)[['X']]))
-  if (fast) Y_person <- Y_person %>% dplyr::group_by_(person) %>% dplyr::summarise_all(~ median(as.numeric(.x))) %>% dplyr::ungroup()
-  Y_person <- Y_person %>% dplyr::select(-{{person}}) %>% dplyr::select(colnames(beta_person))
+  if (birtms_fit$model_specs$item_parameter_number > 1) {
+    person_covars2 <- paste0("personcovars_", person_covars)
+    intercept <- sym("skillintercept_Intercept")
+  } else {
+    person_covars2 <- person_covars
+    intercept <- sym("Intercept")
+  }
 
-  beta_item <- beta_all %>% tibble::as_tibble() %>% dplyr::select(Intercept, purrr::map(item_covars, tidyselect::starts_with, vars = colnames(.data)) %>% unlist()) %>% as.matrix()
-  Y_item <- tibble::tibble({{item}} := fit$data[[item]]) %>% dplyr::mutate(as.data.frame(brms::make_standata(data = fit$data, formula = fit$formula)[['X']]))
+  # browser()
+
+  beta_person <- beta_all %>% tibble::as_tibble() %>% dplyr::select({{intercept}}, purrr::map(person_covars2, tidyselect::starts_with, vars = colnames(.data)) %>% unlist()) %>% as.matrix()
+  if (birtms_fit$model_specs$item_parameter_number == 1) {
+    colnm <- colnames(beta_person)
+    Y_person <- tibble::tibble({{person}} := fit$data[[person]]) %>% dplyr::mutate(as.data.frame(brms::make_standata(data = fit$data, formula = fit$formula)[["X"]]))
+  } else {
+    colnm <- colnames(beta_person) %>% stringr::str_remove("personcovars_") %>% stringr::str_remove("skillintercept_")
+    Y_person <- tibble::tibble({{person}} := fit$data[[person]]) %>% dplyr::mutate(as.data.frame(
+      cbind(brms::make_standata(data = fit$data, formula = fit$formula)[["X_skillintercept"]],
+            brms::make_standata(data = fit$data, formula = fit$formula)[["X_personcovars"]])))
+  }
+  if (fast) Y_person <- Y_person %>% dplyr::group_by_(person) %>% dplyr::summarise_all(~ median(as.numeric(.x))) %>% dplyr::ungroup()
+  Y_person <- Y_person %>% dplyr::select(-{{person}}) %>% dplyr::select(colnm)
+
+  beta_item <- beta_all %>% tibble::as_tibble() %>% dplyr::select({{intercept}}, purrr::map(item_covars, tidyselect::starts_with, vars = colnames(.data)) %>% unlist()) %>% as.matrix()
+  if (birtms_fit$model_specs$item_parameter_number == 1) {
+    colnm <- colnames(beta_item)
+    Y_item <- tibble::tibble({{item}} := fit$data[[item]]) %>% dplyr::mutate(as.data.frame(brms::make_standata(data = fit$data, formula = fit$formula)[['X']]))
+  } else {
+    colnm <- colnames(beta_item) %>% stringr::str_remove("itemcovars_") %>% stringr::str_remove("skillintercept_")
+    Y_item <- tibble::tibble({{item}} := fit$data[[item]]) %>% dplyr::mutate(as.data.frame(
+      cbind(brms::make_standata(data = fit$data, formula = fit$formula)[["X_skillintercept"]],
+            brms::make_standata(data = fit$data, formula = fit$formula)[["X_itemcovars"]])))
+  }
   if (fast) Y_item <- Y_item %>% dplyr::group_by_(item) %>% dplyr::summarise_all(~ median(as.numeric(.x))) %>% dplyr::ungroup()
-  Y_item <- Y_item %>% dplyr::select(-!!item) %>% dplyr::select(colnames(beta_item))
+  Y_item <- Y_item %>% dplyr::select(-!!item) %>% dplyr::select(colnm)
 
   variance_person <- (var_cor[[person]]$sd %>% as.data.frame())^2
   variance_item <- (var_cor[[item]]$sd %>% as.data.frame())^2
@@ -71,8 +97,8 @@ calc_latent_regression_coefs_distribution <- function(variance, beta, Y) {
     sd_vec[i] <- temp$sd_theta
   }
 
-  if(nrow(beta) > 1) return(list(R2 = tidybayes::median_hdi(R2_vec), sd_theta = tidybayes::median_hdi(sd_vec)))
-  return(list(R2_theta = R2_vec, sd_theta = sd_vec))
+  if(nrow(beta) > 1) return(list(R2 = tidybayes::median_hdi(R2_vec), sd = tidybayes::median_hdi(sd_vec)))
+  return(list(R2 = R2_vec, sd = sd_vec))
 }
 
 #' Calculates point estimate of latent regression coefficients
