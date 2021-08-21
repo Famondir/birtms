@@ -28,6 +28,8 @@ data_eirt$proflevel <- as.factor(data_eirt$proflevel)
 data_eirt$abilcov <- as.factor(data_eirt$abilcov)
 
 data_tina <- rio::import("../inst/extdata/data_tina.xlsx")
+# HS.data_long %>% select(-person) %>% group_by(item, itemtype_model1, itemtype_model2, itemtype_model3, itemtype_kontext) %>% summarise_all(mean) %>% select(-response) %>% rio::export("items_tina.xlsx")
+items_tina <- rio::import("../inst/extdata/items_tina.xlsx")
 
 data_simon <- rio::import("../inst/extdata/daten_fdw_simon.xlsx")
 ```
@@ -83,6 +85,32 @@ fit_1d_1pl_tina1_kft <-
                                                    ),
                                       refit = glob_refit)
 
+# fit_1d_1pl_tina1_kft_newkft <- 
+#   birtms::birtm_aio(response_data = data_tina, 
+#                                       response_columns = SuHT3.binary:KaKST1.binary,
+#                                       prior = priors_1d_1pl_token,
+#                                       iter = 6000, warmup = 1000,
+#                                       thin = 2,
+#                                       file = "../inst/extdata/fit_1d_1pl_tina1_kft_newkft",
+#                     variable_specifications = list(person = 'token',
+#                                                    person_covariables_main_effect = c('KFT.2pl.WLE.theta')
+#                                                    ),
+#                                       refit = glob_refit)
+
+fit_1d_1pl_tina1_kontext <- 
+  birtms::birtm_aio(response_data = data_tina, 
+                    item_data = items_tina,
+                                      response_columns = SuHT3.binary:KaKST1.binary,
+                                      prior = priors_1d_1pl_token,
+                                      iter = 6000, warmup = 1000,
+                                      thin = 2,
+                                      file = "../inst/extdata/fit_1d_1pl_tina1_kontext",
+                    variable_specifications = list(person = 'token',
+                                                   item_covariables_intercept = c('itemtype_kontext')
+                                                   ),
+                                      refit = glob_refit)
+
+
 fit_1d_1pl_tina1_fw <- 
   birtms::birtm_aio(response_data = data_tina, 
                                       response_columns = SuHT3.binary:KaKST1.binary,
@@ -135,6 +163,7 @@ loo_tina_1pl <- loo_marginal(fit_1d_1pl_tina1)
 loo_tina_1pl_fw_kft <- loo_marginal(fit_1d_1pl_tina1_fw_kft)
 loo_tina_1pl_fw <- loo_marginal(fit_1d_1pl_tina1_fw)
 loo_tina_1pl_kft <- loo_marginal(fit_1d_1pl_tina1_kft)
+loo_tina_1pl_kontext <- loo_marginal(fit_1d_1pl_tina1_kontext)
 ```
 
 ## 2PL
@@ -244,6 +273,30 @@ fit_1d_2pl_tina1_fw <-
                                                    person_covariables_main_effect = c('FW.2pl.WLE.theta')
                                                    ),
                                       refit = glob_refit)
+
+priors_1d_2pl_token_covs <- prior("normal(0, 3)", nlpar = "skillintercept") +
+  prior("normal(0, 1)", class = "b", nlpar = "logalpha") +
+  prior("normal(0, 5)", class = "b", nlpar = "personcovars") +
+  prior("normal(0, 5)", class = "b", nlpar = "itemcovars") +
+  prior("constant(1)", class = "sd", group = "token", nlpar = "theta") +
+  prior("normal(0, 3)", class = "sd", group = "item", nlpar = "beta") +
+  prior("normal(0, 1)", class = "sd", group = "item", nlpar = "logalpha")
+
+fit_1d_2pl_tina1_kft_kontext <- 
+  birtms::birtm_aio(response_data = data_tina, 
+                    item_data = items_tina,
+                                      response_columns = SuHT3.binary:KaKST1.binary,
+                                      prior = priors_1d_2pl_token_covs,
+                                      iter = 6000, warmup = 1000,
+                                      thin = 2,
+                                      file = "../inst/extdata/fit_1d_2pl_tina1_kft_kontext",
+                    model_specifications = list(item_parameter_number = 2),
+                    variable_specifications = list(person = 'token',
+                                                   person_covariables_main_effect = c('KFT.2pl.WLE.theta'),
+                                                   item_covariables_intercept = c('itemtype_kontext')
+                                                   ),
+                                      refit = glob_refit)
+
 
 priors_1d_2pl_id <- prior("normal(0, 3)", nlpar = "skillintercept") +
   prior("normal(0, 1)", class = "b", nlpar = "logalpha") +
