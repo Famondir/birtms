@@ -1,6 +1,6 @@
 plot_wrightmap <- function(model, items = c(1:5), palette = NULL, lims = NULL,
                            namefun = identity, groupfun = identity,
-                           labsize = 4, binwidth = .5, classic = TRUE) {
+                           labsize = 4, bins = 20, classic = TRUE) {
   stopifnot(model$model_specs$response_type == 'dichotom')
   stopifnot(model$model_specs$add_common_dimension == FALSE)
   stopifnot(model$model_specs$dimensinality_type == 'unidimensional')
@@ -9,7 +9,7 @@ plot_wrightmap <- function(model, items = c(1:5), palette = NULL, lims = NULL,
   theta <- get.theta_for_wrightmap(model)
   delta <- get.delta_for_wrigthmap(model)
 
-  map <- ggWrightMap.custom(theta = theta, b = delta[["delta"]], binwidth = binwidth, size = 15,
+  map <- ggWrightMap.custom(theta = theta, b = delta[["delta"]], bins = bins, size = 15,
                             color = "skyblue", rel.width = c(1,3),
                             group = groupfun(delta[["rowname"]]),
                             item.names = namefun(delta[["rowname"]]),
@@ -43,7 +43,7 @@ get.delta_for_wrigthmap <- function(model) {
   return(deltas)
 }
 
-ggWrightMap.custom <- function(theta, b, binwidth = 0.5, color = "blue", size = 15, item.names = NULL,
+ggWrightMap.custom <- function(theta, b, bins = 10, color = "blue", size = 15, item.names = NULL,
                                rel.width = 1, group = NULL, palette = NULL, lims = NULL, labsize = 6,
                                classic = FALSE) # ursprünglich aus ShinyItemAnalysis
 {
@@ -61,7 +61,8 @@ ggWrightMap.custom <- function(theta, b, binwidth = 0.5, color = "blue", size = 
 
   df.theta <- data.frame(theta = theta)
 
-  theta.cut.points <- seq(min(c(theta, b)) - binwidth / 2, max(c(theta, b)) + binwidth / 2, binwidth / 2)
+  binwidth <- -(min(c(theta, b))-max(c(theta, b)))/bins
+  theta.cut.points <- seq(min(c(theta, b)) - binwidth / 2, max(c(theta, b)) + binwidth / 2, binwidth)
   b.cut.points <- cut(b, theta.cut.points, include.lowest = T)
   levels(b.cut.points) <- theta.cut.points[-length(theta.cut.points)] + diff(theta.cut.points) / 2
   b.cut.points <- as.numeric(paste(b.cut.points))
