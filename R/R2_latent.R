@@ -16,7 +16,13 @@ if(getRversion() >= "2.15.1")  utils::globalVariables(c("Intercept"))
 R2_latent <- function(birtms_fit, fast = TRUE) {
   if (is.birtmsfit(birtms_fit)) fit <- birtms_fit
   else stop('Object is not of type birtms_fit. Therefore var_specs element might be missing. Execution terminated.')
-  if (fast & !is.null(fit$var_specs$situation_covariables)) warning('Model used situation covariables but fast argument is TRUE. Please set fast to FALSE to get more reliable estimates.')
+
+  stopifnot(model$model_specs$response_type == 'dichotom')
+  stopifnot(model$model_specs$add_common_dimension == FALSE)
+  stopifnot(model$model_specs$dimensinality_type == 'unidimensional')
+  stopifnot(model$model_specs$item_parameter_number < 2) # not checked if it works with 3pl or 4pl models yet
+
+  if (fast & !is.null(fit$var_specs$situation_covariables)) stop('Model used situation covariables but fast argument is TRUE. Please set fast to FALSE to get more reliable estimates.')
 
   var_cor <- brms::VarCorr(fit, summary = FALSE)
   beta_all <- brms::fixef(fit, summary = FALSE)

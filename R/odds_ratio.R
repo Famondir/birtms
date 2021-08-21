@@ -343,6 +343,8 @@ calculate_odds_ratio_parallel <- function(y_rep = NULL, y = NULL, zero_correctio
 get_or <- function(model, n_samples = NULL, ci_width = .89, zero_correction = 'none', ci_method = 'Woolf',
                    nsim_ci = 10000000, nsim_median = 100000, cores = 4) {
   if(model$model_specs$response_type != 'dichotom') stop('Odds ratios are only implemented for dichotomous models.')
+  stopifnot(model$model_specs$add_common_dimension == FALSE)
+  stopifnot(model$model_specs$dimensinality_type == 'unidimensional')
 
   seperate_itempairs <- function(x) {
     x <- x %>% mutate(itempair = stringr::str_remove(itempair, 'ItemPair')) %>%
