@@ -35,13 +35,13 @@ R2_latent <- function(birtms_fit, fast = TRUE) {
 
   if (birtms_fit$model_specs$item_parameter_number > 1) {
     person_covars2 <- paste0("personcovars_", person_covars)
+    item_covars2 <- paste0("itemcovars_", item_covars)
     intercept <- sym("skillintercept_Intercept")
   } else {
     person_covars2 <- person_covars
+    item_covars2 <- itemcovars
     intercept <- sym("Intercept")
   }
-
-  # browser()
 
   beta_person <- beta_all %>% tibble::as_tibble() %>% dplyr::select({{intercept}}, purrr::map(person_covars2, tidyselect::starts_with, vars = colnames(.data)) %>% unlist()) %>% as.matrix()
   if (birtms_fit$model_specs$item_parameter_number == 1) {
@@ -56,7 +56,7 @@ R2_latent <- function(birtms_fit, fast = TRUE) {
   if (fast) Y_person <- Y_person %>% dplyr::group_by_(person) %>% dplyr::summarise_all(~ median(as.numeric(.x))) %>% dplyr::ungroup()
   Y_person <- Y_person %>% dplyr::select(-{{person}}) %>% dplyr::select(colnm)
 
-  beta_item <- beta_all %>% tibble::as_tibble() %>% dplyr::select({{intercept}}, purrr::map(item_covars, tidyselect::starts_with, vars = colnames(.data)) %>% unlist()) %>% as.matrix()
+  beta_item <- beta_all %>% tibble::as_tibble() %>% dplyr::select({{intercept}}, purrr::map(item_covars2, tidyselect::starts_with, vars = colnames(.data)) %>% unlist()) %>% as.matrix()
   if (birtms_fit$model_specs$item_parameter_number == 1) {
     colnm <- colnames(beta_item)
     Y_item <- tibble::tibble({{item}} := fit$data[[item]]) %>% dplyr::mutate(as.data.frame(brms::make_standata(data = fit$data, formula = fit$formula)[['X']]))
