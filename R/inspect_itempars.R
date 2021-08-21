@@ -1,5 +1,6 @@
 plot_itemparameter <- function(model, pars, style, items = c(1,5), thresholds = c(.2, 2),
                                alphacut = c(.2,.3, 2), betacut = c(-2,2)) {
+
   data <- model %>% spread.draws(pars) %>% filter(item_nr >= items[1], item_nr <= items[2])
 
   if (pars == 'slope') {
@@ -49,6 +50,27 @@ plot_itemparameter <- function(model, pars, style, items = c(1,5), thresholds = 
 }
 
 spread.draws <- function(model, pars) {
+  stopifnot(model$model_specs$response_type == 'dichotom')
+  stopifnot(model$model_specs$add_common_dimension == FALSE)
+  stopifnot(model$model_specs$dimensinality_type == 'unidimensional')
+
+  if (model$model_specs$item_parameter_number == 1) {
+    if (stringr::str_detect(pars, "slope")) stop('1pl models have no interesting slope parameter')
+    beta_ran <- sym("r_item")
+    beta_fix <- sym("b_Intercept")
+    beta_names = c("r_item[item,]", "b_Intercept")
+    beta_lang = sapply(beta_names, str2lang)
+
+  } else if (model$model_specs$item_parameter_number == 2) {
+    beta_ran <- sym("r_item__beta")
+    beta_fix <- sym("b_skillintercept_Intercept")
+    beta_names = c("r_item__beta[item,]", "b_skillintercept_Intercept")
+    beta_lang = sapply(beta_names, str2lang)
+
+  } else {
+    stop('Only 1pl and 2pl-models implemented yet')
+  }
+
   data_long <- model$data
 
   item_key <- data_long %>% select(item) %>% unique
@@ -60,14 +82,14 @@ spread.draws <- function(model, pars) {
       mutate(alpha1 = exp(r_item__logalpha+b_logalpha_Intercept))
   } else if (pars == 'adjusted slope') {
     stop('3pl models not supportet yet')
-    data <- model %>% spread_draws(alpha1[item_nr], gamma[item_nr]) %>%
-      mutate(adjusted_alpha = alpha1*(1-gamma))
+    # data <- model %>% spread_draws(alpha1[item_nr], gamma[item_nr]) %>%
+    #   mutate(adjusted_alpha = alpha1*(1-gamma))
   } else if (pars %in% c('easyness', 'delta', 'beta', 'difficulty')) {
-    data <- model %>% tidybayes::spread_draws(r_item__beta[item,], b_skillintercept_Intercept) %>%
-      mutate(delta = ifelse(pars == 'difficulty', -1, 1)*(r_item__beta+b_skillintercept_Intercept))
+    data <- model %>% tidybayes::spread_draws(!!!beta_lang) %>%
+      mutate(delta = ifelse(pars == 'difficulty', -1, 1)*({{beta_ran}}+{{beta_fix}}))
   } else if (pars == 'pseudoguess' | pars == 'gamma') {
     stop('3pl models not supportet yet')
-    data <- model %>% spread_draws(gamma[item_nr])
+    # data <- model %>% spread_draws(gamma[item_nr])
   } else {
     stop('Dieser Parameter wurde noch nicht implementiert.')
   }
