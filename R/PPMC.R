@@ -1,0 +1,252 @@
+get_ppmcdatasets <- function(model, ppmcMethod, crit, group = 'item', post_responses = NULL) {
+
+  if (ppmcMethod == 'CC' | ppmcMethod == 'all') {
+    if (is.null(post_responses)) {
+      post_responses <- get_postdata(model = model, subset = model$subset)
+    }
+
+    yrep = make_post_longer(model = model, postdata = post_responses, 'yrep')
+    ppe = make_post_longer(model = model, postdata = post_responses, 'ppe')
+  } else if (ppmcMethod == 'MC' | ppmcMethod == 'all') {
+    if (is.null(model$ppmcData$ppe_mc)) {
+      temp <- get.mixed_ppmc_data(model, subset = model$subset, ppmcMethod = ppmcMethod)
+      ppmcData$ppe_mc <- temp$ppe
+      ppmcData$yrep_mc <- temp
+    }
+
+    ppe = model$ppmcData$ppe_mc
+    yrep = model$ppmcData$yrep_mc
+  } else if (ppmcMethod == 'MM' | ppmcMethod == 'all') {
+    if (is.null(model$ppmcData$ppe_mm)) {
+      model$ppmcData$ppe_mm <- get.ppe_ppmc(model, subset = model$subset, ppmcMethod = ppmcMethod)
+      model$ppmcData$yrep_mm <- get.yrep_ppmc(model$ppmcData$ppe_mm)
+    }
+
+    ppe = model$ppmcData$ppe_mm
+    yrep = model$ppmcData$yrep_mm
+  } else {
+    stop('Fehler. Ungültige PPMC Methode!')
+  }
+
+  # prevents recalculation for fitdatasets,
+  # scine this function is called twice, cause model is altered in observe function
+  # print(calculated_ppmc_datasets)
+  if (group == 'item') {
+    fitData <- model %>%
+      fit_statistic(criterion = crit, group = item, yrep = yrep, ppe = ppe)
+  } else if (group == 'ID') {
+    fitData <- model %>%
+      fit_statistic(criterion = crit, group = ID, yrep = yrep, ppe = ppe)
+  }
+
+  return(fitData)
+}
+
+fit_statistic <- function(model, criterion, group, ppe = NULL, yrep = NULL) {
+  group <- enquo(group)
+  data_long <- model$data
+
+  # head(ppe)
+  # head(yrep)
+
+  print('calculating fitstatistic')
+
+  fitdata <- ppe %>%
+    mutate(yrep = yrep$yrep) %>%
+    mutate(
+      crit = criterion(response, ppe, .),
+      crit_rep = criterion(yrep, ppe, .)
+    ) %>%
+    group_by(!!group, draw) %>%
+    summarise(
+      crit = sum(crit),
+      crit_rep = sum(crit_rep),
+      crit_diff = crit_rep - crit,
+      .groups = 'drop'
+    ) %>%
+    mutate(draw = as.numeric(sub("^V", "", draw))) %>%
+    arrange(!!group, draw)
+
+  print('finished')
+
+  return(fitdata)
+}
+
+infit <- function(y, p, data, ...) {
+  sum_var_p <- data %>% mutate(var_p = (ppe*(1-ppe))) %>% group_by(item, draw) %>%
+    mutate(sum_var = sum(var_p)) %>% ungroup() %>% select(sum_var)
+
+  (y - p)^2 / sum_var_p %>%
+    return()
+}
+
+outfit <- function(y, p, data, ...) {
+  N <- length(unique(data$ID))
+
+  (y - p)^2 / N / (p*(1-p)) %>%
+    return()
+}
+
+ll <- function(y, p, ...) {
+  y * log(p) + (1 - y) * log(1 - p) %>%
+    return()
+}
+
+Q1 <- function(y, p, data, ...) {
+  stop('Q1 not implemented yet')
+}
+
+G2 <- function(y, p, data, ...) {
+  stop('G2 not implemented yet')
+}
+
+plot_fit_statistic <- function(model, data, units = c(1,9), group = 'item', ppmcMethod = 'CC', hdi_width = .89) {
+  if (ppmcMethod == 'CC') {
+    color = "#8b7d6b70"
+  } else if (ppmcMethod == 'MC') {
+    color = "#008b4570"
+  } else if (ppmcMethod == 'MM') {
+    color = "#ff634770"
+  }
+
+  person <- model$var_specs$person
+  personsym <- sym(person)
+
+  if (group == 'item') {
+    g <- data %>% mutate(item_id = get.item.id(.)) %>% filter(item_id <= units[2] & item_id >= units[1]) %>%
+      group_by(item) %>%
+      ggplot(aes(x = crit_diff, y = 0, fill = stat(quantile))) +
+      ggridges::geom_density_ridges_gradient(quantile_lines = TRUE, quantile_fun = hdi_custWidth, quantiles = hdi_width, vline_linetype = 2) +
+      # geom_density(data = item_fit2_1pl_testlets_mm[1:(1600*9),], aes(crit_diff), colour = 'steelblue1', fill = 'steelblue1', alpha = 0.3) +
+      facet_wrap("item", scales = "free") +
+      scale_fill_manual(values = c("transparent", color, "transparent"), guide = "none") +
+      xlab("itemfit criteria difference between predicted and observed responses.")
+  } else if (group == person) {
+    g <- data %>% mutate(person_id = get.person.id(., person = {{person}})) %>%
+      filter(person_id <= units[2] & person_id >= units[1]) %>%
+      mutate({{person}} := paste('Person', {{personsym}})) %>% group_by({{personsym}}) %>%
+      ggplot(aes(x = crit_diff, y = 0, fill = stat(quantile))) +
+      ggridges::geom_density_ridges_gradient(quantile_lines = TRUE, quantile_fun = HDInterval::hdi, vline_linetype = 2) +
+      # geom_density(data = item_fit2_1pl_testlets_mm[1:(1600*9),], aes(crit_diff), colour = 'steelblue1', fill = 'steelblue1', alpha = 0.3) +
+      facet_wrap({{person}}, scales = "free") +
+      scale_fill_manual(values = c("transparent", color, "transparent"), guide = "none") +
+      xlab("Log-likelihood difference between predicted and observed responses.")
+  }
+
+  return(g)
+}
+
+hdi_custWidth <- function(...) {
+  dots <- list(...)
+  quantiles <- dots[[2]]
+  hdi_width <- quantiles[[length(quantiles)]] # uses the last entry if its a vector which should be the biggest one; better pass a single double < 1.0
+  if (is.na(hdi_width)) hdi_width <- .89 # happens is quantiles = 1L
+  message(paste0('HDI credible interval width = ', hdi_width))
+  HDInterval::hdi(dots[[1]], credMass = hdi_width)
+}
+
+get.person.id <- function(data_long, person) {
+  personsym <- sym(person)
+
+  personnames <- unique(model$data[[person]])
+  person_key <- seq_along(personnames)
+  names(person_key) <- personnames
+
+  data_long %>% mutate(person.id = person_key[person], .after = person) %>% pull(person.id) %>%
+    return()
+}
+
+get.mixed_ppmc_data <- function(model, subset = NULL, ppmcMethod = "MC", sd = 1) { # 40 s statt 53 s bzw. 48 s
+  # speed up further with sparse matrix multiplication
+
+  person <- model$var_specs$person
+  personsym <- sym(person)
+
+  tictoc::tic()
+  data_long <- model$data %>% mutate(item.id = get.item.id(.))
+
+  if (is.null(subset)) {
+    subset <- c(1:nsamples(model))
+  }
+
+  message('Calculating probabilities')
+
+  itempars <- spread.draws(model, pars = 'delta') %>% relocate(delta, .after = last_col())
+
+  if (model$model_specs$item_parameter_number == 2) {
+    alpha1 <- spread.draws(model, pars = 'alpha1')
+    itempars <- itempars %>% inner_join(alpha1)
+  } else {
+    itempars <- itempars %>% mutate(alpha1 = 1)
+  }
+
+  if (model$model_specs$item_parameter_number == 3) {
+    stop('Function not implemented for 3pl model')
+    # gamma <- spread.draws(model, pars = 'gamma')
+    # itempars <- itempars %>% inner_join(gamma)
+  } else {
+    itempars <- itempars %>% mutate(gamma = 0)
+  }
+
+  itempars <- itempars %>% filter(.draw %in% subset) #%>% left_join(testlet)
+
+  # using N(0,1) or prior (for 1 pl) insted?
+  # theta_rep <- purrr::map(brms::VarCorr(model, summary = FALSE)[[person]][["sd"]],
+  #                         .f = ~rnorm(length(unique(model$data$person)), mean = 0, sd = .x)) %>%
+  #   as.data.frame() %>% t()
+  theta_rep <- rnorm(brms::nsamples(model)*length(unique(model$data$person)), mean = 0, sd = sd) %>%
+    matrix(ncol = length(unique(model$data$person)))
+
+  theta_rep <- theta_rep %>% as.data.frame() %>%
+    setNames(paste0("Persondummy ",1:length(unique(model$data$person)))) %>%
+    as_tibble() %>% mutate(.draw = row_number(), .before = 1) %>% filter(.draw %in% subset) %>%
+    tidyr::pivot_longer(cols = -.draw, values_to = "theta", names_to = "person")
+
+
+  # theta_rep <- model %>% spread_draws(theta_rep[ID]) %>% filter(.draw %in% subset)
+
+  itempars <- itempars %>% group_by(.draw) %>% nest() %>% rename(itempars = data)
+  theta_rep <- theta_rep %>% group_by(.draw) %>% nest() %>% rename(theta_rep = data)
+  ppe <- itempars %>% left_join(theta_rep, by = ".draw")
+
+  ppe <- ppe %>% mutate(testlet_thetas = NA)
+
+  ppmc_data <- ppe %>% mutate(ppe = pmap(list(.draw, itempars, theta_rep, testlet_thetas), calc.probability)) %>%
+    select(.draw, ppe) %>% group_by(.draw) %>% unnest(cols = c(ppe))
+
+  ppmc_data["yrep"] <- rbinom(n = nrow(ppmc_data), size = 1, ppmc_data$ppe)
+
+  message('finished')
+  tictoc::toc()
+
+  return(ppmc_data)
+}
+
+calc.probability <- function(.draw, itempars, theta_rep, testlet_thetas = NA) {
+  person <- theta_rep$person
+  theta_rep <- theta_rep$theta
+
+  itemnames <- itempars$item
+
+  delta <- itempars$delta
+  alpha1 <- itempars$alpha1
+  gamma <- itempars$gamma
+
+  if (!is.na(testlet_thetas)) {
+    testlet <- itempars$testlet
+
+    testlet_thetas <- testlet_thetas %>% select(-c(person, .iteration, .chain))
+
+    ppe <- gamma + (1-gamma)*inv_logit_scaled(
+      delta + (alpha1 %*% t(theta_rep)) + t(testlet_thetas[,testlet]))
+
+  } else {
+    ppe <- gamma + (1-gamma)*inv_logit_scaled(delta + (alpha1 %*% t(theta_rep)))
+  }
+
+  ppe <- ppe %>% t() %>% as.data.frame() %>% setNames(itemnames) %>%
+    mutate(person = person, draw = .draw, .before = 1) %>%
+    pivot_longer(cols = c(3:ncol(.)), names_to = 'item', values_to = 'ppe')
+
+  return(ppe)
+}
