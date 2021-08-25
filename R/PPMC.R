@@ -1,61 +1,60 @@
 get_ppmcdatasets <- function(model, ppmcMethod, crit, group = 'item', post_responses = NULL) {
+  if (is.null(post_responses)) {
+    post_responses <- get_postdata(model = model, subset = model$subset)
+  }
 
-  if (ppmcMethod == 'CC' | ppmcMethod == 'all') {
-    if (is.null(post_responses)) {
-      post_responses <- get_postdata(model = model, subset = model$subset)
-    }
+  ppe <-  make_post_longer(model = model, postdata = post_responses, 'ppe')
 
-    yrep = make_post_longer(model = model, postdata = post_responses, 'yrep')
-    ppe = make_post_longer(model = model, postdata = post_responses, 'ppe')
-  } else if (ppmcMethod == 'MC' | ppmcMethod == 'all') {
-    if (is.null(model$ppmcData$ppe_mc)) {
-      temp <- get.mixed_ppmc_data(model, subset = model$subset, ppmcMethod = ppmcMethod)
-      ppmcData$ppe_mc <- temp$ppe
-      ppmcData$yrep_mc <- temp
-    }
+  if (ppmcMethod == 'C' | ppmcMethod == 'all') {
 
-    ppe = model$ppmcData$ppe_mc
-    yrep = model$ppmcData$yrep_mc
-  } else if (ppmcMethod == 'MM' | ppmcMethod == 'all') {
-    if (is.null(model$ppmcData$ppe_mm)) {
-      model$ppmcData$ppe_mm <- get.ppe_ppmc(model, subset = model$subset, ppmcMethod = ppmcMethod)
-      model$ppmcData$yrep_mm <- get.yrep_ppmc(model$ppmcData$ppe_mm)
-    }
+    yrep <-  make_post_longer(model = model, postdata = post_responses, 'yrep')
+    ppe2 <- ppe
+  } else if (ppmcMethod == 'M' | ppmcMethod == 'all') {
+    temp <- get.mixed_ppmc_data(model, subset = model$subset, ppmcMethod = ppmcMethod)
 
-    ppe = model$ppmcData$ppe_mm
-    yrep = model$ppmcData$yrep_mm
+    ppe2 <- list()
+    yrep <- list()
+
+    ppe2$ppe = temp$ppe
+    yrep$yrep = temp$yrep
+  } else if (ppmcMethod == 'MM' # | ppmcMethod == 'all'
+             ) {
+    stop('Mixed PPMC for testlet models not implemented yet.')
+
+    # if (is.null(model$ppmcData$ppe_mm)) {
+    #   model$ppmcData$ppe_mm <- get.ppe_ppmc(model, subset = model$subset, ppmcMethod = ppmcMethod)
+    #   model$ppmcData$yrep_mm <- get.yrep_ppmc(model$ppmcData$ppe_mm)
+    # }
+    #
+    # ppe = model$ppmcData$ppe_mm
+    # yrep = model$ppmcData$yrep_mm
   } else {
     stop('Fehler. Ungültige PPMC Methode!')
   }
+
+  data <- ppe %>% mutate(yrep = yrep$yrep, ppe2= ppe2$ppe) # should be sorted in the right order so no join needed
 
   # prevents recalculation for fitdatasets,
   # scine this function is called twice, cause model is altered in observe function
   # print(calculated_ppmc_datasets)
   if (group == 'item') {
-    fitData <- model %>%
-      fit_statistic(criterion = crit, group = item, yrep = yrep, ppe = ppe)
+    fitData <- fit_statistic(criterion = crit, group = item, data = data)
   } else if (group == 'ID') {
-    fitData <- model %>%
-      fit_statistic(criterion = crit, group = ID, yrep = yrep, ppe = ppe)
+    fitData <- fit_statistic(criterion = crit, group = ID, data = data)
   }
 
   return(fitData)
 }
 
-fit_statistic <- function(model, criterion, group, ppe = NULL, yrep = NULL) {
+fit_statistic <- function(criterion, group, data) {
   group <- enquo(group)
-  data_long <- model$data
-
-  # head(ppe)
-  # head(yrep)
 
   print('calculating fitstatistic')
 
-  fitdata <- ppe %>%
-    mutate(yrep = yrep$yrep) %>%
+  fitdata <- data %>%
     mutate(
       crit = criterion(response, ppe, .),
-      crit_rep = criterion(yrep, ppe, .)
+      crit_rep = criterion(yrep, ppe2, .)
     ) %>%
     group_by(!!group, draw) %>%
     summarise(
@@ -100,10 +99,10 @@ G2 <- function(y, p, data, ...) {
   stop('G2 not implemented yet')
 }
 
-plot_fit_statistic <- function(model, data, units = c(1,9), group = 'item', ppmcMethod = 'CC', hdi_width = .89) {
-  if (ppmcMethod == 'CC') {
+plot_fit_statistic <- function(model, data, units = c(1,9), group = 'item', ppmcMethod = 'C', hdi_width = .89) {
+  if (ppmcMethod == 'C') {
     color = "#8b7d6b70"
-  } else if (ppmcMethod == 'MC') {
+  } else if (ppmcMethod == 'M') {
     color = "#008b4570"
   } else if (ppmcMethod == 'MM') {
     color = "#ff634770"
@@ -175,7 +174,8 @@ get.mixed_ppmc_data <- function(model, subset = NULL, ppmcMethod = "MC", sd = 1)
 
   if (model$model_specs$item_parameter_number == 2) {
     alpha1 <- spread.draws(model, pars = 'alpha1')
-    itempars <- itempars %>% inner_join(alpha1)
+    # itempars <- itempars %>% inner_join(alpha1) # should be in the right order so no join needed
+    itempars <- itempars %>% ungroup() %>% mutate(alpha1 = alpha1$alpha1)
   } else {
     itempars <- itempars %>% mutate(alpha1 = 1)
   }

@@ -11,6 +11,7 @@ editor_options:
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(brms)
+load_all()
 
 glob_refit = FALSE
 ```
@@ -449,4 +450,21 @@ plot_itemparameter(fit_1d_2pl_tina1, pars = "difficulty", style = "halfeye", thr
 ```{r}
 respfuncdata_1d_1pl_tina <- calc.personresponsefunction(fit_1d_1pl_tina1, post_responses =  posterior_responses_tina_1pl)
 plot_personresponsefunction(fit_1d_1pl_tina1, respfuncdata_1d_1pl_tina, id = c(1:5))
+```
+
+## PPMC-Checks
+
+```{r}
+ppmc_data_spm_1pl <- fit_1d_1pl_spm_full1 %>% get_ppmcdatasets(ppmcMethod = 'C', crit = ll, post_responses = posterior_responses_spm_1pl)
+plot_fit_statistic(model = fit_1d_1pl_spm_full1, data = ppmc_data_spm_1pl, units = c(1,12))
+
+ppmc_data_spm_1pl_mixed <- fit_1d_1pl_spm_full1 %>% get_ppmcdatasets(ppmcMethod = 'M', crit = ll, post_responses = posterior_responses_spm_1pl)
+plot_fit_statistic(model = fit_1d_1pl_spm_full1, data = ppmc_data_spm_1pl_mixed, units = c(1,12), ppmcMethod = 'M')
+
+
+ppmc_data_spm_2pl <- fit_1d_2pl_spm_full1 %>% get_ppmcdatasets(ppmcMethod = 'C', crit = ll, post_responses = posterior_responses_spm_2pl)
+plot_fit_statistic(model = fit_1d_2pl_spm_full1, data = ppmc_data_spm_2pl, units = c(1,12))
+
+ppmc_data_spm_2pl_mixed <- fit_1d_2pl_spm_full1 %>% get_ppmcdatasets(ppmcMethod = 'M', crit = ll, post_responses = posterior_responses_spm_2pl)
+plot_fit_statistic(model = fit_1d_2pl_spm_full1, data = ppmc_data_spm_2pl_mixed, units = c(1,12), ppmcMethod = 'M')
 ```
