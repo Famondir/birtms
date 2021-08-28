@@ -462,11 +462,18 @@ ppmc_data_spm_1pl_mixed <- fit_1d_1pl_spm_full1 %>% get_ppmcdatasets(ppmcMethod 
 plot_fit_statistic(model = fit_1d_1pl_spm_full1, data = ppmc_data_spm_1pl_mixed, units = c(1,12), ppmcMethod = 'M')
 
 ppmc_data_spm_1pl_mixed_sd <- fit_1d_1pl_spm_full1 %>% get_ppmcdatasets(ppmcMethod = 'M', crit = ll, post_responses = posterior_responses_spm_1pl, sd = VarCorr(fit_1d_1pl_spm_full1)$person$sd[[1]])
-plot_fit_statistic(model = fit_1d_1pl_spm_full1, data = ppmc_data_spm_1pl_mixed, units = c(1,12), ppmcMethod = 'M')
+plot_fit_statistic(model = fit_1d_1pl_spm_full1, data = ppmc_data_spm_1pl_mixed_sd, units = c(1,12), ppmcMethod = 'M')
 
 ppmc_data_spm_2pl <- fit_1d_2pl_spm_full1 %>% get_ppmcdatasets(ppmcMethod = 'C', crit = ll, post_responses = posterior_responses_spm_2pl)
 plot_fit_statistic(model = fit_1d_2pl_spm_full1, data = ppmc_data_spm_2pl, units = c(1,12))
 
 ppmc_data_spm_2pl_mixed <- fit_1d_2pl_spm_full1 %>% get_ppmcdatasets(ppmcMethod = 'M', crit = ll, post_responses = posterior_responses_spm_2pl)
 plot_fit_statistic(model = fit_1d_2pl_spm_full1, data = ppmc_data_spm_2pl_mixed, units = c(1,12), ppmcMethod = 'M')
+
+ppmc_data_tina_1pl <- fit_1d_1pl_tina1 %>% get_ppmcdatasets(ppmcMethod = 'C', crit = ll, post_responses = posterior_responses_tina_1pl)
+plot_fit_statistic(model = fit_1d_1pl_tina1, data = ppmc_data_tina_1pl, units = c(1,12))
+
+ppmc_data_tina_1pl_mixed <- fit_1d_1pl_tina1 %>% get_ppmcdatasets(ppmcMethod = 'M', crit = ll, post_responses = posterior_responses_tina_1pl)
+plot_fit_statistic(model = fit_1d_1pl_tina1, data = ppmc_data_tina_1pl_mixed, units = c(1,12), ppmcMethod = 'M')
+
 ```

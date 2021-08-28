@@ -74,7 +74,7 @@ fit_statistic <- function(criterion, group, data) {
     mutate(draw = as.numeric(sub("^V", "", .draw))) %>%
     arrange(!!group, .draw)
 
-  print('finished')
+  # message('finished')
 
   return(fitdata)
 }
@@ -202,8 +202,8 @@ get.mixed_ppmc_data <- function(model, subset = NULL, ppmcMethod = "MC", sd = 1)
   # theta_rep <- purrr::map(brms::VarCorr(model, summary = FALSE)[[person]][["sd"]],
   #                         .f = ~rnorm(length(unique(model$data$person)), mean = 0, sd = .x)) %>%
   #   as.data.frame() %>% t()
-  theta_rep <- rnorm(brms::nsamples(model)*length(unique(model$data$person)), mean = 0, sd = sd) %>%
-    matrix(ncol = length(unique(model$data$person)))
+  theta_rep <- rnorm(brms::nsamples(model)*length(unique(model$data[[person]])), mean = 0, sd = sd) %>%
+    matrix(ncol = length(unique(model$data[[person]])))
 
   ppmc_data <- calc.probability(itempars, theta_rep)
 
@@ -233,8 +233,12 @@ calc.probability <- function(itempars, theta_rep) {
   reps <- ncol(a)
   n_pers <- ncol(theta_rep)
 
-  A <- matrix(rep(0, reps^2*n_items), nrow = n_items*reps)
-  # A <- Matrix(rep(0, reps^2*n_items), nrow = n_items*reps, sparse = TRUE)
+  # A <- matrix(rep(0, reps^2*n_items), nrow = n_items*reps)
+  A <- Matrix::Matrix(0, ncol = reps, nrow = n_items*reps, sparse = TRUE)
+
+  # for (i in 1:reps) {
+  #   A[(i-1)*nrow(a)+1:(i)*nrow(a),i] <- a[,i]
+  # }
 
   for (i in 1:reps) {
     A[,i] <- c(rep(0, (i-1)*nrow(a)), a[,i], rep(0, (reps-i)*nrow(a)))
