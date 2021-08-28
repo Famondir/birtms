@@ -197,11 +197,12 @@ get.mixed_ppmc_data <- function(model, subset = NULL, ppmcMethod = "MC", sd = 1)
   theta_rep <- rnorm(brms::nsamples(model)*length(unique(model$data$person)), mean = 0, sd = sd) %>%
     matrix(ncol = length(unique(model$data$person)))
 
+  ppe2 <- calc.probability2(itempars, theta_rep)
+
   theta_rep <- theta_rep %>% as.data.frame() %>%
     setNames(paste0("Persondummy ",1:length(unique(model$data$person)))) %>%
     as_tibble() %>% mutate(.draw = row_number(), .before = 1) %>% filter(.draw %in% subset) %>%
     tidyr::pivot_longer(cols = -.draw, values_to = "theta", names_to = "person")
-
 
   # theta_rep <- model %>% spread_draws(theta_rep[ID]) %>% filter(.draw %in% subset)
 
@@ -247,6 +248,46 @@ calc.probability <- function(.draw, itempars, theta_rep, testlet_thetas = NA) {
   ppe <- ppe %>% t() %>% as.data.frame() %>% setNames(itemnames) %>%
     mutate(person = person, draw = .draw, .before = 1) %>%
     pivot_longer(cols = c(3:ncol(.)), names_to = 'item', values_to = 'ppe')
+
+  return(ppe)
+}
+
+calc.probability2 <- function(itempars, theta_rep) {
+
+  d <- itempars %>% select(item, delta, .draw) %>%
+    pivot_wider(names_from = .draw, values_from = delta)
+  item_names <- d %>% pull(item)
+  d <- d %>% ungroup() %>%  select(-item) %>%
+    as.matrix() %>% as.numeric()
+  a <- itempars %>% select(item, alpha1, .draw) %>%
+    pivot_wider(names_from = .draw, values_from = alpha1) %>% ungroup() %>%  select(-item) %>%
+    as.matrix()
+  g <- itempars %>% select(item, gamma, .draw) %>%
+    pivot_wider(names_from = .draw, values_from = gamma) %>% ungroup() %>%  select(-item) %>%
+    as.matrix() %>% as.numeric()
+
+  n_items <- nrow(a)
+  reps <- ncol(a)
+  n_pers <- ncol(theta_rep)
+
+  A <- matrix(rep(0, reps^2*n_items), nrow = n_items*reps)
+  # A <- Matrix(rep(0, reps^2*n_items), nrow = n_items*reps, sparse = TRUE)
+
+  for (i in 1:reps) {
+    A[,i] <- c(rep(0, (i-1)*nrow(a)), a[,i], rep(0, (reps-i)*nrow(a)))
+  }
+
+  A <- Matrix::Matrix(A, sparse = TRUE)
+
+  person_terms <- A %*% theta_rep
+  terms <- as.matrix(person_terms) + d
+  ppe <- g + (1-g)*inv_logit_scaled(terms)
+  colnames(ppe) <- paste("Persondummy",1:n_pers)
+
+  ppe <- ppe %>% as_tibble() %>% mutate(item = rep(item_names, ncol(a)),
+                                        .draw = rep(1:ncol(a), each = length(item_names)), .before = 1) %>%
+    pivot_longer(values_to = "ppe", names_to = "person", cols = c(-item, -.draw))
+
 
   return(ppe)
 }
