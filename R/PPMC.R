@@ -1,4 +1,4 @@
-get_ppmcdatasets <- function(model, ppmcMethod, crit, group = 'item', post_responses = NULL) {
+get_ppmcdatasets <- function(model, ppmcMethod, crit, group = 'item', post_responses = NULL, sd = 1) {
   if (is.null(post_responses)) {
     post_responses <- get_postdata(model = model, subset = model$subset)
   }
@@ -15,7 +15,7 @@ get_ppmcdatasets <- function(model, ppmcMethod, crit, group = 'item', post_respo
     yrep <-  make_post_longer(model = model, postdata = post_responses, 'yrep')
     ppe2 <- ppe
   } else if (ppmcMethod == 'M' | ppmcMethod == 'all') {
-    temp <- get.mixed_ppmc_data(model, subset = model$subset, ppmcMethod = ppmcMethod) %>%
+    temp <- get.mixed_ppmc_data(model, subset = model$subset, ppmcMethod = ppmcMethod, sd = sd) %>%
       mutate(item.id = key[item]) %>% arrange(.draw, item.id)
 
     ppe <- ppe %>% arrange(.draw, item.id)
@@ -169,7 +169,7 @@ get.mixed_ppmc_data <- function(model, subset = NULL, ppmcMethod = "MC", sd = 1)
   person <- model$var_specs$person
   personsym <- sym(person)
 
-  tictoc::tic()
+  # tictoc::tic()
   data_long <- model$data %>% mutate(item.id = get.item.id(.))
 
   if (is.null(subset)) {
@@ -209,8 +209,8 @@ get.mixed_ppmc_data <- function(model, subset = NULL, ppmcMethod = "MC", sd = 1)
 
   ppmc_data["yrep"] <- rbinom(n = nrow(ppmc_data), size = 1, ppmc_data$ppe)
 
-  message('finished')
-  tictoc::toc()
+  # message('finished')
+  # tictoc::toc()
 
   return(ppmc_data)
 }
