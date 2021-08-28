@@ -3,14 +3,22 @@ get_ppmcdatasets <- function(model, ppmcMethod, crit, group = 'item', post_respo
     post_responses <- get_postdata(model = model, subset = model$subset)
   }
 
-  ppe <-  make_post_longer(model = model, postdata = post_responses, 'ppe')
+  ppe <-  make_post_longer(model = model, postdata = post_responses, 'ppe') %>%
+    mutate(item.id = get.item.id(.))
+
+  item_key <- ppe %>% select(item.id, item) %>% group_by(item) %>% summarise_all(mean) %>% ungroup()
+  key <- item_key$item.id %>% as.integer()
+  names(key) <- item_key$item
 
   if (ppmcMethod == 'C' | ppmcMethod == 'all') {
 
     yrep <-  make_post_longer(model = model, postdata = post_responses, 'yrep')
     ppe2 <- ppe
   } else if (ppmcMethod == 'M' | ppmcMethod == 'all') {
-    temp <- get.mixed_ppmc_data(model, subset = model$subset, ppmcMethod = ppmcMethod)
+    temp <- get.mixed_ppmc_data(model, subset = model$subset, ppmcMethod = ppmcMethod) %>%
+      mutate(item.id = key[item]) %>% arrange(.draw, item.id)
+
+    ppe <- ppe %>% arrange(.draw, item.id)
 
     ppe2 <- list()
     yrep <- list()
@@ -49,22 +57,22 @@ get_ppmcdatasets <- function(model, ppmcMethod, crit, group = 'item', post_respo
 fit_statistic <- function(criterion, group, data) {
   group <- enquo(group)
 
-  print('calculating fitstatistic')
+  message('calculating fitstatistic')
 
   fitdata <- data %>%
     mutate(
       crit = criterion(response, ppe, .),
       crit_rep = criterion(yrep, ppe2, .)
     ) %>%
-    group_by(!!group, draw) %>%
+    group_by(!!group, .draw) %>%
     summarise(
       crit = sum(crit),
       crit_rep = sum(crit_rep),
       crit_diff = crit_rep - crit,
       .groups = 'drop'
     ) %>%
-    mutate(draw = as.numeric(sub("^V", "", draw))) %>%
-    arrange(!!group, draw)
+    mutate(draw = as.numeric(sub("^V", "", .draw))) %>%
+    arrange(!!group, .draw)
 
   print('finished')
 
@@ -198,22 +206,23 @@ get.mixed_ppmc_data <- function(model, subset = NULL, ppmcMethod = "MC", sd = 1)
     matrix(ncol = length(unique(model$data$person)))
 
   ppe2 <- calc.probability2(itempars, theta_rep)
+  ppmc_data <- ppe2
 
-  theta_rep <- theta_rep %>% as.data.frame() %>%
-    setNames(paste0("Persondummy ",1:length(unique(model$data$person)))) %>%
-    as_tibble() %>% mutate(.draw = row_number(), .before = 1) %>% filter(.draw %in% subset) %>%
-    tidyr::pivot_longer(cols = -.draw, values_to = "theta", names_to = "person")
-
-  # theta_rep <- model %>% spread_draws(theta_rep[ID]) %>% filter(.draw %in% subset)
-
-  itempars <- itempars %>% group_by(.draw) %>% nest() %>% rename(itempars = data)
-  theta_rep <- theta_rep %>% group_by(.draw) %>% nest() %>% rename(theta_rep = data)
-  ppe <- itempars %>% left_join(theta_rep, by = ".draw")
-
-  ppe <- ppe %>% mutate(testlet_thetas = NA)
-
-  ppmc_data <- ppe %>% mutate(ppe = pmap(list(.draw, itempars, theta_rep, testlet_thetas), calc.probability)) %>%
-    select(.draw, ppe) %>% group_by(.draw) %>% unnest(cols = c(ppe))
+  # theta_rep <- theta_rep %>% as.data.frame() %>%
+  #   setNames(paste0("Persondummy ",1:length(unique(model$data$person)))) %>%
+  #   as_tibble() %>% mutate(.draw = row_number(), .before = 1) %>% filter(.draw %in% subset) %>%
+  #   tidyr::pivot_longer(cols = -.draw, values_to = "theta", names_to = "person")
+  #
+  # # theta_rep <- model %>% spread_draws(theta_rep[ID]) %>% filter(.draw %in% subset)
+  #
+  # itempars <- itempars %>% group_by(.draw) %>% nest() %>% rename(itempars = data)
+  # theta_rep <- theta_rep %>% group_by(.draw) %>% nest() %>% rename(theta_rep = data)
+  # ppe <- itempars %>% left_join(theta_rep, by = ".draw")
+  #
+  # ppe <- ppe %>% mutate(testlet_thetas = NA)
+  #
+  # ppmc_data <- ppe %>% mutate(ppe = pmap(list(.draw, itempars, theta_rep, testlet_thetas), calc.probability)) %>%
+  #   select(.draw, ppe) %>% group_by(.draw) %>% unnest(cols = c(ppe))
 
   ppmc_data["yrep"] <- rbinom(n = nrow(ppmc_data), size = 1, ppmc_data$ppe)
 

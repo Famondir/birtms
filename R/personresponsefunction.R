@@ -79,7 +79,8 @@ make_post_longer <- function(model, postdata, name) {
   postdata <- postdata[[name]] %>% t() %>%
     as.data.frame() %>%
     cbind(model$data) %>%
-    gather("draw", !!name, starts_with("V"))
+    pivot_longer(values_to = {{name}}, names_to = ".draw", cols = starts_with("V"), names_prefix = "V") %>%
+    mutate(.draw = as.integer(.draw))
 
   return(postdata)
 }
