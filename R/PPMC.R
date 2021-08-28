@@ -205,24 +205,7 @@ get.mixed_ppmc_data <- function(model, subset = NULL, ppmcMethod = "MC", sd = 1)
   theta_rep <- rnorm(brms::nsamples(model)*length(unique(model$data$person)), mean = 0, sd = sd) %>%
     matrix(ncol = length(unique(model$data$person)))
 
-  ppe2 <- calc.probability2(itempars, theta_rep)
-  ppmc_data <- ppe2
-
-  # theta_rep <- theta_rep %>% as.data.frame() %>%
-  #   setNames(paste0("Persondummy ",1:length(unique(model$data$person)))) %>%
-  #   as_tibble() %>% mutate(.draw = row_number(), .before = 1) %>% filter(.draw %in% subset) %>%
-  #   tidyr::pivot_longer(cols = -.draw, values_to = "theta", names_to = "person")
-  #
-  # # theta_rep <- model %>% spread_draws(theta_rep[ID]) %>% filter(.draw %in% subset)
-  #
-  # itempars <- itempars %>% group_by(.draw) %>% nest() %>% rename(itempars = data)
-  # theta_rep <- theta_rep %>% group_by(.draw) %>% nest() %>% rename(theta_rep = data)
-  # ppe <- itempars %>% left_join(theta_rep, by = ".draw")
-  #
-  # ppe <- ppe %>% mutate(testlet_thetas = NA)
-  #
-  # ppmc_data <- ppe %>% mutate(ppe = pmap(list(.draw, itempars, theta_rep, testlet_thetas), calc.probability)) %>%
-  #   select(.draw, ppe) %>% group_by(.draw) %>% unnest(cols = c(ppe))
+  ppmc_data <- calc.probability(itempars, theta_rep)
 
   ppmc_data["yrep"] <- rbinom(n = nrow(ppmc_data), size = 1, ppmc_data$ppe)
 
@@ -232,36 +215,7 @@ get.mixed_ppmc_data <- function(model, subset = NULL, ppmcMethod = "MC", sd = 1)
   return(ppmc_data)
 }
 
-calc.probability <- function(.draw, itempars, theta_rep, testlet_thetas = NA) {
-  person <- theta_rep$person
-  theta_rep <- theta_rep$theta
-
-  itemnames <- itempars$item
-
-  delta <- itempars$delta
-  alpha1 <- itempars$alpha1
-  gamma <- itempars$gamma
-
-  if (!is.na(testlet_thetas)) {
-    testlet <- itempars$testlet
-
-    testlet_thetas <- testlet_thetas %>% select(-c(person, .iteration, .chain))
-
-    ppe <- gamma + (1-gamma)*inv_logit_scaled(
-      delta + (alpha1 %*% t(theta_rep)) + t(testlet_thetas[,testlet]))
-
-  } else {
-    ppe <- gamma + (1-gamma)*inv_logit_scaled(delta + (alpha1 %*% t(theta_rep)))
-  }
-
-  ppe <- ppe %>% t() %>% as.data.frame() %>% setNames(itemnames) %>%
-    mutate(person = person, draw = .draw, .before = 1) %>%
-    pivot_longer(cols = c(3:ncol(.)), names_to = 'item', values_to = 'ppe')
-
-  return(ppe)
-}
-
-calc.probability2 <- function(itempars, theta_rep) {
+calc.probability <- function(itempars, theta_rep) {
 
   d <- itempars %>% select(item, delta, .draw) %>%
     pivot_wider(names_from = .draw, values_from = delta)
