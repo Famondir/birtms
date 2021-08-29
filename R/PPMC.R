@@ -26,10 +26,26 @@ get_ppmcdatasets <- function(model, ppmcMethod, crit, group = 'item', post_respo
   if (ppmcMethod == 'C' | ppmcMethod == 'all') {
 
     yrep <-  make_post_longer(model = model, postdata = post_responses, 'yrep')
-    ppe2 <- ppe
+
+    data <- ppe %>% mutate(yrep = yrep$yrep, ppe2 = ppe)
   } else if (ppmcMethod == 'M' | ppmcMethod == 'all') {
     temp <- get.mixed_ppmc_data(model, subset = post_responses$subset, ppmcMethod = ppmcMethod, sd = sd) %>%
       mutate(item.id = key[item]) %>% arrange(.draw, item.id)
+
+    if (nrow(temp) > nrow(ppe)) {
+      warning('Rownumber of posterior predictions differing. Does the model have missings by design?')
+
+      ppe <- ppe %>% mutate(person.id = personkey[person]) # %>% arrange(.draw, item.id, person.id)
+      temp <- temp %>% mutate(person.id = personkey[person]) %>%
+        select(.draw, item.id, ppe, yrep, person.id) %>% rename(ppe2 = ppe) # %>% arrange(.draw, item.id, person.id)
+
+      data <- ppe %>% left_join(temp, by = c(".draw", "item.id", "person.id"))
+
+    } else {
+      ppe <- ppe %>% arrange(.draw, item.id)
+
+      data <- ppe %>% mutate(yrep = temp$yrep, ppe2= temp$ppe) # should be sorted in the right order so no join needed
+    }
 
   } else if (ppmcMethod == 'MM' # | ppmcMethod == 'all'
              ) {
@@ -46,28 +62,13 @@ get_ppmcdatasets <- function(model, ppmcMethod, crit, group = 'item', post_respo
     stop('Fehler. Ungültige PPMC Methode!')
   }
 
-  if (nrow(temp) > nrow(ppe)) {
-    warning('Rownumber of posterior predictions differing. Does the model have missings by design?')
-
-    ppe <- ppe %>% mutate(person.id = personkey[person]) # %>% arrange(.draw, item.id, person.id)
-    temp <- temp %>% mutate(person.id = personkey[person]) %>%
-      select(.draw, item.id, ppe, yrep, person.id) %>% rename(ppe2 = ppe) # %>% arrange(.draw, item.id, person.id)
-
-    data <- ppe %>% left_join(temp, by = c(".draw", "item.id", "person.id"))
-
-  } else {
-    ppe <- ppe %>% arrange(.draw, item.id)
-
-    data <- ppe %>% mutate(yrep = temp$yrep, ppe2= temp$ppe) # should be sorted in the right order so no join needed
-  }
-
   # prevents recalculation for fitdatasets,
   # scine this function is called twice, cause model is altered in observe function
   # print(calculated_ppmc_datasets)
   if (group == 'item') {
     fitData <- fit_statistic(criterion = crit, group = item, data = data)
-  } else if (group == 'ID') {
-    fitData <- fit_statistic(criterion = crit, group = ID, data = data)
+  } else if (group == person) {
+    fitData <- fit_statistic(criterion = crit, group = {{symperson}}, data = data)
   }
 
   return(fitData)
