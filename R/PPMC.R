@@ -29,6 +29,9 @@ get_ppmcdatasets <- function(model, ppmcMethod, crit, group = 'item', post_respo
 
     data <- ppe %>% mutate(yrep = yrep$yrep, ppe2 = ppe)
   } else if (ppmcMethod == 'M' | ppmcMethod == 'all') {
+    if (group != 'item') stop("Mixed PPMC only suitable for items.")
+    if (any(str_detect(names(model$var_specs), "item_covariables"))) stop("PPMC for models with item covars not implemented yet.")
+
     temp <- get.mixed_ppmc_data(model, subset = post_responses$subset, ppmcMethod = ppmcMethod, sd = sd) %>%
       mutate(item.id = key[item]) %>% arrange(.draw, item.id)
 
