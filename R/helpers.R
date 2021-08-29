@@ -186,3 +186,9 @@ timeit <- function(expr) {
   expr
   tictoc::toc()
 }
+
+get.size <- function(x) {
+  size <- object.size(x) %>% as.numeric()
+  size <- size / 1000000
+  size %>% round(2) %>% paste("MB") %>% print()
+}
