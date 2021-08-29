@@ -17,7 +17,7 @@ get_ppmcdatasets <- function(model, ppmcMethod, crit, group = 'item', post_respo
   personkey <- personkey[unique(names(personkey))]
 
   ppe <-  make_post_longer(model = model, postdata = post_responses, 'ppe') %>%
-    mutate(item.id = get.item.id(.)) %>% rename(person = {{symperson}})
+    mutate(item.id = get.item.id(.)) # %>% rename(person = {{symperson}})
 
   item_key <- ppe %>% select(item.id, item) %>% group_by(item) %>% summarise_all(mean) %>% ungroup()
   key <- item_key$item.id %>% as.integer()
@@ -35,7 +35,7 @@ get_ppmcdatasets <- function(model, ppmcMethod, crit, group = 'item', post_respo
     if (nrow(temp) > nrow(ppe)) {
       warning('Rownumber of posterior predictions differing. Does the model have missings by design?')
 
-      ppe <- ppe %>% mutate(person.id = personkey[person]) # %>% arrange(.draw, item.id, person.id)
+      ppe <- ppe %>% mutate(person.id = personkey[{{symperson}}]) # %>% arrange(.draw, item.id, person.id)
       temp <- temp %>% mutate(person.id = personkey[person]) %>%
         select(.draw, item.id, ppe, yrep, person.id) %>% rename(ppe2 = ppe) # %>% arrange(.draw, item.id, person.id)
 
@@ -63,19 +63,19 @@ get_ppmcdatasets <- function(model, ppmcMethod, crit, group = 'item', post_respo
   }
 
   # prevents recalculation for fitdatasets,
-  # scine this function is called twice, cause model is altered in observe function
+  # since this function is called twice, cause model is altered in observe function
   # print(calculated_ppmc_datasets)
   if (group == 'item') {
-    fitData <- fit_statistic(criterion = crit, group = item, data = data)
+    fitData <- fit_statistic(criterion = crit, group = "item", data = data)
   } else if (group == person) {
-    fitData <- fit_statistic(criterion = crit, group = {{symperson}}, data = data)
+    fitData <- fit_statistic(criterion = crit, group = person, data = data)
   }
 
   return(fitData)
 }
 
 fit_statistic <- function(criterion, group, data) {
-  group <- enquo(group)
+  group <- sym(group)
 
   message('calculating fitstatistic')
 
@@ -84,15 +84,15 @@ fit_statistic <- function(criterion, group, data) {
       crit = criterion(response, ppe, .),
       crit_rep = criterion(yrep, ppe2, .)
     ) %>%
-    group_by(!!group, .draw) %>%
+    group_by({{group}}, .draw) %>%
     summarise(
       crit = sum(crit),
       crit_rep = sum(crit_rep),
       crit_diff = crit_rep - crit,
       .groups = 'drop'
-    ) %>%
-    mutate(draw = as.numeric(sub("^V", "", .draw))) %>%
-    arrange(!!group, .draw)
+    ) # %>%
+    # mutate(draw = as.numeric(sub("^V", "", .draw))) %>%
+    # arrange({{group}}, .draw)
 
   # message('finished')
 
