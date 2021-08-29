@@ -1,10 +1,23 @@
-get_ppmcdatasets <- function(model, ppmcMethod, crit, group = 'item', post_responses = NULL, sd = 1) {
+get_ppmcdatasets <- function(model, ppmcMethod, crit, group = 'item', post_responses = NULL, sd = 1, n_samples = NULL) {
   if (is.null(post_responses)) {
-    post_responses <- get_postdata(model = model, subset = model$subset)
+    post_responses <- get_postdata(model = model)
   }
 
+  if(!is.null(n_samples)) {
+    subset <- sample(nsamples(model), n_samples, replace = FALSE)
+    post_responses$yrep <- post_responses$yrep[subset,]
+    post_responses$ppe <- post_responses$ppe[subset,]
+    post_responses$subset <- subset
+  }
+
+  person <- model$var_specs$person
+  symperson <- sym(person)
+
+  personkey <- get.person.id(model$data, model = model)
+  personkey <- personkey[unique(names(personkey))]
+
   ppe <-  make_post_longer(model = model, postdata = post_responses, 'ppe') %>%
-    mutate(item.id = get.item.id(.))
+    mutate(item.id = get.item.id(.)) %>% rename(person = {{symperson}})
 
   item_key <- ppe %>% select(item.id, item) %>% group_by(item) %>% summarise_all(mean) %>% ungroup()
   key <- item_key$item.id %>% as.integer()
@@ -15,16 +28,9 @@ get_ppmcdatasets <- function(model, ppmcMethod, crit, group = 'item', post_respo
     yrep <-  make_post_longer(model = model, postdata = post_responses, 'yrep')
     ppe2 <- ppe
   } else if (ppmcMethod == 'M' | ppmcMethod == 'all') {
-    temp <- get.mixed_ppmc_data(model, subset = model$subset, ppmcMethod = ppmcMethod, sd = sd) %>%
+    temp <- get.mixed_ppmc_data(model, subset = post_responses$subset, ppmcMethod = ppmcMethod, sd = sd) %>%
       mutate(item.id = key[item]) %>% arrange(.draw, item.id)
 
-    ppe <- ppe %>% arrange(.draw, item.id)
-
-    ppe2 <- list()
-    yrep <- list()
-
-    ppe2$ppe = temp$ppe
-    yrep$yrep = temp$yrep
   } else if (ppmcMethod == 'MM' # | ppmcMethod == 'all'
              ) {
     stop('Mixed PPMC for testlet models not implemented yet.')
@@ -40,10 +46,20 @@ get_ppmcdatasets <- function(model, ppmcMethod, crit, group = 'item', post_respo
     stop('Fehler. Ungültige PPMC Methode!')
   }
 
-  # data <- ppe %>% left_join(temp %>% select(.draw, item.id, ppe, yrep) %>% rename(ppe2 = ppe),
-  #                           by = c(".draw", "item.id"))
+  if (nrow(temp) > nrow(ppe)) {
+    warning('Rownumber of posterior predictions differing. Does the model have missings by design?')
 
-  data <- ppe %>% mutate(yrep = yrep$yrep, ppe2= ppe2$ppe) # should be sorted in the right order so no join needed
+    ppe <- ppe %>% mutate(person.id = personkey[person]) # %>% arrange(.draw, item.id, person.id)
+    temp <- temp %>% mutate(person.id = personkey[person]) %>%
+      select(.draw, item.id, ppe, yrep, person.id) %>% rename(ppe2 = ppe) # %>% arrange(.draw, item.id, person.id)
+
+    data <- ppe %>% left_join(temp, by = c(".draw", "item.id", "person.id"))
+
+  } else {
+    ppe <- ppe %>% arrange(.draw, item.id)
+
+    data <- ppe %>% mutate(yrep = temp$yrep, ppe2= temp$ppe) # should be sorted in the right order so no join needed
+  }
 
   # prevents recalculation for fitdatasets,
   # scine this function is called twice, cause model is altered in observe function
@@ -132,7 +148,7 @@ plot_fit_statistic <- function(model, data, units = c(1,9), group = 'item', ppmc
       scale_fill_manual(values = c("transparent", color, "transparent"), guide = "none") +
       xlab("itemfit criteria difference between predicted and observed responses.")
   } else if (group == person) {
-    g <- data %>% mutate(person_id = get.person.id(., person = {{person}})) %>%
+    g <- data %>% mutate(person_id = get.person.id(., model = model)) %>%
       filter(person_id <= units[2] & person_id >= units[1]) %>%
       mutate({{person}} := paste('Person', {{personsym}})) %>% group_by({{personsym}}) %>%
       ggplot(aes(x = crit_diff, y = 0, fill = stat(quantile))) +
@@ -155,25 +171,26 @@ hdi_custWidth <- function(...) {
   HDInterval::hdi(dots[[1]], credMass = hdi_width)
 }
 
-get.person.id <- function(data_long, person) {
+get.person.id <- function(data_long, model) {
+  person <- model$var_specs$person
   personsym <- sym(person)
 
   personnames <- unique(model$data[[person]])
   person_key <- seq_along(personnames)
   names(person_key) <- personnames
 
-  data_long %>% mutate(person.id = person_key[person], .after = person) %>% pull(person.id) %>%
+  data_long %>% mutate(person.id = person_key[{{personsym}}], .after = person) %>% pull(person.id) %>%
     return()
 }
 
-get.mixed_ppmc_data <- function(model, subset = NULL, ppmcMethod = "MC", sd = 1) { # 40 s statt 53 s bzw. 48 s
-  # speed up further with sparse matrix multiplication
+get.mixed_ppmc_data <- function(model, subset = NULL, ppmcMethod = "MC",
+                                sd = 1, sequential = FALSE) {
 
   person <- model$var_specs$person
   personsym <- sym(person)
 
   # tictoc::tic()
-  data_long <- model$data %>% mutate(item.id = get.item.id(.))
+  # data_long <- model$data %>% mutate(item.id = get.item.id(.))
 
   if (is.null(subset)) {
     subset <- c(1:nsamples(model))
@@ -207,10 +224,30 @@ get.mixed_ppmc_data <- function(model, subset = NULL, ppmcMethod = "MC", sd = 1)
   #   as.data.frame() %>% t()
 
   person_ids <- unique(model$data[[person]])
-  theta_rep <- rnorm(brms::nsamples(model)*length(person_ids), mean = 0, sd = sd) %>%
+  reps <- ifelse(is.null(subset), brms::nsamples(model), length(subset))
+  theta_rep <- rnorm(reps*length(person_ids), mean = 0, sd = sd) %>%
     matrix(ncol = length(person_ids))
 
-  ppmc_data <- calc.probability(itempars, theta_rep, person_ids)
+  if (!sequential) {
+    ppmc_data <- calc.probability(itempars, theta_rep, person_ids)
+  } else {
+    theta_rep <- theta_rep %>% as.data.frame() %>%
+      setNames(person_ids) %>%
+      as_tibble() %>% mutate(.draw = row_number(), .before = 1) %>% filter(.draw %in% subset) %>%
+      tidyr::pivot_longer(cols = -.draw, values_to = "theta", names_to = "person")
+
+    # theta_rep <- model %>% spread_draws(theta_rep[ID]) %>% filter(.draw %in% subset)
+
+    itempars <- itempars %>% group_by(.draw) %>% nest() %>% rename(itempars = data)
+    theta_rep <- theta_rep %>% group_by(.draw) %>% nest() %>% rename(theta_rep = data)
+    ppe <- itempars %>% left_join(theta_rep, by = ".draw")
+
+    ppe <- ppe %>% mutate(testlet_thetas = NA)
+
+    ppmc_data <- ppe %>% mutate(ppe = pmap(list(.draw, itempars, theta_rep, testlet_thetas),
+                                           calc.probability_sequential)) %>%
+      select(.draw, ppe) %>% group_by(.draw) %>% unnest(cols = c(ppe)) %>% select(-draw)
+  }
 
   ppmc_data["yrep"] <- rbinom(n = nrow(ppmc_data), size = 1, ppmc_data$ppe)
 
@@ -229,7 +266,7 @@ calc.probability <- function(itempars, theta_rep, person_ids) {
     as.matrix() %>% as.numeric()
   a <- itempars %>% select(item, alpha1, .draw) %>%
     pivot_wider(names_from = .draw, values_from = alpha1) %>% ungroup() %>%  select(-item) %>%
-    as.matrix() %>% as.numeric()
+    as.matrix()
   g <- itempars %>% select(item, gamma, .draw) %>%
     pivot_wider(names_from = .draw, values_from = gamma) %>% ungroup() %>%  select(-item) %>%
     as.matrix() %>% as.numeric()
@@ -239,30 +276,45 @@ calc.probability <- function(itempars, theta_rep, person_ids) {
   n_pers <- ncol(theta_rep)
 
   A <- Matrix::sparseMatrix(i = 1:(n_items*reps), j = rep(1:reps, each = n_items),
-                             x = a, dims = list(n_items*reps, reps))
-
-  # # A <- matrix(rep(0, reps^2*n_items), nrow = n_items*reps)
-  # A <- Matrix::Matrix(0, ncol = reps, nrow = n_items*reps, sparse = TRUE)
-  #
-  # # for (i in 1:reps) {
-  # #   A[(i-1)*nrow(a)+1:(i)*nrow(a),i] <- a[,i]
-  # # }
-  #
-  # for (i in 1:reps) {
-  #   A[,i] <- c(rep(0, (i-1)*nrow(a)), a[,i], rep(0, (reps-i)*nrow(a)))
-  # }
-  #
-  # # A <- Matrix::Matrix(A, sparse = TRUE)
+                             x = as.numeric(a), dims = list(n_items*reps, reps))
 
   person_terms <- A %*% theta_rep
   terms <- as.matrix(person_terms) + d
-  ppe <- g + (1-g)*inv_logit_scaled(terms)
-  colnames(ppe) <- paste("Persondummy",1:n_pers)
+  ppe <- g + (1-g)*brms::inv_logit_scaled(terms)
+  colnames(ppe) <- person_ids
 
   ppe <- ppe %>% as_tibble() %>% mutate(item = rep(item_names, ncol(a)),
                                         .draw = rep(1:ncol(a), each = length(item_names)), .before = 1) %>%
     pivot_longer(values_to = "ppe", names_to = "person", cols = c(-item, -.draw))
 
+  return(ppe)
+}
+
+calc.probability_sequential <- function(.draw, itempars, theta_rep, testlet_thetas = NA) {
+  person <- theta_rep$person
+  theta_rep <- theta_rep$theta
+
+  itemnames <- itempars$item
+
+  delta <- itempars$delta
+  alpha1 <- itempars$alpha1
+  gamma <- itempars$gamma
+
+  if (!is.na(testlet_thetas)) {
+    testlet <- itempars$testlet
+
+    testlet_thetas <- testlet_thetas %>% select(-c(person, .iteration, .chain))
+
+    ppe <- gamma + (1-gamma)*inv_logit_scaled(
+      delta + (alpha1 %*% t(theta_rep)) + t(testlet_thetas[,testlet]))
+
+  } else {
+    ppe <- gamma + (1-gamma)*inv_logit_scaled(delta + (alpha1 %*% t(theta_rep)))
+  }
+
+  ppe <- ppe %>% t() %>% as.data.frame() %>% setNames(itemnames) %>%
+    mutate(person = person, draw = .draw, .before = 1) %>%
+    pivot_longer(cols = c(3:ncol(.)), names_to = 'item', values_to = 'ppe')
 
   return(ppe)
 }
