@@ -40,6 +40,9 @@ get_ppmcdatasets <- function(model, ppmcMethod, crit, group = 'item', post_respo
     stop('Fehler. Ungültige PPMC Methode!')
   }
 
+  # data <- ppe %>% left_join(temp %>% select(.draw, item.id, ppe, yrep) %>% rename(ppe2 = ppe),
+  #                           by = c(".draw", "item.id"))
+
   data <- ppe %>% mutate(yrep = yrep$yrep, ppe2= ppe2$ppe) # should be sorted in the right order so no join needed
 
   # prevents recalculation for fitdatasets,
@@ -202,10 +205,12 @@ get.mixed_ppmc_data <- function(model, subset = NULL, ppmcMethod = "MC", sd = 1)
   # theta_rep <- purrr::map(brms::VarCorr(model, summary = FALSE)[[person]][["sd"]],
   #                         .f = ~rnorm(length(unique(model$data$person)), mean = 0, sd = .x)) %>%
   #   as.data.frame() %>% t()
-  theta_rep <- rnorm(brms::nsamples(model)*length(unique(model$data[[person]])), mean = 0, sd = sd) %>%
-    matrix(ncol = length(unique(model$data[[person]])))
 
-  ppmc_data <- calc.probability(itempars, theta_rep)
+  person_ids <- unique(model$data[[person]])
+  theta_rep <- rnorm(brms::nsamples(model)*length(person_ids), mean = 0, sd = sd) %>%
+    matrix(ncol = length(person_ids))
+
+  ppmc_data <- calc.probability(itempars, theta_rep, person_ids)
 
   ppmc_data["yrep"] <- rbinom(n = nrow(ppmc_data), size = 1, ppmc_data$ppe)
 
@@ -215,7 +220,7 @@ get.mixed_ppmc_data <- function(model, subset = NULL, ppmcMethod = "MC", sd = 1)
   return(ppmc_data)
 }
 
-calc.probability <- function(itempars, theta_rep) {
+calc.probability <- function(itempars, theta_rep, person_ids) {
 
   d <- itempars %>% select(item, delta, .draw) %>%
     pivot_wider(names_from = .draw, values_from = delta)
@@ -224,7 +229,7 @@ calc.probability <- function(itempars, theta_rep) {
     as.matrix() %>% as.numeric()
   a <- itempars %>% select(item, alpha1, .draw) %>%
     pivot_wider(names_from = .draw, values_from = alpha1) %>% ungroup() %>%  select(-item) %>%
-    as.matrix()
+    as.matrix() %>% as.numeric()
   g <- itempars %>% select(item, gamma, .draw) %>%
     pivot_wider(names_from = .draw, values_from = gamma) %>% ungroup() %>%  select(-item) %>%
     as.matrix() %>% as.numeric()
@@ -233,18 +238,21 @@ calc.probability <- function(itempars, theta_rep) {
   reps <- ncol(a)
   n_pers <- ncol(theta_rep)
 
-  # A <- matrix(rep(0, reps^2*n_items), nrow = n_items*reps)
-  A <- Matrix::Matrix(0, ncol = reps, nrow = n_items*reps, sparse = TRUE)
+  A <- Matrix::sparseMatrix(i = 1:(n_items*reps), j = rep(1:reps, each = n_items),
+                             x = a, dims = list(n_items*reps, reps))
 
+  # # A <- matrix(rep(0, reps^2*n_items), nrow = n_items*reps)
+  # A <- Matrix::Matrix(0, ncol = reps, nrow = n_items*reps, sparse = TRUE)
+  #
+  # # for (i in 1:reps) {
+  # #   A[(i-1)*nrow(a)+1:(i)*nrow(a),i] <- a[,i]
+  # # }
+  #
   # for (i in 1:reps) {
-  #   A[(i-1)*nrow(a)+1:(i)*nrow(a),i] <- a[,i]
+  #   A[,i] <- c(rep(0, (i-1)*nrow(a)), a[,i], rep(0, (reps-i)*nrow(a)))
   # }
-
-  for (i in 1:reps) {
-    A[,i] <- c(rep(0, (i-1)*nrow(a)), a[,i], rep(0, (reps-i)*nrow(a)))
-  }
-
-  A <- Matrix::Matrix(A, sparse = TRUE)
+  #
+  # # A <- Matrix::Matrix(A, sparse = TRUE)
 
   person_terms <- A %*% theta_rep
   terms <- as.matrix(person_terms) + d
