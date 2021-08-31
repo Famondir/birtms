@@ -626,7 +626,7 @@ birtm_aio(response_data, response_columns,
           variable_specifications = NULL, model_specifications = NULL,
           prior = NULL, cores = 4, file = NULL, refit = FALSE,
           check_prior_influence = FALSE, preparing_bf = FALSE,
-          add_waic = TRUE, add_loo = TRUE, ...)
+          add_waic = FALSE, add_loo = FALSE, ...)
 ```
 
 In an easy example you would use it as this:
