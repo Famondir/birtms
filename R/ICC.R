@@ -63,7 +63,7 @@ ICC_check <- function(model, item_id = 1, num_groups = NULL, verbose = FALSE, po
     summarise(person_mean = mean(response, na.rm = T), person_sd = sd(response, na.rm = T), n = sum(!is.na(response)), se = person_sd/sqrt(n), .groups = 'drop') %>%
     rename(y = person_mean, yerr = person_sd, se_x = se, n_x = n) %>% ungroup() #%>% arrange(group_id, person.id)
 
-  temp2 <- theta_post %>% group_by(group_id, {{symperson}}) %>% #filter({{symperson}} %in% unique(yrep_item$person.id)) %>% # später filtern viel schneller!
+  temp2 <- theta_post %>% group_by(group_id, {{symperson}}) %>% #filter({{symperson}} %in% unique(yrep_item$person.id)) %>% # sp\u00E4ter filtern viel schneller!
     summarise(person_mean = mean(theta, na.rm = T), person_sd = sd(theta, na.rm = T), n = sum(!is.na(theta)), se = person_sd/sqrt(n), .groups = 'drop') %>%
     rename(x = person_mean, xerr = person_sd, se_y = se, n_y = n) %>% ungroup %>% #arrange(group_id, {{person}}) %>%
     rename(person.id = {{person}}) %>% filter(person.id %in% unique(yrep_item$person.id))
@@ -120,22 +120,22 @@ ICC_check <- function(model, item_id = 1, num_groups = NULL, verbose = FALSE, po
     geom_line(data = data_gg_summary, aes(x = x, y = y), size = 1) +
     geom_point(data = data_gg_summary, aes(x = x, y = y, fill = factor(group_id), size = se_x), pch=21, stroke = 1.5) +
     scale_size(range = c(4, 10)) +
-    guides(size=guide_legend(title = "Standardfehler der gemittelten\nFähigkeit der Rohsummengruppen", nrow = 1, title.position = "top", label.position = "bottom",
+    guides(size=guide_legend(title = "Standardfehler der gemittelten\nF\u00E4higkeit der Rohsummengruppen", nrow = 1, title.position = "top", label.position = "bottom",
                              label.hjust = 0.5)) +
     ggtitle(paste0('Item ', unique(data_long %>% filter(item.id == item_id) %>% select(item))),
             subtitle = paste0('Itemnr. ', item_id, ' (', sum(!is.na(data_gg$item_score)), ' Beobachtungen)')) +
-    xlab("Fähigkeit [logit]") + ylab("beobachtete Antwortquote / vorhergesagte Antwortwahrscheinlichkeit") +
+    xlab("F\u00E4higkeit [logit]") + ylab("beobachtete Antwortquote / vorhergesagte Antwortwahrscheinlichkeit") +
     theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5),
           plot.caption = ggtext::element_markdown(lineheight = 1.5, hjust = 0.5))
 
   if (verbose) {
     g <- g +
-      labs(caption="**Erklärung:** Die Kreise markieren die über die Rohsummengruppen gemittelten Antwortquoten und Fähigkeiten der Beobachtung.<br>
-         Die größe der Punkte entspricht dem Standardfehler der Fähigkeitsmittelwerte und ist damit proportional zu deren Streuung innerhalb der Gruppen.<br>
-         Die kleinen Punkte repräsentieren die über alle Posteriosamples gemittelten vorhergesagten Antwortquoten und Fähigkeiten der Einzelpersonen.<br>
-         Die Ellipsen repräsentieren die entsprechenden Wahrscheinlichkeitsdichten der Mittelwertverteilung der über die Rohsummengruppen aggregierten<br>
-         Antwortquoten und Fähigkeiten. Deren Zentren sind jeweils mit einem Kreuz markiert.<br>
-         Sie bilden somit das auf den Posteriorsamples basierende Pendant zu den auf den tatsächlichen Beobachtungen basierenden Kreisen.")
+      labs(caption="**Erkl\u00E4rung:** Die Kreise markieren die \u00FCber die Rohsummengruppen gemittelten Antwortquoten und F\u00E4higkeiten der Beobachtung.<br>
+         Die gr\u00F6\u00DFe der Punkte entspricht dem Standardfehler der F\u00E4higkeitsmittelwerte und ist damit proportional zu deren Streuung innerhalb der Gruppen.<br>
+         Die kleinen Punkte repr\u00E4sentieren die \u00FCber alle Posteriosamples gemittelten vorhergesagten Antwortquoten und F\u00E4higkeiten der Einzelpersonen.<br>
+         Die Ellipsen repr\u00E4sentieren die entsprechenden Wahrscheinlichkeitsdichten der Mittelwertverteilung der \u00FCber die Rohsummengruppen aggregierten<br>
+         Antwortquoten und F\u00E4higkeiten. Deren Zentren sind jeweils mit einem Kreuz markiert.<br>
+         Sie bilden somit das auf den Posteriorsamples basierende Pendant zu den auf den tats\u00E4chlichen Beobachtungen basierenden Kreisen.")
   }
 
   return(g)
@@ -218,7 +218,7 @@ get.scoregroup <- function(model, num_groups = 5, table_person_values = NULL) {
 
 plot_ICC_cont <- function (delta, alpha = NULL, gamma = NULL, psi = NULL, p_interval = 'median_qi', step_size = 0.1, print = TRUE, width = seq(0,0.96,0.12)) {
   if (is.null(delta)) {
-    stop("Bitte geben sie für ein 1PL-Modell mindestens einen Vektor für die Itemleichtigkeit (delta) ein.")
+    stop("Bitte geben sie f\u00FCr ein 1PL-Modell mindestens einen Vektor f\u00FCr die Itemleichtigkeit (delta) ein.")
   }
 
   data <- tibble(x = seq(from = -4.5, to = 4.5, by = step_size)) %>%  group_by_all()
@@ -228,7 +228,7 @@ plot_ICC_cont <- function (delta, alpha = NULL, gamma = NULL, psi = NULL, p_inte
   g <- data  %>%  ggplot(aes(x = x, y = y)) +
     tidybayes::stat_lineribbon(aes(fill = stat(.width)), .width = width, point_interval = p_interval, colour = 'white', size = .75) +
     scale_fill_binned(low = "#1d1d1d", high = "#E1E1E1", limit = c(0, 0.96), show.limits = TRUE, breaks = seq(0.12, 0.84, by = 0.12),
-                      guide = guide_coloursteps(title = 'Glaubwürdigkeitsintervall in %', nrow = 1, title.position = "top", label.position = "bottom",
+                      guide = guide_coloursteps(title = 'Glaubw\u00FCrdigkeitsintervall in %', nrow = 1, title.position = "top", label.position = "bottom",
                                                 barwidth = 10, frame.colour = NULL), labels = scale100) +
     theme(legend.position="bottom", legend.box = "horizontal") +
     coord_cartesian(xlim = c(-4,4), ylim = c(0,1), expand = TRUE, default = FALSE, clip = "on")

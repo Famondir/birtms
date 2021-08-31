@@ -73,7 +73,7 @@ get_ppmcdatasets <- function(model, ppmcMethod, post_responses = NULL, sd = 1, n
     # ppe = model$ppmcData$ppe_mm
     # yrep = model$ppmcData$yrep_mm
   } else {
-    stop('Fehler. Ungültige PPMC Methode!')
+    stop('Fehler. Ung\u00FCltige PPMC Methode!')
   }
 
   return(data)

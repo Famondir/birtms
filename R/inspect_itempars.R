@@ -9,7 +9,7 @@ plot_itemparameter <- function(model, pars, style, items = c(1,5), thresholds = 
       geom_vline(xintercept = alphacut[1], linetype = "dashed") +
       geom_vline(xintercept = alphacut[2], linetype = "dotted") +
       scale_fill_manual(values = c("gray80", "skyblue")) +
-      xlab("Trennschärfe") +
+      xlab("Trennsch\u00E4rfe") +
       labs(fill = "Innerhalb der Grenzen")
   } else if (pars == 'adjusted slope') {
     g <- data %>%
@@ -17,7 +17,7 @@ plot_itemparameter <- function(model, pars, style, items = c(1,5), thresholds = 
       geom_vline(xintercept = alphacut[1], linetype = "dashed") +
       geom_vline(xintercept = alphacut[2], linetype = "dotted") +
       scale_fill_manual(values = c("gray80", "skyblue")) +
-      xlab("Trennschärfe") +
+      xlab("Trennsch\u00E4rfe") +
       labs(fill = "Innerhalb der Grenzen")
   } else if (pars %in% c('easyness', 'delta', 'beta', 'difficulty')) {
     g <- data %>%
