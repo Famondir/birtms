@@ -8,10 +8,14 @@ Calculates the marginal loglikelihood for an IRT model}
 marginal_loglik(fit, n_nodes = 11, cores = 4)
 }
 \arguments{
-\item{cores}{}
+\item{fit}{birtmsfit object}
+
+\item{n_nodes}{int; number of nodes where the loglik gets evaluated; some models need more nodes to reach convergence of loglik}
+
+\item{cores}{int; number of CPU cores used for parallel processing}
 }
 \value{
-
+list
 }
 \description{
 marginal_loglik

@@ -2,7 +2,7 @@
 % Please edit documentation in R/build_formula.R
 \name{add_covars_linear}
 \alias{add_covars_linear}
-\title{Title}
+\title{add_covars_linear}
 \usage{
 add_covars_linear(x, specifications)
 }
@@ -16,5 +16,5 @@ an expression x
 #' @importFrom rlang expr
 }
 \description{
-Title
+add_covars_linear
 }

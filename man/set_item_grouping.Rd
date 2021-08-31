@@ -2,7 +2,7 @@
 % Please edit documentation in R/build_formula.R
 \name{set_item_grouping}
 \alias{set_item_grouping}
-\title{Title}
+\title{set_item_grouping}
 \usage{
 set_item_grouping(var_specs)
 }
@@ -13,5 +13,5 @@ set_item_grouping(var_specs)
 an expression p
 }
 \description{
-Title
+set_item_grouping
 }
