@@ -80,7 +80,7 @@ set_person_grouping <- function(var_specs) {
   return(p)
 }
 
-#' Title
+#' set_item_grouping
 #'
 #' @param var_specs a named list of symbols
 #'
@@ -101,7 +101,7 @@ set_item_grouping <- function(var_specs) {
   return(i)
 }
 
-#' Title
+#' add_covars_linear
 #'
 #' @param x an expression
 #' @param specifications a list of symbols
