@@ -28,11 +28,11 @@ data_eirt$treat <- as.factor(data_eirt$treat)
 data_eirt$proflevel <- as.factor(data_eirt$proflevel)
 data_eirt$abilcov <- as.factor(data_eirt$abilcov)
 
-data_tina <- rio::import("../inst/extdata/data_tina.xlsx")
+data_tina <- rio::import("../data-raw/data_tina.xlsx")
 # HS.data_long %>% select(-person) %>% group_by(item, itemtype_model1, itemtype_model2, itemtype_model3, itemtype_kontext) %>% summarise_all(mean) %>% select(-response) %>% rio::export("items_tina.xlsx")
-items_tina <- rio::import("../inst/extdata/items_tina.xlsx")
+items_tina <- rio::import("../data-raw/items_tina.xlsx")
 
-data_simon <- rio::import("../inst/extdata/daten_fdw_simon.xlsx")
+data_simon <- rio::import("../data-raw/daten_fdw_simon.xlsx")
 ```
 
 ## 1PL
@@ -45,7 +45,7 @@ priors_1d_1pl <- prior("normal(0, 3)", class = "sd", group = "person") +
 
 fit_1d_1pl_spm_full1 <- birtms::birtm_aio(response_data = data_spm, response_columns = i1:i12,
                                           prior = priors_1d_1pl,
-                                          file = "../inst/extdata/fit_1d_1pl_spm_full1b",
+                                          file = "../models/gdcp/fit_1d_1pl_spm_full1b",
                                           refit = glob_refit)
 
 priors_1d_1pl_token <- prior("normal(0, 3)", class = "sd", group = "token") +
@@ -54,7 +54,7 @@ priors_1d_1pl_token <- prior("normal(0, 3)", class = "sd", group = "token") +
 fit_1d_1pl_tina1 <- birtms::birtm_aio(response_data = data_tina, 
                                       response_columns = SuHT3.binary:KaKST1.binary,
                                       prior = priors_1d_1pl_token,
-                                      file = "../inst/extdata/fit_1d_1pl_tina1",
+                                      file = "../models/gdcp/fit_1d_1pl_tina1",
                                       variable_specifications = list(person = 'token'),
                                       refit = glob_refit)
 
@@ -67,7 +67,7 @@ fit_1d_1pl_tina1_fw_kft <-
                                       prior = priors_1d_1pl_token,
                                       iter = 6000, warmup = 1000,
                                       thin = 2,
-                                      file = "../inst/extdata/fit_1d_1pl_tina1_fw_kft",
+                                      file = "../models/gdcp/fit_1d_1pl_tina1_fw_kft",
                     variable_specifications = list(person = 'token',
                                                    person_covariables_main_effect = c('KFT.2pl.WLE.theta',
                                                                                       'FW.2pl.WLE.theta')
@@ -80,7 +80,7 @@ fit_1d_1pl_tina1_kft <-
                                       prior = priors_1d_1pl_token,
                                       iter = 6000, warmup = 1000,
                                       thin = 2,
-                                      file = "../inst/extdata/fit_1d_1pl_tina1_kft",
+                                      file = "../models/gdcp/fit_1d_1pl_tina1_kft",
                     variable_specifications = list(person = 'token',
                                                    person_covariables_main_effect = c('KFT.2pl.WLE.theta')
                                                    ),
@@ -92,7 +92,7 @@ fit_1d_1pl_tina1_kft <-
 #                                       prior = priors_1d_1pl_token,
 #                                       iter = 6000, warmup = 1000,
 #                                       thin = 2,
-#                                       file = "../inst/extdata/fit_1d_1pl_tina1_kft_newkft",
+#                                       file = "../models/gdcp/fit_1d_1pl_tina1_kft_newkft",
 #                     variable_specifications = list(person = 'token',
 #                                                    person_covariables_main_effect = c('KFT.2pl.WLE.theta')
 #                                                    ),
@@ -105,7 +105,7 @@ fit_1d_1pl_tina1_kontext <-
                                       prior = priors_1d_1pl_token,
                                       iter = 6000, warmup = 1000,
                                       thin = 2,
-                                      file = "../inst/extdata/fit_1d_1pl_tina1_kontext",
+                                      file = "../models/gdcp/fit_1d_1pl_tina1_kontext",
                     variable_specifications = list(person = 'token',
                                                    item_covariables_intercept = c('itemtype_kontext')
                                                    ),
@@ -118,7 +118,7 @@ fit_1d_1pl_tina1_fw <-
                                       prior = priors_1d_1pl_token,
                                       iter = 6000, warmup = 1000,
                                       thin = 2,
-                                      file = "../inst/extdata/fit_1d_1pl_tina1_fw",
+                                      file = "../models/gdcp/fit_1d_1pl_tina1_fw",
                     variable_specifications = list(person = 'token',
                                                    person_covariables_main_effect = c('FW.2pl.WLE.theta')
                                                    ),
@@ -131,13 +131,13 @@ priors_1d_1pl_id <- prior("normal(0, 3)", class = "sd", group = "id") +
 # fit_1d_1pl_eirt1 <- birtms::birtm_aio(response_data = data_eirt, 
 #                                       response_columns = Math.1:MathWordProb.1,
 #                                       prior = priors_1d_1pl_id,
-#                                       file = "../inst/extdata/fit_1d_1pl_eirt1",
+#                                       file = "../models/gdcp/fit_1d_1pl_eirt1",
 #                                       variable_specifications = list(person = 'id'),
 #                                       refit = glob_refit)
 fit_1d_1pl_eirt_science1 <- birtms::birtm_aio(response_data = data_eirt, 
                                       response_columns = Science.1:Science.10,
                                       prior = priors_1d_1pl_id,
-                                      file = "../inst/extdata/fit_1d_1pl_eirt_science1b",
+                                      file = "../models/gdcp/fit_1d_1pl_eirt_science1b",
                                       variable_specifications = list(person = 'id'),
                                       refit = glob_refit)
 
@@ -147,7 +147,7 @@ priors_1d_1pl_Usercode <- prior("normal(0, 3)", class = "sd", group = "Usercode"
 fit_1d_1pl_simon1 <- birtms::birtm_aio(response_data = data_simon,
                                        response_columns = p001MC_02:p076MC_07,
                                        prior = priors_1d_1pl_Usercode,
-                                       file = "../inst/extdata/fit_1d_1pl_simon1",
+                                       file = "../models/gdcp/fit_1d_1pl_simon1",
                                        variable_specifications = list(person = 'Usercode'),
                                        refit = glob_refit)
 ```
@@ -186,7 +186,7 @@ priors_1d_2pl <- prior("normal(0, 3)", nlpar = "skillintercept") +
 fit_1d_2pl_spm_full1 <- birtms::birtm_aio(response_data = data_spm, response_columns = i1:i12,
                                           prior = priors_1d_2pl,
                                           model_specifications = list(item_parameter_number = 2),
-                                          file = "../inst/extdata/fit_1d_2pl_spm_full1b",
+                                          file = "../models/gdcp/fit_1d_2pl_spm_full1b",
                                           refit = glob_refit)
 
 priors_1d_2pl_Usercode <- prior("normal(0, 3)", nlpar = "skillintercept") +
@@ -198,7 +198,7 @@ priors_1d_2pl_Usercode <- prior("normal(0, 3)", nlpar = "skillintercept") +
 fit_1d_2pl_simon1 <- birtms::birtm_aio(response_data = data_simon, response_columns = p001MC_02:p076MC_07,
                                           prior = priors_1d_2pl_Usercode,
                                           model_specifications = list(item_parameter_number = 2),
-                                          file = "../inst/extdata/fit_1d_2pl_simon1",
+                                          file = "../models/gdcp/fit_1d_2pl_simon1",
                                           variable_specifications = list(person = 'Usercode'),
                                           refit = glob_refit)
 
@@ -212,7 +212,7 @@ fit_1d_2pl_tina1 <- birtms::birtm_aio(response_data = data_tina,
                                       response_columns = SuHT3.binary:KaKST1.binary,
                                       prior = priors_1d_2pl_token,
                                       model_specifications = list(item_parameter_number = 2),
-                                      file = "../inst/extdata/fit_1d_2pl_tina1",
+                                      file = "../models/gdcp/fit_1d_2pl_tina1",
                                       variable_specifications = list(person = 'token'),
                                       refit = glob_refit)
 
@@ -241,7 +241,7 @@ fit_1d_2pl_tina1_kft <-
                                       prior = priors_1d_2pl_token_perscovs,
                                       iter = 6000, warmup = 1000,
                                       thin = 2,
-                                      file = "../inst/extdata/fit_1d_2pl_tina1_kft",
+                                      file = "../models/gdcp/fit_1d_2pl_tina1_kft",
                     model_specifications = list(item_parameter_number = 2),
                     variable_specifications = list(person = 'token',
                                                    person_covariables_main_effect = c('KFT.2pl.WLE.theta')
@@ -254,7 +254,7 @@ fit_1d_2pl_tina1_fw_kft <-
                                       prior = priors_1d_2pl_token_perscovs,
                                       iter = 6000, warmup = 1000,
                                       thin = 2,
-                                      file = "../inst/extdata/fit_1d_2pl_tina1_fw_kft",
+                                      file = "../models/gdcp/fit_1d_2pl_tina1_fw_kft",
                     model_specifications = list(item_parameter_number = 2),
                     variable_specifications = list(person = 'token',
                                                    person_covariables_main_effect = c('KFT.2pl.WLE.theta',
@@ -268,7 +268,7 @@ fit_1d_2pl_tina1_fw <-
                                       prior = priors_1d_2pl_token_perscovs,
                                       iter = 6000, warmup = 1000,
                                       thin = 2,
-                                      file = "../inst/extdata/fit_1d_2pl_tina1_fw",
+                                      file = "../models/gdcp/fit_1d_2pl_tina1_fw",
                     model_specifications = list(item_parameter_number = 2),
                     variable_specifications = list(person = 'token',
                                                    person_covariables_main_effect = c('FW.2pl.WLE.theta')
@@ -306,7 +306,7 @@ fit_1d_2pl_tina1_kft_kontext <-
                                       prior = priors_1d_2pl_token_covs,
                                       iter = 4000, warmup = 1000,
                                       thin = 2,
-                                      file = "../inst/extdata/fit_1d_2pl_tina1_kft_kontext",
+                                      file = "../models/gdcp/fit_1d_2pl_tina1_kft_kontext",
                     model_specifications = list(item_parameter_number = 2),
                     variable_specifications = list(person = 'token',
                                                    person_covariables_main_effect = c('KFT.2pl.WLE.theta'),
@@ -324,7 +324,7 @@ priors_1d_2pl_id <- prior("normal(0, 3)", nlpar = "skillintercept") +
 fit_1d_2pl_eirt1 <- birtms::birtm_aio(response_data = data_eirt, 
                                       Science.1:Science.10,
                                       prior = priors_1d_2pl_id,
-                                      file = "../inst/extdata/fit_1d_2pl_eirt_science1b",
+                                      file = "../models/gdcp/fit_1d_2pl_eirt_science1b",
                                       variable_specifications = list(person = 'id'),
                                       model_specifications = list(item_parameter_number = 2),
                                       refit = glob_refit)
