@@ -10,8 +10,8 @@ editor_options:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
-library(brms)
-load_all()
+library(birtms)
+# load_all()
 
 glob_refit = FALSE
 ```
@@ -459,7 +459,8 @@ plot_personresponsefunction(fit_1d_1pl_tina1, respfuncdata_1d_1pl_tina, id = c(1
 ### Items
 
 ```{r}
-ppmc_data_spm_1pl <- fit_1d_1pl_spm_full1 %>% get_ppmcdatasets(ppmcMethod = 'C', crit = ll, post_responses = posterior_responses_spm_1pl)
+ppmc_data_spm_1pl <- fit_1d_1pl_spm_full1 %>% get_ppmcdatasets(ppmcMethod = 'C', post_responses = posterior_responses_spm_1pl)
+ppmc_data_spm_1pl_ll <- get_ppmccriteria(ppmcdata = ppmc_data_spm_1pl, ppmcMethod = 'C', crit = ll) # fix this
 plot_fit_statistic(model = fit_1d_1pl_spm_full1, data = ppmc_data_spm_1pl, units = c(1,12))
 
 ppmc_data_spm_1pl_mixed <- fit_1d_1pl_spm_full1 %>% get_ppmcdatasets(ppmcMethod = 'M', crit = ll, post_responses = posterior_responses_spm_1pl)
