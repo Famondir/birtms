@@ -222,8 +222,10 @@ calculate_odds_ratio_parallel <- function(y_rep = NULL, y = NULL, zero_correctio
 
   # ----- create a temporary logging file ----
   logFile <- tempfile()
-  viewer <- getOption("viewer")
-  viewer(logFile)
+  if (rstudioapi::isAvailable()) {
+    viewer <- getOption("viewer")
+    viewer(logFile)
+  }
 
   # ----- initialise multiple workers ----
   cl <- parallel::makeCluster(cores, outfile = logFile)
@@ -381,7 +383,7 @@ get_or <- function(model, n_samples = NULL, ci_width = .89, zero_correction = 'n
   # message("Splitting dataframe by group into 3D array. May take a while.") # time scales linear; problem with missings?
   #yrep <- yrep %>% dplyr::group_by(.draw) %>% dplyr::group_split(.keep = TRUE) %>% list2array()
   # in this way (base functions; no tidyr) it just need 0.37 s instead of 11 s !!! But still slower when there are many NAs
-  yrep_arr <- yrep %>% arrange(.draw) %>% as.matrix() %>%
+  yrep_arr <- yrep %>% dplyr::arrange(.draw) %>% as.matrix() %>%
     array(dim=c(dim(yrep)[[1]]/div,div,dim(yrep)[[2]])) %>% aperm(c(1,3,2))
   dimnames(yrep_arr)[[2]] <- names(yrep)
   yrep <- yrep_arr
@@ -590,7 +592,7 @@ plot_or_heatmap <- function(or_data, model = NULL, itemrange = NULL,
       sigma <- model %>% tidybayes::spread_draws({{sd_person__Intercept}}) %>% dplyr::pull({{sd_person__Intercept}})
       alphas <- model %>% tidybayes::spread_draws(b_logalpha_Intercept, r_item__logalpha[itemname,])
       alphas <- alphas %>% mutate(alpha = exp(b_logalpha_Intercept + r_item__logalpha)) %>% dplyr::group_by(itemname) %>%
-        select(alpha, itemname) %>% tidyr::nest() %>% left_join(key, by = c('itemname')) %>% dplyr::arrange(item)
+        select(alpha, itemname) %>% tidyr::nest() %>% dplyr::left_join(key, by = c('itemname')) %>% dplyr::arrange(item)
     } else{
       warning('The limits used to color code the item pairs were derived only for 1 and 2 parametric models.')
     }
@@ -969,27 +971,27 @@ count_for_itempair_or <- function(x, y) {
 }
 
 med_qi <- function(x, .width = .89) {
-  x2 <- x %>% ungroup %>% select(-c("itemname1", "itemname2")) %>%
-    pivot_wider(values_from = "or_dif", names_glue = "{item1}_{item2}", names_from = c("item1", "item2")) %>%
+  x2 <- x %>% dplyr::ungroup() %>% select(-c("itemname1", "itemname2")) %>%
+    tidyr::pivot_wider(values_from = "or_dif", names_glue = "{item1}_{item2}", names_from = c("item1", "item2")) %>%
     select(-".draw") %>% apply(2, ggdist::median_qi, .width = .width)
   x3 <- data.frame(matrix(unlist(x2), nrow=length(x2), byrow=TRUE)) %>% setNames(names(x2[[1]]))
-  y <- cbind(str_split(names(x2), "_"))
+  y <- cbind(stringr::str_split(names(x2), "_"))
   y2 <- data.frame(matrix(unlist(y), nrow=length(y), byrow=TRUE)) %>% setNames(c("item1", "item2"))
-  x4 <- cbind(y2,x3) %>% as_tibble() %>% mutate_at(c(1,2), as.integer) %>% mutate_at(c(3:6), as.numeric) %>%
-    rename(or_dif = y, .lower = ymin, .upper = ymax)
+  x4 <- cbind(y2,x3) %>% tibble::as_tibble() %>% dplyr::mutate_at(c(1,2), as.integer) %>% dplyr::mutate_at(c(3:6), as.numeric) %>%
+    dplyr::rename(or_dif = y, .lower = ymin, .upper = ymax)
 
   return(x4)
 }
 
 med_hdci <- function(x, .width = .89) {
-  x2 <- x %>% ungroup %>% select(-c("itemname1", "itemname2")) %>%
-    pivot_wider(values_from = "or_dif", names_glue = "{item1}_{item2}", names_from = c("item1", "item2")) %>%
+  x2 <- x %>% dplyr::ungroup() %>% select(-c("itemname1", "itemname2")) %>%
+    tidyr::pivot_wider(values_from = "or_dif", names_glue = "{item1}_{item2}", names_from = c("item1", "item2")) %>%
     select(-".draw") %>% apply(2, ggdist::median_hdci, .width = .width)
   x3 <- data.frame(matrix(unlist(x2), nrow=length(x2), byrow=TRUE)) %>% setNames(names(x2[[1]]))
-  y <- cbind(str_split(names(x2), "_"))
+  y <- cbind(stringr::str_split(names(x2), "_"))
   y2 <- data.frame(matrix(unlist(y), nrow=length(y), byrow=TRUE)) %>% setNames(c("item1", "item2"))
-  x4 <- cbind(y2,x3) %>% as_tibble() %>% mutate_at(c(1,2), as.integer) %>% mutate_at(c(3:6), as.numeric) %>%
-    rename(or_dif = y, .lower = ymin, .upper = ymax)
+  x4 <- cbind(y2,x3) %>% tibble::as_tibble() %>% dplyr::mutate_at(c(1,2), as.integer) %>% dplyr::mutate_at(c(3:6), as.numeric) %>%
+    dplyr::rename(or_dif = y, .lower = ymin, .upper = ymax)
 
   return(x4)
 }
