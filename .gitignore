@@ -10,3 +10,6 @@ interactive_scripts/Gesamtdatensatz Querschnitt.sav
 interactive_scripts/orddata.csv
 interactive_scripts/dataset.csv
 interactive_scripts/old/
+data-raw/data_tina.xlsx
+data-raw/daten_fdw_simon.xlsx
+data-raw/items_tina.xlsx
