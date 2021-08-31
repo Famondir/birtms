@@ -379,7 +379,7 @@ get_or <- function(model, n_samples = NULL, ci_width = .89, zero_correction = 'n
     tidyr::pivot_wider(names_from = {{item}}, values_from = 'yrep') %>%
     select(-{{person}}) #%>% mutate(.draw = as.numeric(.draw))
 
-  div <- ifelse(is.null(n_samples), brms::nsamples(model), n_samples)
+  div <- ifelse(is.null(n_samples), brms::ndraws(model), n_samples)
 
   # message("Splitting dataframe by group into 3D array. May take a while.") # time scales linear; problem with missings?
   #yrep <- yrep %>% dplyr::group_by(.draw) %>% dplyr::group_split(.keep = TRUE) %>% list2array()

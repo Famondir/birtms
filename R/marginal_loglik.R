@@ -177,7 +177,7 @@ mll_parallel_brms_1pl <- function(fit, n_nodes = 11, best_only = FALSE, cores = 
                    select(!tidyselect::starts_with('.')) %>% as.matrix()
   )
 
-  n_iter2 <- brms::nsamples(fit)
+  n_iter2 <- brms::ndraws(fit)
 
   post_means2 <- purrr::map(draws2, ~matrix(colMeans(.), nrow = 1))
 
@@ -294,7 +294,7 @@ mll_parallel_brms_2pl <- function(fit, MFUN, n_nodes = 11, best_only = FALSE, co
                    select(!tidyselect::starts_with('.')) %>% as.matrix()
   )
 
-  n_iter2 <- brms::nsamples(fit)
+  n_iter2 <- brms::ndraws(fit)
 
   post_means2 <- purrr::map(draws2, ~matrix(colMeans(.), nrow = 1))
 

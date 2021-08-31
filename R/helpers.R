@@ -79,7 +79,7 @@ ppe <- posterior_predictive_values_long(model, n_samples, brms::posterior_epred)
 #' Additionally y_rep (predicted answers) or ppe (posterior predictive estimate) and .draw (which MCMC draw comes the answer from).
 posterior_predictive_values_long <- function(model, n_samples = NULL, f) {
   draws <- NULL
-  if (!is.null(n_samples)) draws <- sample(1:brms::nsamples(model), size = n_samples, replace = FALSE) %>% sort()
+  if (!is.null(n_samples)) draws <- sample(1:brms::ndraws(model), size = n_samples, replace = FALSE) %>% sort()
 
   message('Extracting posterior predictiv values')
   ppv <- f(model, subset = draws)

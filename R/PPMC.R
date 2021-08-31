@@ -23,7 +23,7 @@ get_ppmcdatasets <- function(model, ppmcMethod, post_responses = NULL, sd = 1, n
   }
 
   if(!is.null(n_samples)) {
-    subset <- sample(brms::nsamples(model), n_samples, replace = FALSE)
+    subset <- sample(brms::ndraws(model), n_samples, replace = FALSE)
     post_responses$yrep <- post_responses$yrep[subset,]
     post_responses$ppe <- post_responses$ppe[subset,]
     post_responses$subset <- subset
@@ -242,7 +242,7 @@ get.mixed_ppmc_data <- function(model, subset = NULL, ppmcMethod = "MC",
   # data_long <- model$data %>% mutate(item.id = get.item.id(.))
 
   if (is.null(subset)) {
-    subset <- c(1:brms::nsamples(model))
+    subset <- c(1:brms::ndraws(model))
   }
 
   message('Calculating probabilities')
@@ -273,7 +273,7 @@ get.mixed_ppmc_data <- function(model, subset = NULL, ppmcMethod = "MC",
   #   as.data.frame() %>% t()
 
   person_ids <- unique(model$data[[person]])
-  reps <- ifelse(is.null(subset), brms::nsamples(model), length(subset))
+  reps <- ifelse(is.null(subset), brms::ndraws(model), length(subset))
   theta_rep <- stats::rnorm(reps*length(person_ids), mean = 0, sd = sd) %>%
     matrix(ncol = length(person_ids))
 
