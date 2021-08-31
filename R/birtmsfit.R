@@ -1,3 +1,14 @@
+#' Created a birtmsfit from brms fit by adding specs
+#'
+#' @param fit brmsfit object
+#' @param variable_specifications list of stringt
+#' @param model_specifications list of stringt
+#' @param file character; filepath
+#'
+#' @return birtmsfit object
+#' @export
+#'
+#' @examples
 new_birtmsfit <- function(fit, variable_specifications = NULL, model_specifications = NULL, file = NULL) {
   stopifnot(brms::is.brmsfit(fit))
 

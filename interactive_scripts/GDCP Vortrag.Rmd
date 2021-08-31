@@ -451,7 +451,7 @@ plot_itemparameter(fit_1d_2pl_tina1, pars = "difficulty", style = "halfeye", thr
 ## Personresponsefunctions
 
 ```{r}
-respfuncdata_1d_1pl_tina <- calc.personresponsefunction(fit_1d_1pl_tina1, post_responses =  posterior_responses_tina_1pl)
+respfuncdata_1d_1pl_tina <- calc_personresponsedata(fit_1d_1pl_tina1, post_responses =  posterior_responses_tina_1pl)
 plot_personresponsefunction(fit_1d_1pl_tina1, respfuncdata_1d_1pl_tina, id = c(1:5))
 ```
 

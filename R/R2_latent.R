@@ -1,9 +1,9 @@
 # Sets the expressions used to build the formula as global variables to inform R
 # CMD check that they are intended to have no definition at time of package
 # building
-if(getRversion() >= "2.15.1")  utils::globalVariables(c("Intercept"))
+if(getRversion() >= "2.15.1")  utils::globalVariables(c("Intercept", "itemcovars"))
 
-#' R.squared
+#' Bayesian kind of R.squared
 #'
 #' Computes R.squared for non hierarchical models with item and person covariates. (Hierarchical models not tested right now.)
 #'

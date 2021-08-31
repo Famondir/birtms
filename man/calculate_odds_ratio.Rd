@@ -13,8 +13,7 @@ calculate_odds_ratio(
   ci_method = "Woolf",
   ci_width = 0.89,
   nsim_ci = 1e+07,
-  nsim_median = 1e+05,
-  cores = 4
+  nsim_median = 1e+05
 )
 }
 \arguments{

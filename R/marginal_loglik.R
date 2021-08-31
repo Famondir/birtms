@@ -1,3 +1,9 @@
+# Sets the expressions used to build the formula as global variables to inform R
+# CMD check that they are intended to have no definition at time of package
+# building
+if(getRversion() >= "2.15.1")  utils::globalVariables(c("i", '.chain', 'r_item__alpha', 'n_nodes', 'elpd', 'prob_k', 'criteria'
+))
+
 #' marginal_loglik
 #' Calculates the marginal loglikelihood for an IRT model
 #'
@@ -27,7 +33,7 @@ marginal_loglik <- function(fit, n_nodes = 11, cores = 4) {
 loo_marginal <- function(fit, ...) {
   ll_marginal <- marginal_loglik(fit, ...)
 
-  return(brms::loo(ll_marginal$ll, r_eff = loo::relative_eff(ll_marginal$ll, ll_marginal$chain)))
+  return(loo::loo(ll_marginal$ll, r_eff = loo::relative_eff(ll_marginal$ll, ll_marginal$chain)))
 }
 
 #' Checks marginal loglik for different numbers of nodes
@@ -52,7 +58,7 @@ check_n_nodes <- function(fit, min_nodes = 1, max_nodes = 8, cores = 4) {
     sd_person__Intercept <- sym(paste0('sd_', {{person}}, '__theta_Intercept'))
   }
 
-  chain <- fit %>% tidybayes::spread_draws(!!sd_person__Intercept) %>% pull(.chain)
+  chain <- fit %>% tidybayes::spread_draws(!!sd_person__Intercept) %>% dplyr::pull(.chain)
   results <- tibble::tibble("n_nodes" = rep(NA_integer_, max_nodes),
                             "elpd" = rep(NA_real_, max_nodes),
                             "n_greater_0.7" = rep(NA_integer_, max_nodes),
@@ -62,12 +68,12 @@ check_n_nodes <- function(fit, min_nodes = 1, max_nodes = 8, cores = 4) {
   loos <- list()
   for (i in max_nodes:min_nodes) {
     n_nodes = 2^(1+i)+1
-    timestamp()
+    utils::timestamp()
     print(paste0("Iteration: ",max_nodes+1-i,", n_nodes: ", n_nodes))
 
     ll_marg <- mll_fun(fit, n_nodes = n_nodes, cores = cores)
 
-    loo_ll_marg_brms <- loo(ll_marg$ll, r_eff = loo::relative_eff(ll_marg$ll, chain))
+    loo_ll_marg_brms <- loo::loo(ll_marg$ll, r_eff = loo::relative_eff(ll_marg$ll, chain))
     results[i,1] <- n_nodes
     results[i,2] <- loo_ll_marg_brms$estimates[1,1]
     results[i,4] <- sum(loo_ll_marg_brms$diagnostics$pareto_k>1)
@@ -100,19 +106,19 @@ plot_check_n_nodes <- function(check_n_nodes_object) {
   a <- ylim1[1] - b*ylim2[1]
 
   res %>%
-    pivot_longer(names_to = "criteria", values_to = "prob_k", cols = -(n_nodes:elpd)) %>%
-    ggplot(aes(x=n_nodes)) +
-    geom_line(aes(y = elpd, color = "elpd")) +
-    geom_line(aes(y = a + prob_k * b, color = criteria)) +
-    geom_point(aes(y = elpd)) +
-    geom_point(aes(y = a + prob_k*b, color = criteria)) +
-    scale_y_continuous(
+    tidyr::pivot_longer(names_to = "criteria", values_to = "prob_k", cols = -(n_nodes:elpd)) %>%
+    ggplot2::ggplot(aes(x=n_nodes)) +
+    ggplot2::geom_line(aes(y = elpd, color = "elpd")) +
+    ggplot2::geom_line(aes(y = a + prob_k * b, color = criteria)) +
+    ggplot2::geom_point(aes(y = elpd)) +
+    ggplot2::geom_point(aes(y = a + prob_k*b, color = criteria)) +
+    ggplot2::scale_y_continuous(
       # Features of the first axis
       name = "loo elpd",
       # Add a second axis and specify its features
-      sec.axis = sec_axis(~ (. - a)/b, name="number of problematic pareto k's")
-    ) + theme(legend.position="bottom") +
-    scale_color_manual(values=c("black", "blue", "red")) #+  coord_cartesian(ylim = ylim1)
+      sec.axis = ggplot2::sec_axis(~ (. - a)/b, name="number of problematic pareto k's")
+    ) + ggplot2::theme(legend.position="bottom") +
+    ggplot2::scale_color_manual(values=c("black", "blue", "red")) #+  coord_cartesian(ylim = ylim1)
 }
 
 choose_mll_fun <- function(fit) {
@@ -139,7 +145,7 @@ mll_parallel_brms_1pl <- function(fit, n_nodes = 11, best_only = FALSE, cores = 
     base_term <- linear_terms[iter, resp_numbers] - draws2$theta[[iter, r]]
 
     p2 <- brms::inv_logit_scaled(matrix(rep(base_term, length(node)), nrow = length(node), byrow = TRUE) + node)
-    rowSums(dbinom(matrix(rep(y, length(node)), nrow = length(node), byrow = TRUE), 1, p2, log = TRUE))
+    rowSums(stats::dbinom(matrix(rep(y, length(node)), nrow = length(node), byrow = TRUE), 1, p2, log = TRUE))
   }
 
   # ----- create a temporary logging file ----
@@ -160,24 +166,24 @@ mll_parallel_brms_1pl <- function(fit, n_nodes = 11, best_only = FALSE, cores = 
   r_person_vec <- str2lang(paste0({{r_person}},'[',{{person}},',]'))
 
   # we get the dataset from the brms fit and add row and person numbers instead of passing it to the function
-  data_list2 <- fit$data %>% mutate(resp_number = row_number(),
+  data_list2 <- fit$data %>% mutate(resp_number = dplyr::row_number(),
                                     person_number = as.integer(factor({{person}}, levels = unique({{person}}))))
 
   draws2 <- list(sd = tidybayes::spread_draws(fit, !!sd_person__Intercept) %>%
                    rename(sd_person = {{sd_person__Intercept}}) %>%
-                   select(!starts_with('.')) %>% as.matrix(),
+                   select(!tidyselect::starts_with('.')) %>% as.matrix(),
                  theta = tidybayes::spread_draws(fit, !!r_person_vec) %>%
-                   pivot_wider(values_from = {{r_person}}, names_from = {{person}}) %>%
-                   select(!starts_with('.')) %>% as.matrix()
+                   tidyr::pivot_wider(values_from = {{r_person}}, names_from = {{person}}) %>%
+                   select(!tidyselect::starts_with('.')) %>% as.matrix()
   )
 
-  n_iter2 <- nsamples(fit)
+  n_iter2 <- brms::nsamples(fit)
 
-  post_means2 <- map(draws2, ~matrix(colMeans(.), nrow = 1))
+  post_means2 <- purrr::map(draws2, ~matrix(colMeans(.), nrow = 1))
 
   # Seperate out draws for residuals and their SD
-  resid2 <- ranef(fit)[[{{person}}]][,1,1]
-  stddev2 <- ranef(fit)[[{{person}}]][,2,1]
+  resid2 <- brms::ranef(fit)[[{{person}}]][,1,1]
+  stddev2 <- brms::ranef(fit)[[{{person}}]][,2,1]
 
   n_persons <- length(resid2)
 
@@ -185,7 +191,7 @@ mll_parallel_brms_1pl <- function(fit, n_nodes = 11, best_only = FALSE, cores = 
   std_quad <- statmod::gauss.quad.prob(n_nodes, "normal", mu = 0, sigma = 1)
   std_log_weights <- log(std_quad$weights)
 
-  linear_terms <- fitted(fit, scale = 'linear', summary = FALSE)
+  linear_terms <- stats::fitted(fit, scale = 'linear', summary = FALSE)
   linear_terms_mean <- matrix(colMeans(linear_terms), nrow = 1)
 
   start = 1
@@ -212,7 +218,7 @@ mll_parallel_brms_1pl <- function(fit, n_nodes = 11, best_only = FALSE, cores = 
       sd_i <- ifelse(i <= n_iter2, draws2$sd[[i]], post_means2$sd[[1]])
       adapt_nodes <- resid2[[j]] + stddev2[[j]] * std_quad$nodes
       log_weights <- log(sqrt(2*pi)) + log(stddev2[[j]]) + std_quad$nodes^2/2 +
-        dnorm(adapt_nodes, sd = sd_i, log = TRUE) + std_log_weights
+        stats::dnorm(adapt_nodes, sd = sd_i, log = TRUE) + std_log_weights
 
       # Evaluate mll with adaptive quadrature. If at n_iter + 1, evaluate
       # marginal likelihood at posterior means.
@@ -256,7 +262,7 @@ mll_parallel_brms_2pl <- function(fit, MFUN, n_nodes = 11, best_only = FALSE, co
     base_term <- linear_terms[iter, resp_numbers] - alphas[iter,items]*draws2$theta[[iter, person]] # get information which item was edited
 
     p2 <- brms::inv_logit_scaled(matrix(rep(base_term, length(node)), nrow = length(node), byrow = TRUE) + node %*% t(alphas[iter,items]))
-    rowSums(dbinom(matrix(rep(y, length(node)), nrow = length(node), byrow = TRUE), 1, p2, log = TRUE))
+    rowSums(stats::dbinom(matrix(rep(y, length(node)), nrow = length(node), byrow = TRUE), 1, p2, log = TRUE))
   }
 
   # ----- create a temporary logging file ----
@@ -277,24 +283,24 @@ mll_parallel_brms_2pl <- function(fit, MFUN, n_nodes = 11, best_only = FALSE, co
   r_person_vec <- str2lang(paste0({{r_person}},'[',{{person}},',]'))
 
   # we get the dataset from the brms fit and add row and person numbers instead of passing it to the function
-  data_list2 <- fit$data %>% mutate(resp_number = row_number(),
+  data_list2 <- fit$data %>% mutate(resp_number = dplyr::row_number(),
                                     person_number = as.numeric(factor({{person}}, levels = unique({{person}}))))
 
   draws2 <- list(sd = tidybayes::spread_draws(fit, !!sd_person__Intercept) %>%
                    rename(sd_person = {{sd_person__Intercept}}) %>%
-                   select(!starts_with('.')) %>% as.matrix(),
+                   select(!tidyselect::starts_with('.')) %>% as.matrix(),
                  theta = tidybayes::spread_draws(fit, !!r_person_vec) %>%
-                   pivot_wider(values_from = {{r_person}}, names_from = {{person}}) %>%
-                   select(!starts_with('.')) %>% as.matrix()
+                   tidyr::pivot_wider(values_from = {{r_person}}, names_from = {{person}}) %>%
+                   select(!tidyselect::starts_with('.')) %>% as.matrix()
   )
 
-  n_iter2 <- nsamples(fit)
+  n_iter2 <- brms::nsamples(fit)
 
   post_means2 <- purrr::map(draws2, ~matrix(colMeans(.), nrow = 1))
 
   # Seperate out draws for residuals and their SD
-  resid2 <- ranef(fit)[[{{person}}]][,1,1]
-  stddev2 <- ranef(fit)[[{{person}}]][,2,1]
+  resid2 <- brms::ranef(fit)[[{{person}}]][,1,1]
+  stddev2 <- brms::ranef(fit)[[{{person}}]][,2,1]
 
   n_persons <- length(resid2)
 
@@ -302,7 +308,7 @@ mll_parallel_brms_2pl <- function(fit, MFUN, n_nodes = 11, best_only = FALSE, co
   std_quad <- statmod::gauss.quad.prob(n_nodes, "normal", mu = 0, sigma = 1)
   std_log_weights <- log(std_quad$weights)
 
-  linear_terms <- fitted(fit, scale = 'linear', summary = FALSE)
+  linear_terms <- stats::fitted(fit, scale = 'linear', summary = FALSE)
   linear_terms_mean <- matrix(colMeans(linear_terms), nrow = 1)
 
   itemparams <- fit %>% tidybayes::spread_draws(#r_item__beta[item,],
@@ -311,7 +317,7 @@ mll_parallel_brms_2pl <- function(fit, MFUN, n_nodes = 11, best_only = FALSE, co
 
   # safer version (better trackable); gets just executed once, so speed isn't so important at all
   alphas <- itemparams %>% select(item, r_item__alpha, .draw) %>%
-    pivot_wider(names_from = item, values_from = r_item__alpha) %>% select(-.draw) %>% as.matrix()
+    tidyr::pivot_wider(names_from = item, values_from = r_item__alpha) %>% select(-.draw) %>% as.matrix()
 
   # alphas <- matrix(itemparams$r_item__alpha, nrow = n_iter2) # faster version (3 vs 20 ms)
   # colnames(alphas) <- unique(itemparams$item)
@@ -347,7 +353,7 @@ mll_parallel_brms_2pl <- function(fit, MFUN, n_nodes = 11, best_only = FALSE, co
       sd_i <- ifelse(i <= n_iter2, draws2$sd[[i]], post_means2$sd[[1]])
       adapt_nodes <- resid2[[j]] + stddev2[[j]] * std_quad$nodes
       log_weights <- log(sqrt(2*pi)) + log(stddev2[[j]]) + std_quad$nodes^2/2 +
-        dnorm(adapt_nodes, sd = sd_i, log = TRUE) + std_log_weights
+        stats::dnorm(adapt_nodes, sd = sd_i, log = TRUE) + std_log_weights
 
       # Evaluate mll with adaptive quadrature. If at n_iter + 1, evaluate
       # marginal likelihood at posterior means.

@@ -31,6 +31,8 @@ get_or(
 \item{nsim_ci}{integer; number of draws used to get a distribution of the odds ratio value to calculate CIs}
 
 \item{nsim_median}{integer; number of draws used to get a distribution of the odds ratio value to calculate the median}
+
+\item{cores}{#' @param cores int; number of CPU cores used for parallel processing}
 }
 \value{
 birtmsdata; tibble with additinal attributes

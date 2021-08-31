@@ -2,7 +2,7 @@
 % Please edit documentation in R/R2_latent.R
 \name{R2_latent}
 \alias{R2_latent}
-\title{R.squared}
+\title{Bayesian kind of R.squared}
 \usage{
 R2_latent(birtms_fit, fast = TRUE)
 }

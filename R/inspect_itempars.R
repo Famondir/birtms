@@ -1,3 +1,22 @@
+# Sets the expressions used to build the formula as global variables to inform R
+# CMD check that they are intended to have no definition at time of package
+# building
+if(getRversion() >= "2.15.1")  utils::globalVariables(c('person_id', 'alpha1', 'adjusted_alpha'))
+
+#' Plots cateye or dot plots for item parameters
+#'
+#' @param model birtmsfit object
+#' @param pars character; either 'slope', 'easyness', 'delta', 'beta', 'difficulty' or 'pseudoguess'
+#' @param style character; either "halfeye" or "dots"
+#' @param items integer vector of length 2; indicates first and last item to plot the parameter distributions for
+#' @param thresholds double vector of length 2; crops the plot horizontally
+#' @param alphacut double vector of length 3;
+#' @param betacut double vector of length 2;
+#'
+#' @return ggplot object
+#' @export
+#'
+#' @examples
 plot_itemparameter <- function(model, pars, style, items = c(1,5), thresholds = c(.2, 2),
                                alphacut = c(.2,.3, 2), betacut = c(-2,2)) {
 
@@ -5,35 +24,35 @@ plot_itemparameter <- function(model, pars, style, items = c(1,5), thresholds = 
 
   if (pars == 'slope') {
     g <- data %>%
-      ggplot(aes(y = item, x = alpha1, fill = stat(x > alphacut[1] & x < alphacut[3]))) +
-      geom_vline(xintercept = alphacut[1], linetype = "dashed") +
-      geom_vline(xintercept = alphacut[2], linetype = "dotted") +
-      scale_fill_manual(values = c("gray80", "skyblue")) +
-      xlab("Trennsch\u00E4rfe") +
-      labs(fill = "Innerhalb der Grenzen")
+      ggplot2::ggplot(aes(y = item, x = alpha1, fill = ggplot2::stat(x > alphacut[1] & x < alphacut[3]))) +
+      ggplot2::geom_vline(xintercept = alphacut[1], linetype = "dashed") +
+      ggplot2::geom_vline(xintercept = alphacut[2], linetype = "dotted") +
+      ggplot2::scale_fill_manual(values = c("gray80", "skyblue")) +
+      ggplot2::xlab("Trennsch\u00E4rfe") +
+      ggplot2::labs(fill = "Innerhalb der Grenzen")
   } else if (pars == 'adjusted slope') {
     g <- data %>%
-      ggplot(aes(y = item, x = adjusted_alpha, fill = stat(x > alphacut[1] & x < alphacut[3]))) +
-      geom_vline(xintercept = alphacut[1], linetype = "dashed") +
-      geom_vline(xintercept = alphacut[2], linetype = "dotted") +
-      scale_fill_manual(values = c("gray80", "skyblue")) +
-      xlab("Trennsch\u00E4rfe") +
-      labs(fill = "Innerhalb der Grenzen")
+      ggplot2::ggplot(aes(y = item, x = adjusted_alpha, fill = ggplot2::stat(x > alphacut[1] & x < alphacut[3]))) +
+      ggplot2::geom_vline(xintercept = alphacut[1], linetype = "dashed") +
+      ggplot2::geom_vline(xintercept = alphacut[2], linetype = "dotted") +
+      ggplot2::scale_fill_manual(values = c("gray80", "skyblue")) +
+      ggplot2::xlab("Trennsch\u00E4rfe") +
+      ggplot2::labs(fill = "Innerhalb der Grenzen")
   } else if (pars %in% c('easyness', 'delta', 'beta', 'difficulty')) {
     g <- data %>%
-      ggplot(aes(y = item, x = delta, fill = stat(x > betacut[1] & x < betacut[2]))) +
-      scale_fill_manual(values = c("gray80", "skyblue"))  +
-      labs(fill = "Innerhalb der Grenzen")
+      ggplot2::ggplot(aes(y = item, x = delta, fill = ggplot2::stat(x > betacut[1] & x < betacut[2]))) +
+      ggplot2::scale_fill_manual(values = c("gray80", "skyblue"))  +
+      ggplot2::labs(fill = "Innerhalb der Grenzen")
     if(pars != 'difficulty') {
-      g <- g + xlab("Einfachheit")
+      g <- g + ggplot2::xlab("Einfachheit")
     } else {
-      g <- g + xlab("Schwierigkeit")
+      g <- g + ggplot2::xlab("Schwierigkeit")
     }
   } else if (pars == 'pseudoguess') {
     g <- data %>%
-      ggplot(aes(y = item, x = gamma, fill = stat(x < 1/15 | x > 1/2))) +
-      scale_fill_manual(values = c("skyblue", "gray80")) +
-      xlab("Pseuderatewahrscheinlichkeit")
+      ggplot2::ggplot(aes(y = item, x = gamma, fill = ggplot2::stat(x < 1/15 | x > 1/2))) +
+      ggplot2::scale_fill_manual(values = c("skyblue", "gray80")) +
+      ggplot2::xlab("Pseuderatewahrscheinlichkeit")
   } else {
     stop('Dieser Parameter wurde noch nicht implementiert.')
   }
@@ -44,7 +63,7 @@ plot_itemparameter <- function(model, pars, style, items = c(1,5), thresholds = 
     g <- g + ggdist::stat_dots(quantiles = 100)
   }
 
-  g <- g + coord_cartesian(xlim = c(min(thresholds[1]*1.25, 0), thresholds[2]*1.25))
+  g <- g + ggplot2::coord_cartesian(xlim = c(min(thresholds[1]*1.25, 0), thresholds[2]*1.25))
 
   return(g)
 }

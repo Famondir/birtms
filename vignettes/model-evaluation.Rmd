@@ -20,6 +20,8 @@ knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
 )
+
+cores <- ifelse(rstudioapi::isAvailable(), 4, 1)
 ```
 
 ```{r setup}
@@ -36,7 +38,7 @@ fit_1d_1pl_spm1 <- readRDS('../inst/extdata/fit_1d_1pl_spm1.rds')
 ```
 
 ```{r fig.width=7, fig.height=7}
-or_data <- birtms::get_or(fit_1d_1pl_spm1, zero_correction = 'Haldane')
+or_data <- birtms::get_or(fit_1d_1pl_spm1, zero_correction = 'Haldane', cores = cores)
 or_data %>% birtms::plot_ppmc_or_heatmap()
 ```
 
@@ -44,7 +46,7 @@ or_data %>% birtms::plot_ppmc_or_heatmap()
 Should use `zero_correction = 'Bayes'` only if there are few 0 counts in the posterior samples. You can check this via:
 
 ```{r}
-or_data <- birtms::get_or(fit_1d_1pl_spm1, zero_correction = 'none')
+or_data <- birtms::get_or(fit_1d_1pl_spm1, zero_correction = 'none', cores = cores)
 or_data %>% tidyr::unnest('or_dif_samples') %>% dplyr::pull(or_dif) %>% is.infinite() %>% sum()
 ```
 

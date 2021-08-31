@@ -35,7 +35,18 @@ Imports:
     ggdist,
     modeest,
     bde,
-    ggformula
+    ggformula,
+    Matrix,
+    cowplot,
+    doParallel,
+    ggnewscale,
+    foreach,
+    loo,
+    matrixStats,
+    randomcoloR,
+    rstudioapi,
+    tictoc,
+    statmod
 RoxygenNote: 7.1.1
 VignetteBuilder: knitr
 Config/testthat/edition: 3

@@ -181,14 +181,42 @@ aggregate_warnings <- function(expr) {
   }
 }
 
+#' Takes time of a process using tictoc package
+#'
+#' @param expr expression in curled brackets
+#'
+#' @return result of expression
+#' @export
+#'
+#' @examples
 timeit <- function(expr) {
   tictoc::tic()
   expr
   tictoc::toc()
 }
 
+#' Prints size of object in MB
+#'
+#' @param x object
+#'
+#' @return character
+#' @export
+#'
+#' @examples
 get.size <- function(x) {
-  size <- object.size(x) %>% as.numeric()
+  size <- utils::object.size(x) %>% as.numeric()
   size <- size / 1000000
   size %>% round(2) %>% paste("MB") %>% print()
+}
+
+make_post_longer <- function(model, postdata, name) {
+  message('Some datawrangling')
+
+  postdata <- postdata[[name]] %>% t() %>%
+    as.data.frame() %>%
+    cbind(model$data) %>%
+    tidyr::pivot_longer(values_to = {{name}}, names_to = ".draw", cols = tidyselect::starts_with("V"), names_prefix = "V") %>%
+    mutate(.draw = as.integer(.draw))
+
+  return(postdata)
 }

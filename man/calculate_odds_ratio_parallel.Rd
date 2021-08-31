@@ -32,7 +32,7 @@ calculate_odds_ratio_parallel(
 
 \item{nsim_median}{integer; number of draws used to get a distribution of the odds ratio value to calculate the median}
 
-\item{cores}{int}
+\item{cores}{int; number of CPU cores used for parallel processing}
 }
 \value{
 tibble

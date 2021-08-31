@@ -1,3 +1,19 @@
+# Sets the expressions used to build the formula as global variables to inform R
+# CMD check that they are intended to have no definition at time of package
+# building
+if(getRversion() >= "2.15.1")  utils::globalVariables(c('ppe', 'rowname', 'delta'))
+
+#' PLots person response functions
+#'
+#' @param model birtmsfit object
+#' @param personresponsedata data.frame from birtms::calc.personresponsedata
+#' @param id integer vector; persons to plot PRF for
+#' @param persResFunStyle iteger vector; 1 = scatter, 2 = posterior predict based PRF, 3 = pp_scatter, 4 = force_se
+#'
+#' @return ggplot object
+#' @export
+#'
+#' @examples
 plot_personresponsefunction <- function(model, personresponsedata, id, persResFunStyle = 1) {
   scatter = ifelse(1 %in% persResFunStyle, TRUE, FALSE)
   pp = ifelse(2 %in% persResFunStyle, TRUE, FALSE)
@@ -25,28 +41,38 @@ plot_personresponsefunction <- function(model, personresponsedata, id, persResFu
     multi = FALSE
   }
 
-  g <- data %>% group_by({{personsym}}) %>% ggplot() +
-    geom_smooth(aes(x = diff, y = response, color = factor({{personsym}}), fill = factor({{personsym}})), se = !multi) +
-    coord_cartesian(ylim = c(0, 1)) +
-    labs(title = 'Personresponsefunction', x = "relative item difficulty",
+  g <- data %>% group_by({{personsym}}) %>% ggplot2::ggplot() +
+    ggplot2::geom_smooth(aes(x = diff, y = response, color = factor({{personsym}}), fill = factor({{personsym}})), se = !multi) +
+    ggplot2::coord_cartesian(ylim = c(0, 1)) +
+    ggplot2::labs(title = 'Personresponsefunction', x = "relative item difficulty",
          y = "response probability", color = "Person (ID)", fill = "Person (ID)")
 
   if (scatter) {
-    g <- g + geom_point(aes(x = diff, y = response, color = factor({{personsym}})), alpha = .2)
+    g <- g + ggplot2::geom_point(aes(x = diff, y = response, color = factor({{personsym}})), alpha = .2)
   }
 
   if (pp) {
-    g <- g + geom_smooth(aes(x = diff, y = ppe, color = factor({{personsym}})), linetype = "dashed")
+    g <- g + ggplot2::geom_smooth(aes(x = diff, y = ppe, color = factor({{personsym}})), linetype = "dashed")
   }
 
   if (pp_scatter) {
-    g <- g + geom_point(aes(x = diff, y = ppe, color = factor({{personsym}})), alpha = .2)
+    g <- g + ggplot2::geom_point(aes(x = diff, y = ppe, color = factor({{personsym}})), alpha = .2)
   }
 
   return(g)
 }
 
-calc.personresponsefunction <- function(model, post_responses, id = NULL) {
+#' Calculate person response data
+#'
+#' @param model birtmsfit object
+#' @param post_responses data.frame from birtms::
+#' @param id integer vector; persons to generate data for
+#'
+#' @return data.frame to use in birtms::plot_personresponsefunction
+#' @export
+#'
+#' @examples
+calc_personresponsedata <- function(model, post_responses, id = NULL) {
   person <- model$var_specs$person
   personsym <- sym(person)
 
@@ -71,16 +97,4 @@ calc.personresponsefunction <- function(model, post_responses, id = NULL) {
     left_join(theta, by = {{person}}) %>% mutate(diff = delta - theta) %>% filter(!is.na(diff))
 
   return(data)
-}
-
-make_post_longer <- function(model, postdata, name) {
-  message('Some datawrangling')
-
-  postdata <- postdata[[name]] %>% t() %>%
-    as.data.frame() %>%
-    cbind(model$data) %>%
-    pivot_longer(values_to = {{name}}, names_to = ".draw", cols = starts_with("V"), names_prefix = "V") %>%
-    mutate(.draw = as.integer(.draw))
-
-  return(postdata)
 }

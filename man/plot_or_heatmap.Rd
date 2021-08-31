@@ -25,6 +25,8 @@ plot_or_heatmap(
 
 \item{model}{birtmsfit object}
 
+\item{itemrange}{integer vector of length 2; first and last item to incorporate in the heatmap}
+
 \item{a}{double; mean slope parameter (if not passed model)}
 
 \item{sigma}{double; standard deviation of person dimesnion (theta)}

@@ -1,3 +1,9 @@
+# Sets the expressions used to build the formula as global variables to inform R
+# CMD check that they are intended to have no definition at time of package
+# building
+if(getRversion() >= "2.15.1")  utils::globalVariables(c('hdi_sjb'
+))
+
 
 #' Get mode
 #'

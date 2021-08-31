@@ -1,3 +1,10 @@
+# Sets the expressions used to build the formula as global variables to inform R
+# CMD check that they are intended to have no definition at time of package
+# building
+if(getRversion() >= "2.15.1")  utils::globalVariables(c('.iteration', 'j', 'yrep', 'ppe2', 'crit', 'crit_rep', 'data', 'testlet_thetas',
+                                                        '.draw', 'draw', 'person', 'var_p', 'sum_var', 'item_id', 'crit_diff'
+))
+
 #' Generates data for posterior predictive model checks
 #'
 #' @param model birtmsfit object
@@ -16,7 +23,7 @@ get_ppmcdatasets <- function(model, ppmcMethod, post_responses = NULL, sd = 1, n
   }
 
   if(!is.null(n_samples)) {
-    subset <- sample(nsamples(model), n_samples, replace = FALSE)
+    subset <- sample(brms::nsamples(model), n_samples, replace = FALSE)
     post_responses$yrep <- post_responses$yrep[subset,]
     post_responses$ppe <- post_responses$ppe[subset,]
     post_responses$subset <- subset
@@ -31,7 +38,7 @@ get_ppmcdatasets <- function(model, ppmcMethod, post_responses = NULL, sd = 1, n
   ppe <-  make_post_longer(model = model, postdata = post_responses, 'ppe') %>%
     mutate(item.id = get.item.id(.)) # %>% rename(person = {{symperson}})
 
-  item_key <- ppe %>% select(item.id, item) %>% group_by(item) %>% summarise_all(mean) %>% ungroup()
+  item_key <- ppe %>% select(item.id, item) %>% group_by(item) %>% dplyr::summarise_all(mean) %>% ungroup()
   key <- item_key$item.id %>% as.integer()
   names(key) <- item_key$item
 
@@ -41,7 +48,7 @@ get_ppmcdatasets <- function(model, ppmcMethod, post_responses = NULL, sd = 1, n
 
     data <- ppe %>% mutate(yrep = yrep$yrep, ppe2 = ppe)
   } else if (ppmcMethod == 'M' | ppmcMethod == 'all') {
-    if (any(str_detect(names(model$var_specs), "item_covariables"))) stop("PPMC for models with item covars not implemented yet.")
+    if (any(stringr::str_detect(names(model$var_specs), "item_covariables"))) stop("PPMC for models with item covars not implemented yet.")
 
     temp <- get.mixed_ppmc_data(model, subset = post_responses$subset, ppmcMethod = ppmcMethod, sd = sd) %>%
       mutate(item.id = key[item]) %>% dplyr::arrange(.draw, item.id)
@@ -49,14 +56,14 @@ get_ppmcdatasets <- function(model, ppmcMethod, post_responses = NULL, sd = 1, n
     if (nrow(temp) > nrow(ppe)) {
       warning('Rownumber of posterior predictions differing. Does the model have missings by design?')
 
-      ppe <- ppe %>% mutate(person.id = personkey[{{symperson}}]) # %>% arrange(.draw, item.id, person.id)
+      ppe <- ppe %>% mutate(person.id = personkey[{{symperson}}]) # %>% dplyr::arrange(.draw, item.id, person.id)
       temp <- temp %>% mutate(person.id = personkey[person]) %>%
-        select(.draw, item.id, ppe, yrep, person.id) %>% rename(ppe2 = ppe) # %>% arrange(.draw, item.id, person.id)
+        select(.draw, item.id, ppe, yrep, person.id) %>% rename(ppe2 = ppe) # %>% dplyr::arrange(.draw, item.id, person.id)
 
       data <- ppe %>% left_join(temp, by = c(".draw", "item.id", "person.id"))
 
     } else {
-      ppe <- ppe %>% arrange(.draw, item.id)
+      ppe <- ppe %>% dplyr::arrange(.draw, item.id)
 
       data <- ppe %>% mutate(yrep = temp$yrep, ppe2= temp$ppe) # should be sorted in the right order so no join needed
     }
@@ -130,22 +137,22 @@ plot_fit_statistic <- function(model, data, units = c(1,9), group = 'item', ppmc
   if (group == 'item') {
     g <- data %>% mutate(item_id = get.item.id(.)) %>% filter(item_id <= units[2] & item_id >= units[1]) %>%
       group_by(item) %>%
-      ggplot(aes(x = crit_diff, y = 0, fill = stat(quantile))) +
+      ggplot2::ggplot(aes(x = crit_diff, y = 0, fill = ggplot2::stat(quantile))) +
       ggridges::geom_density_ridges_gradient(quantile_lines = TRUE, quantile_fun = hdi_custWidth, quantiles = hdi_width, vline_linetype = 2) +
       # geom_density(data = item_fit2_1pl_testlets_mm[1:(1600*9),], aes(crit_diff), colour = 'steelblue1', fill = 'steelblue1', alpha = 0.3) +
-      facet_wrap("item", scales = "free") +
-      scale_fill_manual(values = c("transparent", color, "transparent"), guide = "none") +
-      xlab("itemfit criteria difference between predicted and observed responses.")
+      ggplot2::facet_wrap("item", scales = "free") +
+      ggplot2::scale_fill_manual(values = c("transparent", color, "transparent"), guide = "none") +
+      ggplot2::xlab("itemfit criteria difference between predicted and observed responses.")
   } else if (group == person) {
     g <- data %>% mutate(person_id = get.person.id(., model = model)) %>%
       filter(person_id <= units[2] & person_id >= units[1]) %>%
       mutate({{person}} := paste('Person', {{personsym}})) %>% group_by({{personsym}}) %>%
-      ggplot(aes(x = crit_diff, y = 0, fill = stat(quantile))) +
+      ggplot2::ggplot(aes(x = crit_diff, y = 0, fill = ggplot2::stat(quantile))) +
       ggridges::geom_density_ridges_gradient(quantile_lines = TRUE, quantile_fun = HDInterval::hdi, vline_linetype = 2) +
       # geom_density(data = item_fit2_1pl_testlets_mm[1:(1600*9),], aes(crit_diff), colour = 'steelblue1', fill = 'steelblue1', alpha = 0.3) +
-      facet_wrap({{person}}, scales = "free") +
-      scale_fill_manual(values = c("transparent", color, "transparent"), guide = "none") +
-      xlab("Log-likelihood difference between predicted and observed responses.")
+      ggplot2::facet_wrap({{person}}, scales = "free") +
+      ggplot2::scale_fill_manual(values = c("transparent", color, "transparent"), guide = "none") +
+      ggplot2::xlab("Log-likelihood difference between predicted and observed responses.")
   }
 
   return(g)
@@ -169,7 +176,7 @@ fit_statistic <- function(criterion, group, data) {
       .groups = 'drop'
     ) # %>%
     # mutate(draw = as.numeric(sub("^V", "", .draw))) %>%
-    # arrange({{group}}, .draw)
+    # dplyr::arrange({{group}}, .draw)
 
   # message('finished')
 
@@ -177,7 +184,7 @@ fit_statistic <- function(criterion, group, data) {
 }
 
 infit <- function(y, p, data, ...) {
-  sum_var_p <- data %>% mutate(var_p = (ppe*(1-ppe))) %>% group_by(item, draw) %>%
+  sum_var_p <- data %>% mutate(var_p = (ppe*(1-ppe))) %>% group_by(item, .draw) %>%
     mutate(sum_var = sum(var_p)) %>% ungroup() %>% select(sum_var)
 
   (y - p)^2 / sum_var_p %>%
@@ -221,7 +228,7 @@ get.person.id <- function(data_long, model) {
   person_key <- seq_along(personnames)
   names(person_key) <- personnames
 
-  data_long %>% mutate(person.id = person_key[{{personsym}}], .after = person) %>% pull(person.id) %>%
+  data_long %>% mutate(person.id = person_key[{{personsym}}], .after = person) %>% dplyr::pull(person.id) %>%
     return()
 }
 
@@ -235,12 +242,12 @@ get.mixed_ppmc_data <- function(model, subset = NULL, ppmcMethod = "MC",
   # data_long <- model$data %>% mutate(item.id = get.item.id(.))
 
   if (is.null(subset)) {
-    subset <- c(1:nsamples(model))
+    subset <- c(1:brms::nsamples(model))
   }
 
   message('Calculating probabilities')
 
-  itempars <- spread.draws(model, pars = 'delta') %>% relocate(delta, .after = last_col())
+  itempars <- spread.draws(model, pars = 'delta') %>% dplyr::relocate(delta, .after = tidyselect::last_col())
 
   if (model$model_specs$item_parameter_number == 2) {
     alpha1 <- spread.draws(model, pars = 'alpha1')
@@ -262,36 +269,36 @@ get.mixed_ppmc_data <- function(model, subset = NULL, ppmcMethod = "MC",
 
   # using N(0,1) or prior (for 1 pl) insted?
   # theta_rep <- purrr::map(brms::VarCorr(model, summary = FALSE)[[person]][["sd"]],
-  #                         .f = ~rnorm(length(unique(model$data$person)), mean = 0, sd = .x)) %>%
+  #                         .f = ~stats::rnorm(length(unique(model$data$person)), mean = 0, sd = .x)) %>%
   #   as.data.frame() %>% t()
 
   person_ids <- unique(model$data[[person]])
   reps <- ifelse(is.null(subset), brms::nsamples(model), length(subset))
-  theta_rep <- rnorm(reps*length(person_ids), mean = 0, sd = sd) %>%
+  theta_rep <- stats::rnorm(reps*length(person_ids), mean = 0, sd = sd) %>%
     matrix(ncol = length(person_ids))
 
   if (!sequential) {
     ppmc_data <- calc.probability(itempars, theta_rep, person_ids)
   } else {
     theta_rep <- theta_rep %>% as.data.frame() %>%
-      setNames(person_ids) %>%
-      as_tibble() %>% mutate(.draw = row_number(), .before = 1) %>% filter(.draw %in% subset) %>%
+      stats::setNames(person_ids) %>%
+      tibble::as_tibble() %>% mutate(.draw = dplyr::row_number(), .before = 1) %>% filter(.draw %in% subset) %>%
       tidyr::pivot_longer(cols = -.draw, values_to = "theta", names_to = "person")
 
     # theta_rep <- model %>% spread_draws(theta_rep[ID]) %>% filter(.draw %in% subset)
 
-    itempars <- itempars %>% group_by(.draw) %>% nest() %>% rename(itempars = data)
-    theta_rep <- theta_rep %>% group_by(.draw) %>% nest() %>% rename(theta_rep = data)
+    itempars <- itempars %>% group_by(.draw) %>% tidyr::nest() %>% rename(itempars = data)
+    theta_rep <- theta_rep %>% group_by(.draw) %>% tidyr::nest() %>% rename(theta_rep = data)
     ppe <- itempars %>% left_join(theta_rep, by = ".draw")
 
     ppe <- ppe %>% mutate(testlet_thetas = NA)
 
-    ppmc_data <- ppe %>% mutate(ppe = pmap(list(.draw, itempars, theta_rep, testlet_thetas),
+    ppmc_data <- ppe %>% mutate(ppe = purrr::pmap(list(.draw, itempars, theta_rep, testlet_thetas),
                                            calc.probability_sequential)) %>%
-      select(.draw, ppe) %>% group_by(.draw) %>% unnest(cols = c(ppe)) %>% select(-draw)
+      select(.draw, ppe) %>% group_by(.draw) %>% tidyr::unnest(cols = c(ppe)) %>% select(-draw)
   }
 
-  ppmc_data["yrep"] <- rbinom(n = nrow(ppmc_data), size = 1, ppmc_data$ppe)
+  ppmc_data["yrep"] <- stats::rbinom(n = nrow(ppmc_data), size = 1, ppmc_data$ppe)
 
   # message('finished')
   # tictoc::toc()
@@ -302,15 +309,15 @@ get.mixed_ppmc_data <- function(model, subset = NULL, ppmcMethod = "MC",
 calc.probability <- function(itempars, theta_rep, person_ids) {
 
   d <- itempars %>% select(item, delta, .draw) %>%
-    pivot_wider(names_from = .draw, values_from = delta)
-  item_names <- d %>% pull(item)
+    tidyr::pivot_wider(names_from = .draw, values_from = delta)
+  item_names <- d %>% dplyr::pull(item)
   d <- d %>% ungroup() %>%  select(-item) %>%
     as.matrix() %>% as.numeric()
   a <- itempars %>% select(item, alpha1, .draw) %>%
-    pivot_wider(names_from = .draw, values_from = alpha1) %>% ungroup() %>%  select(-item) %>%
+    tidyr::pivot_wider(names_from = .draw, values_from = alpha1) %>% ungroup() %>%  select(-item) %>%
     as.matrix()
   g <- itempars %>% select(item, gamma, .draw) %>%
-    pivot_wider(names_from = .draw, values_from = gamma) %>% ungroup() %>%  select(-item) %>%
+    tidyr::pivot_wider(names_from = .draw, values_from = gamma) %>% ungroup() %>%  select(-item) %>%
     as.matrix() %>% as.numeric()
 
   n_items <- nrow(a)
@@ -325,9 +332,9 @@ calc.probability <- function(itempars, theta_rep, person_ids) {
   ppe <- g + (1-g)*brms::inv_logit_scaled(terms)
   colnames(ppe) <- person_ids
 
-  ppe <- ppe %>% as_tibble() %>% mutate(item = rep(item_names, ncol(a)),
+  ppe <- ppe %>% tibble::as_tibble() %>% mutate(item = rep(item_names, ncol(a)),
                                         .draw = rep(1:ncol(a), each = length(item_names)), .before = 1) %>%
-    pivot_longer(values_to = "ppe", names_to = "person", cols = c(-item, -.draw))
+    tidyr::pivot_longer(values_to = "ppe", names_to = "person", cols = c(-item, -.draw))
 
   return(ppe)
 }
@@ -347,16 +354,16 @@ calc.probability_sequential <- function(.draw, itempars, theta_rep, testlet_thet
 
     testlet_thetas <- testlet_thetas %>% select(-c(person, .iteration, .chain))
 
-    ppe <- gamma + (1-gamma)*inv_logit_scaled(
+    ppe <- gamma + (1-gamma)*brms::inv_logit_scaled(
       delta + (alpha1 %*% t(theta_rep)) + t(testlet_thetas[,testlet]))
 
   } else {
-    ppe <- gamma + (1-gamma)*inv_logit_scaled(delta + (alpha1 %*% t(theta_rep)))
+    ppe <- gamma + (1-gamma)*brms::inv_logit_scaled(delta + (alpha1 %*% t(theta_rep)))
   }
 
-  ppe <- ppe %>% t() %>% as.data.frame() %>% setNames(itemnames) %>%
+  ppe <- ppe %>% t() %>% as.data.frame() %>% stats::setNames(itemnames) %>%
     mutate(person = person, draw = .draw, .before = 1) %>%
-    pivot_longer(cols = c(3:ncol(.)), names_to = 'item', values_to = 'ppe')
+    tidyr::pivot_longer(cols = c(3:ncol(.)), names_to = 'item', values_to = 'ppe')
 
   return(ppe)
 }
