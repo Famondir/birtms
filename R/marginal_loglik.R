@@ -1,11 +1,11 @@
 #' marginal_loglik
 #' Calculates the marginal loglikelihood for an IRT model
 #'
-#' @param fit
-#' @param n_nodes
-#' @param cores
+#' @param fit birtmsfit object
+#' @param n_nodes int; number of nodes where the loglik gets evaluated; some models need more nodes to reach convergence of loglik
+#' @param cores int; number of CPU cores used for parallel processing
 #'
-#' @returnbrms::loo(ll_marginal$ll)
+#' @return list
 #' @export
 #'
 #' @examples
@@ -15,10 +15,104 @@ marginal_loglik <- function(fit, n_nodes = 11, cores = 4) {
   mll_fun(fit = fit, n_nodes = n_nodes, cores = cores)
 }
 
+#' Caclulates marginal loo
+#'
+#' @param fit birtmsfit object
+#' @param ... parameters passed to birms::marginal_loglik
+#'
+#' @return loo
+#' @export
+#'
+#' @examples
 loo_marginal <- function(fit, ...) {
   ll_marginal <- marginal_loglik(fit, ...)
 
   return(brms::loo(ll_marginal$ll, r_eff = loo::relative_eff(ll_marginal$ll, ll_marginal$chain)))
+}
+
+#' Checks marginal loglik for different numbers of nodes
+#'
+#' @param fit birtmsfit object
+#' @param min_nodes int; minimal nodenumber is 2^(min_nodes+1)+1
+#' @param max_nodes int; maximum nodenumber is 2^(max_nodes+1)+1
+#' @param cores int; number of CPU cores used for parallel processing
+#'
+#' @return list to use with birtms::plot_check_n_nodes
+#' @export
+#'
+#' @examples
+check_n_nodes <- function(fit, min_nodes = 1, max_nodes = 8, cores = 4) {
+  mll_fun <- choose_mll_fun(fit)
+
+  person <- sym(fit$var_specs$person)
+
+  if (fit$model_specs$item_parameter_number == 1) {
+    sd_person__Intercept <- sym(paste0('sd_', {{person}}, '__Intercept'))
+  } else if (fit$model_specs$item_parameter_number == 2) {
+    sd_person__Intercept <- sym(paste0('sd_', {{person}}, '__theta_Intercept'))
+  }
+
+  chain <- fit %>% tidybayes::spread_draws(!!sd_person__Intercept) %>% pull(.chain)
+  results <- tibble::tibble("n_nodes" = rep(NA_integer_, max_nodes),
+                            "elpd" = rep(NA_real_, max_nodes),
+                            "n_greater_0.7" = rep(NA_integer_, max_nodes),
+                            "n_greater_1.0" = rep(NA_integer_, max_nodes))
+
+  # marg_lls <- list()
+  loos <- list()
+  for (i in max_nodes:min_nodes) {
+    n_nodes = 2^(1+i)+1
+    timestamp()
+    print(paste0("Iteration: ",max_nodes+1-i,", n_nodes: ", n_nodes))
+
+    ll_marg <- mll_fun(fit, n_nodes = n_nodes, cores = cores)
+
+    loo_ll_marg_brms <- loo(ll_marg$ll, r_eff = loo::relative_eff(ll_marg$ll, chain))
+    results[i,1] <- n_nodes
+    results[i,2] <- loo_ll_marg_brms$estimates[1,1]
+    results[i,4] <- sum(loo_ll_marg_brms$diagnostics$pareto_k>1)
+    results[i,3] <- sum(loo_ll_marg_brms$diagnostics$pareto_k>.7) - results[i,4]
+
+    # marg_lls[i] <- list(ll_marg)
+    loos[i] <- list(loo_ll_marg_brms)
+  }
+
+  results$loo <- loos
+
+  return(results)
+}
+
+#' Plots the marginal loglik and number of problematic pareto k values for different numbers of nodes
+#'
+#' @param check_n_nodes_object list from birtms::check_n_nodes
+#'
+#' @return ggplot object
+#' @export
+#'
+#' @examples
+plot_check_n_nodes <- function(check_n_nodes_object) {
+  res <- check_n_nodes_object
+  res$loo <- NULL
+
+  ylim1 <- c(min(res$elpd), max(res$elpd))
+  ylim2 <- c(min(c(res$n_greater_0.7, res$n_greater_1.0)), max(c(res$n_greater_0.7, res$n_greater_1.0)))
+  b <- diff(ylim1)/diff(ylim2)
+  a <- ylim1[1] - b*ylim2[1]
+
+  res %>%
+    pivot_longer(names_to = "criteria", values_to = "prob_k", cols = -(n_nodes:elpd)) %>%
+    ggplot(aes(x=n_nodes)) +
+    geom_line(aes(y = elpd, color = "elpd")) +
+    geom_line(aes(y = a + prob_k * b, color = criteria)) +
+    geom_point(aes(y = elpd)) +
+    geom_point(aes(y = a + prob_k*b, color = criteria)) +
+    scale_y_continuous(
+      # Features of the first axis
+      name = "loo elpd",
+      # Add a second axis and specify its features
+      sec.axis = sec_axis(~ (. - a)/b, name="number of problematic pareto k's")
+    ) + theme(legend.position="bottom") +
+    scale_color_manual(values=c("black", "blue", "red")) #+  coord_cartesian(ylim = ylim1)
 }
 
 choose_mll_fun <- function(fit) {
@@ -50,8 +144,10 @@ mll_parallel_brms_1pl <- function(fit, n_nodes = 11, best_only = FALSE, cores = 
 
   # ----- create a temporary logging file ----
   logFile <- tempfile()
-  viewer <- getOption("viewer")
-  viewer(logFile)
+  if (rstudioapi::isAvailable()) {
+    viewer <- getOption("viewer")
+    viewer(logFile)
+  }
 
   # ----- initialise multiple workers ----
   cl <- parallel::makeCluster(cores, outfile = logFile)
@@ -165,8 +261,10 @@ mll_parallel_brms_2pl <- function(fit, MFUN, n_nodes = 11, best_only = FALSE, co
 
   # ----- create a temporary logging file ----
   logFile <- tempfile()
-  viewer <- getOption("viewer")
-  viewer(logFile)
+  if (rstudioapi::isAvailable()) {
+    viewer <- getOption("viewer")
+    viewer(logFile)
+  }
 
   # ----- initialise multiple workers ----
   cl <- parallel::makeCluster(cores, outfile = logFile)
@@ -283,68 +381,4 @@ mll_parallel_brms_2pl <- function(fit, MFUN, n_nodes = 11, best_only = FALSE, co
   }
 }
 
-check_n_nodes <- function(fit, min_nodes = 1, max_nodes = 8, cores = 4) {
-  mll_fun <- choose_mll_fun(fit)
 
-  person <- sym(fit$var_specs$person)
-
-  if (fit$model_specs$item_parameter_number == 1) {
-    sd_person__Intercept <- sym(paste0('sd_', {{person}}, '__Intercept'))
-  } else if (fit$model_specs$item_parameter_number == 2) {
-    sd_person__Intercept <- sym(paste0('sd_', {{person}}, '__theta_Intercept'))
-  }
-
-  chain <- fit %>% tidybayes::spread_draws(!!sd_person__Intercept) %>% pull(.chain)
-  results <- tibble::tibble("n_nodes" = rep(NA_integer_, max_nodes),
-                            "elpd" = rep(NA_real_, max_nodes),
-                            "n_greater_0.7" = rep(NA_integer_, max_nodes),
-                            "n_greater_1.0" = rep(NA_integer_, max_nodes))
-
-  # marg_lls <- list()
-  loos <- list()
-  for (i in max_nodes:min_nodes) {
-    n_nodes = 2^(1+i)+1
-    timestamp()
-    print(paste0("Iteration: ",max_nodes+1-i,", n_nodes: ", n_nodes))
-
-    ll_marg <- mll_fun(fit, n_nodes = n_nodes, cores = cores)
-
-    loo_ll_marg_brms <- loo(ll_marg$ll, r_eff = loo::relative_eff(ll_marg$ll, chain))
-    results[i,1] <- n_nodes
-    results[i,2] <- loo_ll_marg_brms$estimates[1,1]
-    results[i,4] <- sum(loo_ll_marg_brms$diagnostics$pareto_k>1)
-    results[i,3] <- sum(loo_ll_marg_brms$diagnostics$pareto_k>.7) - results[i,4]
-
-    # marg_lls[i] <- list(ll_marg)
-    loos[i] <- list(loo_ll_marg_brms)
-  }
-
-  results$loo <- loos
-
-  return(results)
-}
-
-plot_check_n_nodes <- function(check_n_nodes_object) {
-  res <- check_n_nodes_object
-  res$loo <- NULL
-
-  ylim1 <- c(min(res$elpd), max(res$elpd))
-  ylim2 <- c(min(c(res$n_greater_0.7, res$n_greater_1.0)), max(c(res$n_greater_0.7, res$n_greater_1.0)))
-  b <- diff(ylim1)/diff(ylim2)
-  a <- ylim1[1] - b*ylim2[1]
-
-  res %>%
-    pivot_longer(names_to = "criteria", values_to = "prob_k", cols = -(n_nodes:elpd)) %>%
-    ggplot(aes(x=n_nodes)) +
-    geom_line(aes(y = elpd, color = "elpd")) +
-    geom_line(aes(y = a + prob_k * b, color = criteria)) +
-    geom_point(aes(y = elpd)) +
-    geom_point(aes(y = a + prob_k*b, color = criteria)) +
-    scale_y_continuous(
-      # Features of the first axis
-      name = "loo elpd",
-      # Add a second axis and specify its features
-      sec.axis = sec_axis(~ (. - a)/b, name="number of problematic pareto k's")
-    ) + theme(legend.position="bottom") +
-    scale_color_manual(values=c("black", "blue", "red")) #+  coord_cartesian(ylim = ylim1)
-}
