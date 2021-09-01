@@ -1,18 +1,16 @@
 citHeader("To cite birtms in publications use:")
 
-citEntry(entry = "Article",
-  title        = "Dates and Times Made Easy with {lubridate}",
+citEntry(entry = "Computer software",
+  title        = "Famondir/birtms: birtms4GDCP2021",
   author       = personList(as.person("Simon Schaefer")),
-  journal      = "Journal of Statistical Software",
+  journal      = "Zenodo",
   year         = "2021",
-  volume       = "40",
-  number       = "3",
-  pages        = "1--25",
-  url          = "https://www.jstatsoft.org/v40/i03/",
+  doi          = "https://doi.org/10.5281/ZENODO.5363669"
+  url          = "https://github.com/Famondir/birtms",
 
   textVersion  =
   paste("Simon Schaefer (2021).",
-        "Dates and Times Made Easy with lubridate.",
-        "Journal of Statistical Software, 40(3), 1-25.",
-        "URL https://www.jstatsoft.org/v40/i03/.")
+        "Famondir/birtms: birtms4GDCP2021",
+        "https://doi.org/10.5281/ZENODO.5363669",
+        "URL https://github.com/Famondir/birtms.")
 )
