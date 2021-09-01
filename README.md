@@ -1,4 +1,7 @@
 # birtms
 Bayesian item response theory models using Stan based on R package brms.
 
-Pre alpha version. Usage on own risk.
+First beta version. Usage on own risk.
+
+[![DOI](https://zenodo.org/badge/314619059.svg)](https://zenodo.org/badge/latestdoi/314619059)
+
