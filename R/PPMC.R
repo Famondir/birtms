@@ -89,7 +89,7 @@ get_ppmcdatasets <- function(model, ppmcMethod, post_responses = NULL, sd = 1, n
 #' Calculates posterior predictive check for specific criteria
 #'
 #' @param ppmcdata data.frame; data generated with birtms::get_ppmcdatasets
-#' @param crit function; infit, outfit or ll
+#' @param criteria character; currently 'infit', 'outfit' or 'll'
 #' @param ppmcMethod char; either 'C' for consevative checks or 'M' for mixed ppmc with independently drawn theta distribution
 #' @param group char; 'item' or column name of person identifier (e.g. 'person', 'id', 'token')
 #'
@@ -97,7 +97,16 @@ get_ppmcdatasets <- function(model, ppmcMethod, post_responses = NULL, sd = 1, n
 #' @export
 #'
 #' @examples
-get_ppmccriteria <- function(ppmcdata, crit, ppmcMethod, group = 'item') {
+get_ppmccriteria <- function(ppmcdata, criteria, ppmcMethod, group = 'item') {
+  if (criteria == 'll') {
+    crit <- ll
+  } else if (criteria == 'infit') {
+    crit <- infit
+  } else if (criteria == 'outfit') {
+    crit <- outfit
+  } else stop('This criteria is not implemented yet.')
+
+
   if (group == 'item') {
     fitData <- fit_statistic(criterion = crit, group = "item", data = ppmcdata)
   } else if (group == person) {
@@ -137,7 +146,7 @@ plot_fit_statistic <- function(model, data, units = c(1,9), group = 'item', ppmc
   if (group == 'item') {
     g <- data %>% mutate(item_id = get.item.id(.)) %>% filter(item_id <= units[2] & item_id >= units[1]) %>%
       group_by(item) %>%
-      ggplot2::ggplot(aes(x = crit_diff, y = 0, fill = ggplot2::stat(quantile))) +
+      ggplot2::ggplot(aes(x = crit_diff, y = 0, fill = ggplot2::after_stat(quantile))) +
       ggridges::geom_density_ridges_gradient(quantile_lines = TRUE, quantile_fun = hdi_custWidth, quantiles = hdi_width, vline_linetype = 2) +
       # geom_density(data = item_fit2_1pl_testlets_mm[1:(1600*9),], aes(crit_diff), colour = 'steelblue1', fill = 'steelblue1', alpha = 0.3) +
       ggplot2::facet_wrap("item", scales = "free") +
@@ -147,7 +156,7 @@ plot_fit_statistic <- function(model, data, units = c(1,9), group = 'item', ppmc
     g <- data %>% mutate(person_id = get.person.id(., model = model)) %>%
       filter(person_id <= units[2] & person_id >= units[1]) %>%
       mutate({{person}} := paste('Person', {{personsym}})) %>% group_by({{personsym}}) %>%
-      ggplot2::ggplot(aes(x = crit_diff, y = 0, fill = ggplot2::stat(quantile))) +
+      ggplot2::ggplot(aes(x = crit_diff, y = 0, fill = ggplot2::after_stat(quantile))) +
       ggridges::geom_density_ridges_gradient(quantile_lines = TRUE, quantile_fun = HDInterval::hdi, vline_linetype = 2) +
       # geom_density(data = item_fit2_1pl_testlets_mm[1:(1600*9),], aes(crit_diff), colour = 'steelblue1', fill = 'steelblue1', alpha = 0.3) +
       ggplot2::facet_wrap({{person}}, scales = "free") +
