@@ -2,11 +2,7 @@
 % Please edit documentation in R/odds_ratio.R
 \name{plot_or_heatmap}
 \alias{plot_or_heatmap}
-\title{Odds ratio heatmap
-Odds ratio values should be greater 1 for items that are conditionally independent in a one dimensional
-IRT model (Holland, Rosenbaum, 1986). Haberman (2007) shows that the lower bond can be estimated more
-precisely (and will be even higher than 1) and also a upper bond can be calculated and gives formulae
-for 1PL and 2PL models.}
+\title{Odds ratio heatmap}
 \usage{
 plot_or_heatmap(
   or_data,
@@ -43,7 +39,6 @@ plot_or_heatmap(
 ggplot2 object
 }
 \description{
-Odds ratio heatmap
 Odds ratio values should be greater 1 for items that are conditionally independent in a one dimensional
 IRT model (Holland, Rosenbaum, 1986). Haberman (2007) shows that the lower bond can be estimated more
 precisely (and will be even higher than 1) and also a upper bond can be calculated and gives formulae

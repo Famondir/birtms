@@ -535,6 +535,7 @@ plot_ppmc_or_heatmap <- function(or_data, alternative_color = FALSE, itemrange =
 }
 
 #' Odds ratio heatmap
+#'
 #' Odds ratio values should be greater 1 for items that are conditionally independent in a one dimensional
 #' IRT model (Holland, Rosenbaum, 1986). Haberman (2007) shows that the lower bond can be estimated more
 #' precisely (and will be even higher than 1) and also a upper bond can be calculated and gives formulae

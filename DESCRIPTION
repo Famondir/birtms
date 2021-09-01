@@ -1,7 +1,7 @@
 Package: birtms
 Type: Package
 Title: Creates and analyses Bayesian IRT models
-Version: 0.0.0.9001
+Version: 0.0.0.9002
 Authors@R: person("Simon", "Schaefer", email = "simon.d.schaefer@chemie.hu-berlin.de", role = c("aut", "cre"))
 Description: Helps building IRT model formulae and model data for fitting Bayesian IRT models with brms / RStan.
     Comes with functions for model comparison, model analysis and model description; possibly also with graphical methods.

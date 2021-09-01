@@ -4,12 +4,12 @@
 \alias{get_ppmccriteria}
 \title{Calculates posterior predictive check for specific criteria}
 \usage{
-get_ppmccriteria(ppmcdata, crit, ppmcMethod, group = "item")
+get_ppmccriteria(ppmcdata, criteria, ppmcMethod, group = "item")
 }
 \arguments{
 \item{ppmcdata}{data.frame; data generated with birtms::get_ppmcdatasets}
 
-\item{crit}{function; infit, outfit or ll}
+\item{criteria}{character; currently 'infit', 'outfit' or 'll'}
 
 \item{ppmcMethod}{char; either 'C' for consevative checks or 'M' for mixed ppmc with independently drawn theta distribution}
 
