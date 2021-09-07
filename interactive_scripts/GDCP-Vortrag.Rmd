@@ -1,0 +1,524 @@
+---
+title: "Graphical Model Evaluation"
+author: "Simon Schäfer"
+date: "9 8 2021"
+output:
+  pdf_document: default
+  html_document: default
+editor_options:
+  chunk_output_type: inline
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(brms)
+# load_all()
+
+glob_refit = FALSE
+```
+
+Lade unterschiedliche Datensätze.
+
+```{r}
+data_spm <- rio::import("../data/data_spm.rda")
+
+data_eirt <- read_csv("https://raw.githubusercontent.com/danielbkatz/EIRT/master/eirtdata.csv")
+data_eirt <- data_eirt[-1]
+data_eirt <- data_eirt %>% mutate(treat = ifelse(treat==1, "treat", "not-treat"))
+data_eirt$treat <- as.factor(data_eirt$treat)
+data_eirt$proflevel <- as.factor(data_eirt$proflevel)
+data_eirt$abilcov <- as.factor(data_eirt$abilcov)
+
+data_tina <- rio::import("../data-raw/data_tina.xlsx")
+# HS.data_long %>% select(-person) %>% group_by(item, itemtype_model1, itemtype_model2, itemtype_model3, itemtype_kontext) %>% summarise_all(mean) %>% select(-response) %>% rio::export("items_tina.xlsx")
+items_tina <- rio::import("../data-raw/items_tina.xlsx")
+
+data_simon <- rio::import("../data-raw/daten_fdw_simon.xlsx")
+```
+
+## 1PL
+
+Fitte 1pl-Modelle mit birtms.
+
+```{r}
+priors_1d_1pl <- prior("normal(0, 3)", class = "sd", group = "person") +
+  prior("normal(0, 3)", class = "sd", group = "item")
+
+fit_1d_1pl_spm_full1 <- birtms::birtm_aio(response_data = data_spm, response_columns = i1:i12,
+                                          prior = priors_1d_1pl,
+                                          file = "../models/gdcp/fit_1d_1pl_spm_full1b",
+                                          refit = glob_refit)
+
+priors_1d_1pl_token <- prior("normal(0, 3)", class = "sd", group = "token") +
+  prior("normal(0, 3)", class = "sd", group = "item")
+
+fit_1d_1pl_tina1 <- birtms::birtm_aio(response_data = data_tina, 
+                                      response_columns = SuHT3.binary:KaKST1.binary,
+                                      prior = priors_1d_1pl_token,
+                                      file = "../models/gdcp/fit_1d_1pl_tina1",
+                                      variable_specifications = list(person = 'token'),
+                                      refit = glob_refit)
+
+# priors_1d_1pl_token <- prior("normal(0, 3)", class = "sd", group = "token") +
+#   prior("normal(0, 3)", class = "sd", group = "item")
+
+fit_1d_1pl_tina1_fw_kft <- 
+  birtms::birtm_aio(response_data = data_tina, 
+                                      response_columns = SuHT3.binary:KaKST1.binary,
+                                      prior = priors_1d_1pl_token,
+                                      iter = 6000, warmup = 1000,
+                                      thin = 2,
+                                      file = "../models/gdcp/fit_1d_1pl_tina1_fw_kft",
+                    variable_specifications = list(person = 'token',
+                                                   person_covariables_main_effect = c('KFT.2pl.WLE.theta',
+                                                                                      'FW.2pl.WLE.theta')
+                                                   ),
+                                      refit = glob_refit)
+
+fit_1d_1pl_tina1_kft <- 
+  birtms::birtm_aio(response_data = data_tina, 
+                                      response_columns = SuHT3.binary:KaKST1.binary,
+                                      prior = priors_1d_1pl_token,
+                                      iter = 6000, warmup = 1000,
+                                      thin = 2,
+                                      file = "../models/gdcp/fit_1d_1pl_tina1_kft",
+                    variable_specifications = list(person = 'token',
+                                                   person_covariables_main_effect = c('KFT.2pl.WLE.theta')
+                                                   ),
+                                      refit = glob_refit)
+
+# fit_1d_1pl_tina1_kft_newkft <- 
+#   birtms::birtm_aio(response_data = data_tina, 
+#                                       response_columns = SuHT3.binary:KaKST1.binary,
+#                                       prior = priors_1d_1pl_token,
+#                                       iter = 6000, warmup = 1000,
+#                                       thin = 2,
+#                                       file = "../models/gdcp/fit_1d_1pl_tina1_kft_newkft",
+#                     variable_specifications = list(person = 'token',
+#                                                    person_covariables_main_effect = c('KFT.2pl.WLE.theta')
+#                                                    ),
+#                                       refit = glob_refit)
+
+fit_1d_1pl_tina1_kontext <- 
+  birtms::birtm_aio(response_data = data_tina, 
+                    item_data = items_tina,
+                                      response_columns = SuHT3.binary:KaKST1.binary,
+                                      prior = priors_1d_1pl_token,
+                                      iter = 6000, warmup = 1000,
+                                      thin = 2,
+                                      file = "../models/gdcp/fit_1d_1pl_tina1_kontext",
+                    variable_specifications = list(person = 'token',
+                                                   item_covariables_intercept = c('itemtype_kontext')
+                                                   ),
+                                      refit = glob_refit)
+
+
+fit_1d_1pl_tina1_fw <- 
+  birtms::birtm_aio(response_data = data_tina, 
+                                      response_columns = SuHT3.binary:KaKST1.binary,
+                                      prior = priors_1d_1pl_token,
+                                      iter = 6000, warmup = 1000,
+                                      thin = 2,
+                                      file = "../models/gdcp/fit_1d_1pl_tina1_fw",
+                    variable_specifications = list(person = 'token',
+                                                   person_covariables_main_effect = c('FW.2pl.WLE.theta')
+                                                   ),
+                                      refit = glob_refit)
+
+priors_1d_1pl_id <- prior("normal(0, 3)", class = "sd", group = "id") +
+  prior("normal(0, 3)", class = "sd", group = "item")
+
+# Ein Modell über alle Dimensionen hinweg konvergiert schlecht
+# fit_1d_1pl_eirt1 <- birtms::birtm_aio(response_data = data_eirt, 
+#                                       response_columns = Math.1:MathWordProb.1,
+#                                       prior = priors_1d_1pl_id,
+#                                       file = "../models/gdcp/fit_1d_1pl_eirt1",
+#                                       variable_specifications = list(person = 'id'),
+#                                       refit = glob_refit)
+fit_1d_1pl_eirt_science1 <- birtms::birtm_aio(response_data = data_eirt, 
+                                      response_columns = Science.1:Science.10,
+                                      prior = priors_1d_1pl_id,
+                                      file = "../models/gdcp/fit_1d_1pl_eirt_science1b",
+                                      variable_specifications = list(person = 'id'),
+                                      refit = glob_refit)
+
+priors_1d_1pl_Usercode <- prior("normal(0, 3)", class = "sd", group = "Usercode") +
+  prior("normal(0, 3)", class = "sd", group = "item")
+
+fit_1d_1pl_simon1 <- birtms::birtm_aio(response_data = data_simon,
+                                       response_columns = p001MC_02:p076MC_07,
+                                       prior = priors_1d_1pl_Usercode,
+                                       file = "../models/gdcp/fit_1d_1pl_simon1",
+                                       variable_specifications = list(person = 'Usercode'),
+                                       refit = glob_refit)
+```
+
+Berechne marginale Loglikelihood und marginal-loo-cv:
+
+```{r}
+# mll_spm <- marginal_loglik(fit_1d_1pl_spm_full1, n_nodes = 3) # check_n_nodes ist hier nicht nötig (bereits mit 5 nodes konvergiert)
+# mll_simon <- marginal_loglik(fit_1d_1pl_simon1) # braucht 17 - 33 nodes; schlechtere pareto k Werte als beim 1pl
+# mll_tina <- marginal_loglik(fit_1d_1pl_tina1)
+# mll_eirt <- marginal_loglik(fit_1d_1pl_eirt_science1)
+
+loo_tina_1pl <- birtms::loo_marginal(fit_1d_1pl_tina1)
+loo_tina_1pl_fw_kft <- birtms::loo_marginal(fit_1d_1pl_tina1_fw_kft)
+loo_tina_1pl_fw <- birtms::loo_marginal(fit_1d_1pl_tina1_fw)
+loo_tina_1pl_kft <- birtms::loo_marginal(fit_1d_1pl_tina1_kft)
+loo_tina_1pl_kontext <- birtms::loo_marginal(fit_1d_1pl_tina1_kontext)
+
+node_test <- birtms::check_n_nodes(fit_1d_1pl_tina1_fw_kft, min_nodes = 1, max_nodes = 3)
+node_test %>% birtms::plot_check_n_nodes()
+```
+
+## 2PL
+
+Fitte 2pl-Modelle
+
+```{r}
+# f <- birtms::build_formula(model_specifications = list(item_parameter_number = 2))
+# d <- birtms::compose_dataset(response_data = data_spm,
+#                                               response_columns = i1:i12)
+# get_prior(f, d)
+
+priors_1d_2pl <- prior("normal(0, 3)", nlpar = "skillintercept") +
+  prior("normal(0, 1)", class = "b", nlpar = "logalpha") +
+  prior("constant(1)", class = "sd", group = "person", nlpar = "theta") +
+  prior("normal(0, 3)", class = "sd", group = "item", nlpar = "beta") +
+  prior("normal(0, 1)", class = "sd", group = "item", nlpar = "logalpha")
+
+fit_1d_2pl_spm_full1 <- birtms::birtm_aio(response_data = data_spm, response_columns = i1:i12,
+                                          prior = priors_1d_2pl,
+                                          model_specifications = list(item_parameter_number = 2),
+                                          file = "../models/gdcp/fit_1d_2pl_spm_full1b",
+                                          refit = glob_refit)
+
+priors_1d_2pl_Usercode <- prior("normal(0, 3)", nlpar = "skillintercept") +
+  prior("normal(0, 1)", class = "b", nlpar = "logalpha") +
+  prior("constant(1)", class = "sd", group = "Usercode", nlpar = "theta") +
+  prior("normal(0, 3)", class = "sd", group = "item", nlpar = "beta") +
+  prior("normal(0, 1)", class = "sd", group = "item", nlpar = "logalpha")
+
+fit_1d_2pl_simon1 <- birtms::birtm_aio(response_data = data_simon, response_columns = p001MC_02:p076MC_07,
+                                          prior = priors_1d_2pl_Usercode,
+                                          model_specifications = list(item_parameter_number = 2),
+                                          file = "../models/gdcp/fit_1d_2pl_simon1",
+                                          variable_specifications = list(person = 'Usercode'),
+                                          refit = glob_refit)
+
+priors_1d_2pl_token <- prior("normal(0, 3)", nlpar = "skillintercept") +
+  prior("normal(0, 1)", class = "b", nlpar = "logalpha") +
+  prior("constant(1)", class = "sd", group = "token", nlpar = "theta") +
+  prior("normal(0, 3)", class = "sd", group = "item", nlpar = "beta") +
+  prior("normal(0, 1)", class = "sd", group = "item", nlpar = "logalpha")
+
+fit_1d_2pl_tina1 <- birtms::birtm_aio(response_data = data_tina, 
+                                      response_columns = SuHT3.binary:KaKST1.binary,
+                                      prior = priors_1d_2pl_token,
+                                      model_specifications = list(item_parameter_number = 2),
+                                      file = "../models/gdcp/fit_1d_2pl_tina1",
+                                      variable_specifications = list(person = 'token'),
+                                      refit = glob_refit)
+
+formula_tina_2pl_personcovs <- birtms::build_formula(model_specifications = list(item_parameter_number = 2),
+                    variable_specifications = list(person = 'token',
+                                                   person_covariables_main_effect = c('KFT.2pl.WLE.theta')
+                                                   ))
+
+data_tina_long <- birtms::compose_dataset(data_tina, response_columns = SuHT3.binary:KaKST1.binary, 
+                        variable_specifications = list(person = 'token',
+                                                       person_covariables_main_effect = c('KFT.2pl.WLE.theta')
+                                                   ))
+
+brms::get_prior(formula_tina_2pl_personcovs, data_tina_long)
+
+priors_1d_2pl_token_perscovs <- prior("normal(0, 3)", nlpar = "skillintercept") +
+  prior("normal(0, 1)", class = "b", nlpar = "logalpha") +
+  prior("normal(0, 5)", class = "b", nlpar = "personcovars") +
+  prior("constant(1)", class = "sd", group = "token", nlpar = "theta") +
+  prior("normal(0, 3)", class = "sd", group = "item", nlpar = "beta") +
+  prior("normal(0, 1)", class = "sd", group = "item", nlpar = "logalpha")
+
+fit_1d_2pl_tina1_kft <- 
+  birtms::birtm_aio(response_data = data_tina, 
+                                      response_columns = SuHT3.binary:KaKST1.binary,
+                                      prior = priors_1d_2pl_token_perscovs,
+                                      iter = 6000, warmup = 1000,
+                                      thin = 2,
+                                      file = "../models/gdcp/fit_1d_2pl_tina1_kft",
+                    model_specifications = list(item_parameter_number = 2),
+                    variable_specifications = list(person = 'token',
+                                                   person_covariables_main_effect = c('KFT.2pl.WLE.theta')
+                                                   ),
+                                      refit = glob_refit)
+
+fit_1d_2pl_tina1_fw_kft <- 
+  birtms::birtm_aio(response_data = data_tina, 
+                                      response_columns = SuHT3.binary:KaKST1.binary,
+                                      prior = priors_1d_2pl_token_perscovs,
+                                      iter = 6000, warmup = 1000,
+                                      thin = 2,
+                                      file = "../models/gdcp/fit_1d_2pl_tina1_fw_kft",
+                    model_specifications = list(item_parameter_number = 2),
+                    variable_specifications = list(person = 'token',
+                                                   person_covariables_main_effect = c('KFT.2pl.WLE.theta',
+                                                                                      'FW.2pl.WLE.theta')
+                                                   ),
+                                      refit = glob_refit)
+
+fit_1d_2pl_tina1_fw <- 
+  birtms::birtm_aio(response_data = data_tina, 
+                                      response_columns = SuHT3.binary:KaKST1.binary,
+                                      prior = priors_1d_2pl_token_perscovs,
+                                      iter = 6000, warmup = 1000,
+                                      thin = 2,
+                                      file = "../models/gdcp/fit_1d_2pl_tina1_fw",
+                    model_specifications = list(item_parameter_number = 2),
+                    variable_specifications = list(person = 'token',
+                                                   person_covariables_main_effect = c('FW.2pl.WLE.theta')
+                                                   ),
+                                      refit = glob_refit)
+
+formula_tina_2pl_covs <- birtms::build_formula(model_specifications = list(item_parameter_number = 2),
+                    variable_specifications = list(person = 'token',
+                                                   person_covariables_main_effect = c('KFT.2pl.WLE.theta'),
+                                                   item_covariables_intercept = c('itemtype_kontext')
+                                                   ))
+
+data_tina_long_covs <- birtms::compose_dataset(data_tina, response_columns = SuHT3.binary:KaKST1.binary, 
+                                          item_data = items_tina,
+                        variable_specifications = list(person = 'token',
+                                                       person_covariables_main_effect = c('KFT.2pl.WLE.theta'),
+                                                   item_covariables_intercept = c('itemtype_kontext')
+                                                   ))
+
+brms::get_prior(formula_tina_2pl_covs, data_tina_long_covs)
+
+priors_1d_2pl_token_covs <- prior("normal(0, 3)", nlpar = "skillintercept") +
+  prior("normal(0, 1)", class = "b", nlpar = "logalpha") +
+  prior("normal(0, 5)", class = "b", nlpar = "personcovars") +
+  prior("normal(0, 5)", class = "b", nlpar = "itemcovars") +
+  prior("constant(0)", class = "b", nlpar = "itemcovars", coef = "itemtype_kontextT1") + # wichtig, dass ein Level der nominalen covs je subformel (person, item, situation) 0 gesetzt wird (so es nominale covs gibt)
+  prior("constant(1)", class = "sd", group = "token", nlpar = "theta") +
+  prior("normal(0, 3)", class = "sd", group = "item", nlpar = "beta") +
+  prior("normal(0, 1)", class = "sd", group = "item", nlpar = "logalpha")
+
+fit_1d_2pl_tina1_kft_kontext <- 
+  birtms::birtm_aio(response_data = data_tina, 
+                    item_data = items_tina,
+                                      response_columns = SuHT3.binary:KaKST1.binary,
+                                      prior = priors_1d_2pl_token_covs,
+                                      iter = 4000, warmup = 1000,
+                                      thin = 2,
+                                      file = "../models/gdcp/fit_1d_2pl_tina1_kft_kontext",
+                    model_specifications = list(item_parameter_number = 2),
+                    variable_specifications = list(person = 'token',
+                                                   person_covariables_main_effect = c('KFT.2pl.WLE.theta'),
+                                                   item_covariables_intercept = c('itemtype_kontext')
+                                                   ),
+                                      refit = glob_refit)
+
+
+priors_1d_2pl_id <- prior("normal(0, 3)", nlpar = "skillintercept") +
+  prior("normal(0, 1)", class = "b", nlpar = "logalpha") +
+  prior("constant(1)", class = "sd", group = "id", nlpar = "theta") +
+  prior("normal(0, 3)", class = "sd", group = "item", nlpar = "beta") +
+  prior("normal(0, 1)", class = "sd", group = "item", nlpar = "logalpha")
+
+fit_1d_2pl_eirt1 <- birtms::birtm_aio(response_data = data_eirt, 
+                                      Science.1:Science.10,
+                                      prior = priors_1d_2pl_id,
+                                      file = "../models/gdcp/fit_1d_2pl_eirt_science1b",
+                                      variable_specifications = list(person = 'id'),
+                                      model_specifications = list(item_parameter_number = 2),
+                                      refit = glob_refit)
+
+```
+
+Berechne marginale Loglikelihood und marginal-loo-cv:
+
+```{r}
+# mll_spm_2pl <- marginal_loglik(fit_1d_2pl_spm_full1) # bessere pareto k Werte als das 1pl Modell
+# mll_simon_2pl <- marginal_loglik(fit_1d_2pl_simon1)
+# mll_tina_2pl <- marginal_loglik(fit_1d_2pl_tina1)
+# mll_eirt_2pl <- marginal_loglik(fit_1d_2pl_eirt1) # <- 1pl model generalises better!
+
+loo_spm_2pl <- birtms::loo_marginal(fit_1d_2pl_spm_full1)
+
+loo_tina_2pl <- birtms::loo_marginal(fit_1d_2pl_tina1, n_nodes = 33)
+loo_tina_2pl_fw_kft <- birtms::loo_marginal(fit_1d_2pl_tina1_fw_kft, n_nodes = 33)
+loo_tina_2pl_fw <- birtms::loo_marginal(fit_1d_2pl_tina1_fw, n_nodes = 33)
+loo_tina_2pl_kft <- birtms::loo_marginal(fit_1d_2pl_tina1_kft, n_nodes = 33)
+```
+
+## R2
+
+```{r}
+birtms::R2_latent(fit_1d_1pl_tina1)$token$R2 # hier kommt Varianzaufklärung 0 raus, weil es keine personcovs gibt ;)
+birtms::R2_latent(fit_1d_1pl_tina1_fw)$token$R2
+birtms::R2_latent(fit_1d_1pl_tina1_fw_kft)$token$R2
+birtms::R2_latent(fit_1d_1pl_tina1_kft)$token$R2
+```
+
+## ICC plots    
+
+```{r}
+posterior_responses_eirt_1pl <- birtms::get_postdata(fit_1d_1pl_eirt_science1)
+(g_eirt_1pl <- birtms::ICC_check(fit_1d_1pl_eirt_science1, post_responses = posterior_responses_eirt_1pl, num_groups = 6,
+                         #ellipse_type = "norm"
+                         ))
+
+posterior_responses_eirt_2pl <- birtms::get_postdata(fit_1d_2pl_eirt1)
+(g_eirt_2pl <- birtms::ICC_check(fit_1d_2pl_eirt1, post_responses = posterior_responses_eirt_2pl, num_groups = 6,
+                         ellipse_type = "norm"))
+
+posterior_responses_spm_1pl <- birtms::get_postdata(fit_1d_1pl_spm_full1)
+(g_spm_1pl <- birtms::ICC_check(fit_1d_1pl_spm_full1, post_responses = posterior_responses_spm_1pl, num_groups = 6,
+                         #ellipse_type = "norm"
+                         ))
+
+posterior_responses_spm_2pl <- birtms::get_postdata(fit_1d_2pl_spm_full1)
+(g_spm_2pl <- birtms::ICC_check(fit_1d_2pl_spm_full1, post_responses = posterior_responses_spm_2pl, num_groups = 6,
+                         #ellipse_type = "norm"
+                         ))
+
+posterior_responses_simon_1pl <- birtms::get_postdata(fit_1d_1pl_simon1)
+(g_simon_1pl <- birtms::ICC_check(fit_1d_1pl_simon1, post_responses = posterior_responses_simon_1pl, item_id = 2,
+                          ellipse_type = "axisparallel"))
+
+posterior_responses_simon_2pl <- birtms::get_postdata(fit_1d_2pl_simon1)
+(g_simon_2pl <- birtms::ICC_check(fit_1d_2pl_simon1, post_responses = posterior_responses_simon_2pl, item_id = 2,
+                          ellipse_type = "norm"))
+
+posterior_responses_tina_1pl <- birtms::get_postdata(fit_1d_1pl_tina1)
+(g_tina_1pl <- birtms::ICC_check(fit_1d_1pl_tina1, post_responses = posterior_responses_tina_1pl, item_id = 1, num_groups = 6))
+
+posterior_responses_tina_1pl_fw_kft <- birtms::get_postdata(fit_1d_1pl_tina1_fw_kft)
+(g_tina_1pl <- birtms::ICC_check(fit_1d_1pl_tina1_fw_kft, post_responses = posterior_responses_tina_1pl_fw_kft, item_id = 1, num_groups = 6))
+
+posterior_responses_tina_1pl_kontext <- birtms::get_postdata(fit_1d_1pl_tina1_kontext)
+(g_tina_1pl <- birtms::ICC_check(fit_1d_1pl_tina1_kontext, post_responses = posterior_responses_tina_1pl_kontext, item_id = 1, num_groups = 6)) # Itemcovars müssen zu den Itemlocations hinzuaddiert werden
+
+posterior_responses_tina_2pl <- birtms::get_postdata(fit_1d_2pl_tina1)
+(g_tina_2pl <- birtms::ICC_check(fit_1d_2pl_tina1, post_responses = posterior_responses_tina_2pl, item_id = 7, num_groups = 6))
+
+posterior_responses_tina_2pl_fw <- birtms::get_postdata(fit_1d_2pl_tina1_fw)
+
+```
+
+## Odds-Ratios
+
+```{r}
+or_data <- birtms::get_or(fit_1d_1pl_spm_full1, zero_correction = 'Haldane')#, n_samples = 100) # 2 s for 100 samples
+or_data %>% birtms::plot_ppmc_or_heatmap(itemrange = c(1,20))
+
+# or_data_2pl <- birtms::get_or(fit_1d_2pl_spm_full1, zero_correction = 'Haldane')
+# 
+# fit_1d_2pl_spm_full1 <- birtms::birtm_aio(response_data = data_spm, response_columns = i1:i12,
+#                                           prior = priors_1d_2pl,
+#                                           model_specifications = list(item_parameter_number = 2),
+#                                           file = "../models/gdcp/fit_1d_2pl_spm_full1b",
+#                                           refit = glob_refit)
+or_data_sp_2pl <- birtms::get_or(fit_1d_2pl_spm_full1, zero_correction = 'Haldane')
+or_data_sp_2pl %>% birtms::plot_ppmc_or_heatmap()
+or_data_sp_2pl %>% birtms::plot_or_heatmap()
+or_data_sp_2pl %>% birtms::plot_or_heatmap(model = fit_1d_2pl_spm_full1)
+or_data_sp_2pl %>% birtms::plot_or_heatmap(model = fit_1d_2pl_spm_full1, bayesian = TRUE)
+
+or_data2 <- birtms::get_or(fit_1d_1pl_tina1, zero_correction = 'Haldane', n_samples = 1000) # 24.4 s for 50 samples, 33.3 s for 100
+or_data2 %>% birtms::plot_ppmc_or_heatmap(itemrange = c(1,20))
+
+or_data2b <- birtms::get_or(fit_1d_1pl_tina1_fw_kft, zero_correction = 'Haldane', n_samples = 1000)
+or_data2b %>% birtms::plot_ppmc_or_heatmap(itemrange = c(1,20))
+
+or_data2c <- birtms::get_or(fit_1d_1pl_tina1_kontext, zero_correction = 'Haldane', n_samples = 1000)
+or_data2c %>% birtms::plot_ppmc_or_heatmap(itemrange = c(1,20))
+
+or_data3 <- birtms::get_or(fit_1d_2pl_tina1, zero_correction = 'Haldane', n_samples = 50)
+or_data3 %>% birtms::plot_ppmc_or_heatmap(itemrange = c(1,20))
+
+or_data4 <- birtms::get_or(fit_1d_1pl_simon1, zero_correction = 'Haldane', n_samples = 100)
+# 596.5 s für 50, 867.3 s für 100, 691.6 s für 200, 738 s für 400 samples
+or_data4 %>% birtms::plot_ppmc_or_heatmap(itemrange = c(1,20))
+
+or_data %>% birtms::plot_or_heatmap()
+or_data %>% birtms::plot_or_heatmap(model = fit_1d_1pl_spm_full1)
+or_data_2pl %>% birtms::plot_or_heatmap(model = fit_1d_2pl_spm_full1)
+```
+## Wrightmap erstellen
+
+```{r}
+fit_1d_1pl_tina1_fw_kft %>% birtms::plot_wrightmap()
+fit_1d_1pl_tina1_fw_kft %>% birtms::plot_wrightmap(classic = FALSE, labsize = 2, bins = 26,
+                                           namefun = function(x) gsub("\\..*", "", x),
+                                           groupfun =  function(x) gsub("[0-9]*", "", x),
+                                           lims = c(-1.8,1.3))
+```
+## Itemparameter graphisch prüfen
+
+```{r}
+birtms::plot_itemparameter(fit_1d_2pl_tina1, pars = "slope", style = "halfeye", items = c(2,7), alphacut = c(.4, .6, 2))
+birtms::plot_itemparameter(fit_1d_2pl_tina1, pars = "easyness", style = "halfeye", thresholds = c(-2,2))
+birtms::plot_itemparameter(fit_1d_2pl_tina1, pars = "difficulty", style = "halfeye", thresholds = c(-2,2))
+```
+## Personresponsefunctions
+
+```{r}
+respfuncdata_1d_1pl_tina <- birtms::calc_personresponsedata(fit_1d_1pl_tina1, post_responses =  posterior_responses_tina_1pl)
+birtms::plot_personresponsefunction(fit_1d_1pl_tina1, respfuncdata_1d_1pl_tina, id = c(1:5))
+```
+
+## PPMC-Checks
+### Items
+
+```{r}
+ppmc_data_spm_1pl <- fit_1d_1pl_spm_full1 %>% birtms::get_ppmcdatasets(ppmcMethod = 'C', post_responses = posterior_responses_spm_1pl)
+ppmc_data_spm_1pl_ll <- birtms::get_ppmccriteria(ppmcdata = ppmc_data_spm_1pl, ppmcMethod = 'C', criteria = 'll') # fix this
+birtms::plot_fit_statistic(model = fit_1d_1pl_spm_full1, data = ppmc_data_spm_1pl_ll, units = c(1,12))
+
+ppmc_data_spm_1pl_mixed <- fit_1d_1pl_spm_full1 %>% birtms::get_ppmcdatasets(ppmcMethod = 'M', crit = ll, post_responses = posterior_responses_spm_1pl)
+birtms::plot_fit_statistic(model = fit_1d_1pl_spm_full1, data = ppmc_data_spm_1pl_mixed, units = c(1,12), ppmcMethod = 'M')
+
+ppmc_data_spm_1pl_mixed_sd <- fit_1d_1pl_spm_full1 %>% birtms::get_ppmcdatasets(ppmcMethod = 'M', crit = ll, post_responses = posterior_responses_spm_1pl, sd = VarCorr(fit_1d_1pl_spm_full1)$person$sd[[1]])
+birtms::plot_fit_statistic(model = fit_1d_1pl_spm_full1, data = ppmc_data_spm_1pl_mixed_sd, units = c(1,12), ppmcMethod = 'M')
+
+ppmc_data_spm_2pl <- fit_1d_2pl_spm_full1 %>% birtms::get_ppmcdatasets(ppmcMethod = 'C', crit = ll, post_responses = posterior_responses_spm_2pl)
+birtms::plot_fit_statistic(model = fit_1d_2pl_spm_full1, data = ppmc_data_spm_2pl, units = c(1,12))
+
+ppmc_data_spm_2pl_mixed <- fit_1d_2pl_spm_full1 %>% birtms::get_ppmcdatasets(ppmcMethod = 'M', crit = ll, post_responses = posterior_responses_spm_2pl)
+birtms::plot_fit_statistic(model = fit_1d_2pl_spm_full1, data = ppmc_data_spm_2pl_mixed, units = c(1,12), ppmcMethod = 'M')
+
+ppmc_data_tina_1pl <- fit_1d_1pl_tina1 %>% birtms::get_ppmcdatasets(ppmcMethod = 'C', crit = ll, post_responses = posterior_responses_tina_1pl)
+birtms::plot_fit_statistic(model = fit_1d_1pl_tina1, data = ppmc_data_tina_1pl, units = c(1,12))
+
+ppmc_data_tina_1pl_mixed <- fit_1d_1pl_tina1 %>% birtms::get_ppmcdatasets(ppmcMethod = 'M', crit = ll, post_responses = posterior_responses_tina_1pl, n_samples = 1000)
+birtms::plot_fit_statistic(model = fit_1d_1pl_tina1, data = ppmc_data_tina_1pl_mixed, units = c(1,12), ppmcMethod = 'M')
+
+ppmc_data_tina_2pl_mixed <- fit_1d_2pl_tina1 %>% birtms::get_ppmcdatasets(ppmcMethod = 'M', crit = ll, post_responses = posterior_responses_tina_2pl, n_samples = 1000)
+birtms::plot_fit_statistic(model = fit_1d_2pl_tina1, data = ppmc_data_tina_2pl_mixed, units = c(1,12), ppmcMethod = 'M')
+
+ppmc_data_tina_2pl_fw_mixed <- fit_1d_2pl_tina1_fw %>% birtms::get_ppmcdatasets(ppmcMethod = 'M', crit = ll, post_responses = posterior_responses_tina_2pl_fw, n_samples = 1000)
+birtms::plot_fit_statistic(model = fit_1d_2pl_tina1_fw, data = ppmc_data_tina_2pl_fw_mixed, units = c(1,12), ppmcMethod = 'M')
+
+ppmc_data_erit_1pl_mixed <- fit_1d_1pl_eirt_science1 %>% birtms::get_ppmcdatasets(ppmcMethod = 'M', crit = ll, post_responses = posterior_responses_eirt_1pl)
+birtms::plot_fit_statistic(model = fit_1d_1pl_eirt_science1, data = ppmc_data_erit_1pl_mixed, units = c(1,10), ppmcMethod = 'M')
+
+ppmc_data_erit_2pl_mixed <- fit_1d_2pl_eirt1 %>% birtms::get_ppmcdatasets(ppmcMethod = 'M', crit = ll, post_responses = posterior_responses_eirt_2pl)
+birtms::plot_fit_statistic(model = fit_1d_2pl_eirt1, data = ppmc_data_erit_2pl_mixed, units = c(1,10), ppmcMethod = 'M')
+
+ppmc_data_simon_1pl_mixed <- fit_1d_1pl_simon1 %>% birtms::get_ppmcdatasets(ppmcMethod = 'M', crit = ll, post_responses = posterior_responses_simon_1pl, n_samples = 1000)
+birtms::plot_fit_statistic(model = fit_1d_1pl_simon1, data = ppmc_data_simon_1pl_mixed, units = c(1,12), ppmcMethod = 'M')
+
+ppmc_data_simon_2pl_mixed <- fit_1d_2pl_simon1 %>% birtms::get_ppmcdatasets(ppmcMethod = 'M', crit = ll, post_responses = posterior_responses_simon_2pl, n_samples = 1000)
+birtms::plot_fit_statistic(model = fit_1d_2pl_simon1, data = ppmc_data_simon_2pl_mixed, units = c(1,12), ppmcMethod = 'M')
+```
+
+### Persons
+```{r}
+ppmc_data_spm_1pl_person <- fit_1d_1pl_spm_full1 %>% birtms::get_ppmcdatasets(ppmcMethod = 'C', crit = ll, post_responses = posterior_responses_spm_1pl, group = .$var_specs$person)
+fit_1d_1pl_spm_full1 %>% birtms::plot_fit_statistic(data = ppmc_data_spm_1pl_person, units = c(1,12), group = .$var_specs$person)
+
+ppmc_data_eirt_1pl_person <- fit_1d_1pl_eirt_science1 %>% birtms::get_ppmcdatasets(ppmcMethod = 'C', crit = ll, post_responses = posterior_responses_eirt_1pl, group = .$var_specs$person)
+fit_1d_1pl_eirt_science1 %>% birtms::plot_fit_statistic(data = ppmc_data_eirt_1pl_person, units = c(1,12), group = .$var_specs$person)
+```
