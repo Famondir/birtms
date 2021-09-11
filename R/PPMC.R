@@ -12,12 +12,13 @@ if(getRversion() >= "2.15.1")  utils::globalVariables(c('.iteration', 'j', 'yrep
 #' @param post_responses data.frame; data generated with birtms::get_postdata
 #' @param sd double; standard deviation prior for theta distrubution (may be adjusted if person covars are used)
 #' @param n_samples integer; number of posterior samples to use (using all posterior samples might lead to memory overflow)
+#' @param sequential boolean; should mixed PPMC data be calculated sequential (slower but less memory intensive); try adjusting n_samples first
 #'
 #' @return data.frame to use with birtms::get_ppmccriteria
 #' @export
 #'
 #' @examples
-get_ppmcdatasets <- function(model, ppmcMethod, post_responses = NULL, sd = 1, n_samples = NULL) {
+get_ppmcdatasets <- function(model, ppmcMethod, post_responses = NULL, sd = 1, n_samples = NULL, sequential = FALSE) {
   if (is.null(post_responses)) {
     post_responses <- get_postdata(model = model)
   }
@@ -50,7 +51,7 @@ get_ppmcdatasets <- function(model, ppmcMethod, post_responses = NULL, sd = 1, n
   } else if (ppmcMethod == 'M' | ppmcMethod == 'all') {
     if (any(stringr::str_detect(names(model$var_specs), "item_covariables"))) stop("PPMC for models with item covars not implemented yet.")
 
-    temp <- get.mixed_ppmc_data(model, subset = post_responses$subset, ppmcMethod = ppmcMethod, sd = sd) %>%
+    temp <- get.mixed_ppmc_data(model, subset = post_responses$subset, ppmcMethod = ppmcMethod, sd = sd, sequential = sequential) %>%
       mutate(item.id = key[item]) %>% dplyr::arrange(.draw, item.id)
 
     if (nrow(temp) > nrow(ppe)) {
@@ -129,12 +130,13 @@ get_ppmccriteria <- function(model, ppmcdata, criteria, ppmcMethod, group = 'ite
 #' @param group char; 'item' or column name of person identifier (e.g. 'person', 'id', 'token')
 #' @param ppmcMethod char; either 'C' for consevative checks or 'M' for mixed ppmc with independently drawn theta distribution
 #' @param hdi_width double; sets width of credibility interval
+#' @param ncol intger; used with facet_warp
 #'
 #' @return ggplot object
 #' @export
 #'
 #' @examples
-plot_fit_statistic <- function(model, data, units = c(1,9), group = 'item', ppmcMethod = 'C', hdi_width = .89) {
+plot_fit_statistic <- function(model, data, units = c(1,9), group = 'item', ppmcMethod = 'C', hdi_width = .89, ncol = NULL) {
   if (ppmcMethod == 'C') {
     color = "#8b7d6b70"
   } else if (ppmcMethod == 'M') {
@@ -152,7 +154,7 @@ plot_fit_statistic <- function(model, data, units = c(1,9), group = 'item', ppmc
       ggplot2::ggplot(aes(x = crit_diff, y = 0, fill = ggplot2::after_stat(quantile))) +
       ggridges::geom_density_ridges_gradient(quantile_lines = TRUE, quantile_fun = hdi_custWidth, quantiles = hdi_width, vline_linetype = 2) +
       # geom_density(data = item_fit2_1pl_testlets_mm[1:(1600*9),], aes(crit_diff), colour = 'steelblue1', fill = 'steelblue1', alpha = 0.3) +
-      ggplot2::facet_wrap("item", scales = "free") +
+      ggplot2::facet_wrap("item", scales = "free", ncol = ncol) +
       ggplot2::scale_fill_manual(values = c("transparent", color, "transparent"), guide = "none") +
       ggplot2::xlab("itemfit criteria difference between predicted and observed responses.")
   } else if (group == person) {
@@ -162,7 +164,7 @@ plot_fit_statistic <- function(model, data, units = c(1,9), group = 'item', ppmc
       ggplot2::ggplot(aes(x = crit_diff, y = 0, fill = ggplot2::after_stat(quantile))) +
       ggridges::geom_density_ridges_gradient(quantile_lines = TRUE, quantile_fun = HDInterval::hdi, vline_linetype = 2) +
       # geom_density(data = item_fit2_1pl_testlets_mm[1:(1600*9),], aes(crit_diff), colour = 'steelblue1', fill = 'steelblue1', alpha = 0.3) +
-      ggplot2::facet_wrap({{person}}, scales = "free") +
+      ggplot2::facet_wrap({{person}}, scales = "free", ncol = ncol) +
       ggplot2::scale_fill_manual(values = c("transparent", color, "transparent"), guide = "none") +
       ggplot2::xlab("Log-likelihood difference between predicted and observed responses.")
   }

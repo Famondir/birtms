@@ -83,7 +83,7 @@ hsm_hdi_muellerb <- function(.data, ..., .width = .89, inf.rm = FALSE, na.rm = F
 
   if (inf.rm) .data <- .data[is.finite(.data)]
 
-  ggdist::point_interval(.data, ..., .width = .width, .point = hsm, .interval = hdi_sjb, na.rm = na.rm)
+  ggdist::point_interval(.data, ..., .width = .width, .point = hsm, .interval = hdi_mb, na.rm = na.rm)
 }
 
 #' Median and HDI also for bounded densities

@@ -24,7 +24,7 @@ plot_itemparameter <- function(model, pars, style, items = c(1,5), thresholds = 
 
   if (pars == 'slope') {
     g <- data %>%
-      ggplot2::ggplot(aes(y = item, x = alpha1, fill = ggplot2::stat(x > alphacut[1] & x < alphacut[3]))) +
+      ggplot2::ggplot(aes(y = item, x = alpha1, fill = ggplot2::after_stat(x > alphacut[1] & x < alphacut[3]))) +
       ggplot2::geom_vline(xintercept = alphacut[1], linetype = "dashed") +
       ggplot2::geom_vline(xintercept = alphacut[2], linetype = "dotted") +
       ggplot2::scale_fill_manual(values = c("gray80", "skyblue")) +
@@ -32,7 +32,7 @@ plot_itemparameter <- function(model, pars, style, items = c(1,5), thresholds = 
       ggplot2::labs(fill = "Innerhalb der Grenzen")
   } else if (pars == 'adjusted slope') {
     g <- data %>%
-      ggplot2::ggplot(aes(y = item, x = adjusted_alpha, fill = ggplot2::stat(x > alphacut[1] & x < alphacut[3]))) +
+      ggplot2::ggplot(aes(y = item, x = adjusted_alpha, fill = ggplot2::after_stat(x > alphacut[1] & x < alphacut[3]))) +
       ggplot2::geom_vline(xintercept = alphacut[1], linetype = "dashed") +
       ggplot2::geom_vline(xintercept = alphacut[2], linetype = "dotted") +
       ggplot2::scale_fill_manual(values = c("gray80", "skyblue")) +
@@ -40,7 +40,7 @@ plot_itemparameter <- function(model, pars, style, items = c(1,5), thresholds = 
       ggplot2::labs(fill = "Innerhalb der Grenzen")
   } else if (pars %in% c('easyness', 'delta', 'beta', 'difficulty')) {
     g <- data %>%
-      ggplot2::ggplot(aes(y = item, x = delta, fill = ggplot2::stat(x > betacut[1] & x < betacut[2]))) +
+      ggplot2::ggplot(aes(y = item, x = delta, fill = ggplot2::after_stat(x > betacut[1] & x < betacut[2]))) +
       ggplot2::scale_fill_manual(values = c("gray80", "skyblue"))  +
       ggplot2::labs(fill = "Innerhalb der Grenzen")
     if(pars != 'difficulty') {
@@ -50,7 +50,7 @@ plot_itemparameter <- function(model, pars, style, items = c(1,5), thresholds = 
     }
   } else if (pars == 'pseudoguess') {
     g <- data %>%
-      ggplot2::ggplot(aes(y = item, x = gamma, fill = ggplot2::stat(x < 1/15 | x > 1/2))) +
+      ggplot2::ggplot(aes(y = item, x = gamma, fill = ggplot2::after_stat(x < 1/15 | x > 1/2))) +
       ggplot2::scale_fill_manual(values = c("skyblue", "gray80")) +
       ggplot2::xlab("Pseuderatewahrscheinlichkeit")
   } else {

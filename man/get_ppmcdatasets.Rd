@@ -9,7 +9,8 @@ get_ppmcdatasets(
   ppmcMethod,
   post_responses = NULL,
   sd = 1,
-  n_samples = NULL
+  n_samples = NULL,
+  sequential = FALSE
 )
 }
 \arguments{
@@ -22,6 +23,8 @@ get_ppmcdatasets(
 \item{sd}{double; standard deviation prior for theta distrubution (may be adjusted if person covars are used)}
 
 \item{n_samples}{integer; number of posterior samples to use (using all posterior samples might lead to memory overflow)}
+
+\item{sequential}{boolean; should mixed PPMC data be calculated sequential (slower but less memory intensive); try adjusting n_samples first}
 }
 \value{
 data.frame to use with birtms::get_ppmccriteria

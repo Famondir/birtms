@@ -10,7 +10,8 @@ plot_fit_statistic(
   units = c(1, 9),
   group = "item",
   ppmcMethod = "C",
-  hdi_width = 0.89
+  hdi_width = 0.89,
+  ncol = NULL
 )
 }
 \arguments{
@@ -25,6 +26,8 @@ plot_fit_statistic(
 \item{ppmcMethod}{char; either 'C' for consevative checks or 'M' for mixed ppmc with independently drawn theta distribution}
 
 \item{hdi_width}{double; sets width of credibility interval}
+
+\item{ncol}{intger; used with facet_warp}
 }
 \value{
 ggplot object
