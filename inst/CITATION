@@ -1,11 +1,11 @@
 citHeader("To cite birtms in publications use:")
 
-citEntry(entry = "Computer software",
+citEntry(entry = "Misc",
   title        = "Famondir/birtms: birtms4GDCP2021",
   author       = personList(as.person("Simon Schaefer")),
   journal      = "Zenodo",
   year         = "2021",
-  doi          = "https://doi.org/10.5281/ZENODO.5363669"
+  doi          = "https://doi.org/10.5281/ZENODO.5363669",
   url          = "https://github.com/Famondir/birtms",
 
   textVersion  =

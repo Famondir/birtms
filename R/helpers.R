@@ -220,3 +220,46 @@ make_post_longer <- function(model, postdata, name) {
 
   return(postdata)
 }
+
+#' Skim table
+#'
+#' Summarises multiple columns of a table. Works with grouping.
+#'
+#' @param data data.frame
+#' @param ci_width double
+#'
+#' @return data.table
+#' @export
+#'
+#' @examples
+custom_skim <- function(data, ci_width = .89) {
+  q.lower <- function(...) {
+    quantile(..., probs = (1-ci_width)/2)
+  }
+
+  q.upper <- function(...) {
+    quantile(..., probs = 1-(1-ci_width)/2)
+  }
+
+  hdi.lower <- function(...) {
+    HDInterval::hdi(..., credMass = ci_width)[[1]]
+  }
+
+  hdi.upper <- function(...) {
+    HDInterval::hdi(..., credMass = ci_width)[[2]]
+  }
+
+  ci_fun <- function(...) ci_width
+
+  my_skim <- skimr::skim_with(numeric = skimr::sfl("skewness" = e1071::skewness,# is data distributed symmetrically
+                                                   "kurtosis" = e1071::kurtosis, # are the heavy tails (many possible outliers)
+                                                   "mode" = modeest::hsm,
+                                                   "eti.lower" = q.lower,
+                                                   "eti.upper" = q.upper,
+                                                   "hdi.lower" = hdi.lower,
+                                                   "hdi.upper" = hdi.upper,
+                                                   "ci_width" = ci_fun
+  ))
+
+  my_skim(data)
+}

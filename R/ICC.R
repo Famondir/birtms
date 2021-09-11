@@ -16,7 +16,7 @@ if(getRversion() >= "2.15.1")  utils::globalVariables(c(".", "item.id", "r_item"
 #' @param num_groups int; number of groups of persons
 #' @param verbose boolean; should a explanation be added as a caption
 #' @param post_responses list of data.frames from birtms::get_postdata
-#' @param ellipse_type string; 'axisparallel' or 'norm' or 't'
+#' @param ellipse_type string; 'axisparallel' or 'norm' or 't' or 'none'
 #' @param plot_post_person_estimated boolean
 #'
 #' @return ggplot object
@@ -30,7 +30,7 @@ if(getRversion() >= "2.15.1")  utils::globalVariables(c(".", "item.id", "r_item"
 #'
 #' @examples
 ICC_check <- function(model, item_id = 1, num_groups = NULL, verbose = FALSE, post_responses = NULL,
-                      ellipse_type = "axisparallel", plot_post_person_estimated = FALSE) {
+                      ellipse_type = "t", plot_post_person_estimated = TRUE) {
   stopifnot(model$model_specs$response_type == 'dichotom')
   stopifnot(model$model_specs$add_common_dimension == FALSE)
   stopifnot(model$model_specs$dimensinality_type == 'unidimensional')
@@ -132,7 +132,9 @@ ICC_check <- function(model, item_id = 1, num_groups = NULL, verbose = FALSE, po
       g <- g + ggplot2::stat_ellipse(data = data_gg_post, geom = "polygon", mapping = ggplot2::aes(x = x, y = y, fill = factor(group_id), colour = factor(group_id)),
                             alpha = .15, lty = 'dotted', level = i, type = "norm") # assumes data to be normal rather than t distributed
     }
-  }
+  } else if (ellipse_type == "none") {
+
+  } else stop('This axis type is not valid.')
 
   if(plot_post_person_estimated) {
     g <- g + ggplot2::geom_point(data = data_gg_post, ggplot2::aes(x = x, y = y, colour = factor(group_id)), pch=3)
@@ -267,7 +269,7 @@ plot_ICC_cont <- function (delta, alpha = NULL, gamma = NULL, psi = NULL, p_inte
   data <- data %>% dplyr::do(tibble::tibble(y = icc_function(.$x, delta = delta, alpha = alpha, gamma = gamma, psi = psi)))
 
   g <- data  %>%  ggplot2::ggplot(ggplot2::aes(x = x, y = y)) +
-    tidybayes::stat_lineribbon(aes(fill = ggplot2::stat(.width)), .width = width, point_interval = p_interval, colour = 'white', size = .75) +
+    tidybayes::stat_lineribbon(aes(fill = ggplot2::after_stat(.width)), .width = width, point_interval = p_interval, colour = 'white', size = .75) +
     ggplot2::scale_fill_binned(low = "#1d1d1d", high = "#E1E1E1", limit = c(0, 0.96), show.limits = TRUE, breaks = seq(0.12, 0.84, by = 0.12),
                       guide = ggplot2::guide_coloursteps(title = 'Glaubw\u00FCrdigkeitsintervall in %', nrow = 1, title.position = "top", label.position = "bottom",
                                                 barwidth = 10, frame.colour = NULL), labels = scale100) +

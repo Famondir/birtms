@@ -4,9 +4,11 @@
 \alias{get_ppmccriteria}
 \title{Calculates posterior predictive check for specific criteria}
 \usage{
-get_ppmccriteria(ppmcdata, criteria, ppmcMethod, group = "item")
+get_ppmccriteria(model, ppmcdata, criteria, ppmcMethod, group = "item")
 }
 \arguments{
+\item{model}{birtmsfit}
+
 \item{ppmcdata}{data.frame; data generated with birtms::get_ppmcdatasets}
 
 \item{criteria}{character; currently 'infit', 'outfit' or 'll'}

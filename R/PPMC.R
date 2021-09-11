@@ -88,6 +88,7 @@ get_ppmcdatasets <- function(model, ppmcMethod, post_responses = NULL, sd = 1, n
 
 #' Calculates posterior predictive check for specific criteria
 #'
+#' @param model birtmsfit
 #' @param ppmcdata data.frame; data generated with birtms::get_ppmcdatasets
 #' @param criteria character; currently 'infit', 'outfit' or 'll'
 #' @param ppmcMethod char; either 'C' for consevative checks or 'M' for mixed ppmc with independently drawn theta distribution
@@ -97,7 +98,9 @@ get_ppmcdatasets <- function(model, ppmcMethod, post_responses = NULL, sd = 1, n
 #' @export
 #'
 #' @examples
-get_ppmccriteria <- function(ppmcdata, criteria, ppmcMethod, group = 'item') {
+get_ppmccriteria <- function(model, ppmcdata, criteria, ppmcMethod, group = 'item') {
+  person <- model$var_specs$person
+
   if (criteria == 'll') {
     crit <- ll
   } else if (criteria == 'infit') {
@@ -108,11 +111,11 @@ get_ppmccriteria <- function(ppmcdata, criteria, ppmcMethod, group = 'item') {
 
 
   if (group == 'item') {
-    fitData <- fit_statistic(criterion = crit, group = "item", data = ppmcdata)
+    fitData <- fit_statistic(criterion = crit, group = "item", data = ppmcdata, personvar = person)
   } else if (group == person) {
     if (ppmcMethod != 'C') stop("Mixed PPMC only suitable for items.")
 
-    fitData <- fit_statistic(criterion = crit, group = person, data = ppmcdata)
+    fitData <- fit_statistic(criterion = crit, group = person, data = ppmcdata, personvar = person)
   }
 
   return(fitData)
@@ -167,15 +170,15 @@ plot_fit_statistic <- function(model, data, units = c(1,9), group = 'item', ppmc
   return(g)
 }
 
-fit_statistic <- function(criterion, group, data) {
+fit_statistic <- function(criterion, group, data, personvar) {
   group <- sym(group)
 
   message('calculating fitstatistic')
 
   fitdata <- data %>%
     mutate(
-      crit = criterion(response, ppe, .),
-      crit_rep = criterion(yrep, ppe2, .)
+      crit = criterion(y = response, p = ppe, data = ., personvar = personvar),
+      crit_rep = criterion(y = yrep, p = ppe2, data = ., personvar = personvar)
     ) %>%
     group_by({{group}}, .draw) %>%
     summarise(
@@ -200,8 +203,8 @@ infit <- function(y, p, data, ...) {
     return()
 }
 
-outfit <- function(y, p, data, ...) {
-  N <- length(unique(data$ID))
+outfit <- function(y, p, data, personvar, ...) {
+  N <- length(unique(data[[personvar]]))
 
   (y - p)^2 / N / (p*(1-p)) %>%
     return()

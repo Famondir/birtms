@@ -10,8 +10,8 @@ ICC_check(
   num_groups = NULL,
   verbose = FALSE,
   post_responses = NULL,
-  ellipse_type = "axisparallel",
-  plot_post_person_estimated = FALSE
+  ellipse_type = "t",
+  plot_post_person_estimated = TRUE
 )
 }
 \arguments{
@@ -25,7 +25,7 @@ ICC_check(
 
 \item{post_responses}{list of data.frames from birtms::get_postdata}
 
-\item{ellipse_type}{string; 'axisparallel' or 'norm' or 't'}
+\item{ellipse_type}{string; 'axisparallel' or 'norm' or 't' or 'none'}
 
 \item{plot_post_person_estimated}{boolean}
 }
