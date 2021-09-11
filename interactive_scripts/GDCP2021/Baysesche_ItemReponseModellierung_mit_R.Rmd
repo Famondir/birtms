@@ -371,6 +371,7 @@ plot(mod1PL, items = c(8,12), ngroups = 6, export = FALSE)
 - Itembasiert:
   - Item Characteristic Curves plots
   - fit-Statistiken
+  - Itemparameter (neg. Trennschärfe?)
 - Testbasiert:
   - Wrightmap
 </div>
@@ -820,10 +821,6 @@ fit_1d_2pl_spm <- birtms::birtm_aio(data = data_spm,
 1. <big>Modellpassung prüfen</big>
 </div>
 
-<div style="width: 50%; float: right;">
-1. Konvergenz
-</div>
-
 <diV style="float: right; width: 50%;">
 ```{r echo=TRUE, out.width="100%"}
 plot(fit_1d_1pl_spm)
@@ -837,7 +834,7 @@ plot(fit_1d_1pl_spm)
 <div class="notes">
 - MCMC trace plots
 - sd_item__Intercept schief
-<div>
+</div>
 
 ## Bayes'sche IRT-Modellierung in R {.build}
 <diV style="width: 100%;">
@@ -855,19 +852,6 @@ summary(fit_1d_1pl_spm, robust = TRUE)
 <div class="notes">
 - Konvergenz: $\hat{r}$
 - ESS
-</div>
-
-## Bayes'sche IRT-Modellierung in R
-
-<diV style="width: 100;">
-```{r echo=TRUE, class.output = "small"}
-fit_1d_1pl_spm
-```
-</div>
-
-<div style="background-color: rgba(50,50,255,0.25); position: absolute; top: 405px; left: 265px; width: 50px; height: 25px;"></div>
-
-<div class="notes">
 - Schiefe
 - Multimodalität
 </div>
@@ -925,242 +909,40 @@ bayesplot::mcmc_trace(
 
 <div style="float: right; width: 50%;">
 <div class="lessspace">**Itemcheck mit birtms**</div>
+- Itemparameterverteilungen
 - Item Characteristic Curves
 - Posterior Predictive Model Checks
 - Wrightmap
+- Odds Ratio Heatmaps
 </div>
 
 ## Bayes'sche IRT-Modellierung in R
 
-```{r echo=FALSE}
-if (file.exists("../../models/gdcp/post_responses_1pl_spm.rds")) {
-  posterior_responses_spm_1pl <- readRDS("../../models/gdcp/post_responses_1pl_spm.rds")
-} else {
-  posterior_responses_spm_1pl <- birtms::get_postdata(fit_1d_1pl_spm)
-  posterior_responses_spm_1pl %>% saveRDS("../../models/gdcp/post_responses_1pl_spm.rds")
-}
-```
-
-
-<diV style="float: left; width: 100%; margin-top: -20px;">
-```{r echo=TRUE, message = FALSE, eval=FALSE}
-g_spm_1pl <- birtms::ICC_check(fit_1d_1pl_spm, post_responses = posterior_responses_spm_1pl,
-                                num_groups = 6, item_id = 12)
-```
-
-  <figure>
-  <img src="icc_item12_1pl.svg" width = 70% class="center">
-  </figure>
-</div>
-
-## Bayes'sche IRT-Modellierung in R
-
-```{r echo=FALSE}
-if (file.exists("../../models/gdcp/post_responses_2pl_spm.rds")) {
-  posterior_responses_spm_2pl <- readRDS("../../models/gdcp/post_responses_2pl_spm.rds")
-} else {
-  posterior_responses_spm_2pl <- birtms::get_postdata(fit_1d_2pl_spm)
-  posterior_responses_spm_2pl %>% saveRDS("../../models/gdcp/post_responses_2pl_spm.rds")
-}
-```
-
-<diV style="float: left; width: 100%; margin-top: -20px;">
-```{r echo=TRUE, message = FALSE, eval=FALSE}
-g_spm_2pl <- birtms::ICC_check(fit_1d_2pl_spm, post_responses = posterior_responses_spm_1pl,
-                                num_groups = 6, item_id = 12)
-```
-
-  <figure>
-  <img src="icc_item12_2pl.svg" width = 70% class="center">
-  </figure>
-</div>
-
-## Bayes'sche IRT-Modellierung in R
-
-```{r echo=FALSE}
-if (file.exists("../../models/gdcp/post_responses_2pl_spm.rds")) {
-  posterior_responses_spm_2pl <- readRDS("../../models/gdcp/post_responses_2pl_spm.rds")
-} else {
-  posterior_responses_spm_2pl <- birtms::get_postdata(fit_1d_2pl_spm)
-  posterior_responses_spm_2pl %>% saveRDS("../../models/gdcp/post_responses_2pl_spm.rds")
-}
-```
-
-<diV style="float: left; width: 100%; margin-top: -20px;">
-```{r echo=TRUE, message = FALSE, eval=FALSE}
-g_spm_2pl <- birtms::ICC_check(fit_1d_2pl_spm, post_responses = posterior_responses_spm_1pl,
-                                num_groups = 10, item_id = 12)
-```
-
-  <figure>
-  <img src="icc_item12_2pl_10groups.svg" width = 70% class="center">
-  </figure>
-</div>
-
-<dic class="notes">
-- hoher Outfit (2): von low-achievern erraten
-- Ratewahrscheinlichkeit: 12.5 %
-- G1: rät; G2: macht Fehler
-</div>
-
-## Bayes'sche IRT-Modellierung in R
-
-```{r echo=FALSE}
-# if (file.exists("../../models/gdcp/ppmcdata_c_1pl_spm.rds")) {
-#   ppmc_data_spm_1pl <- readRDS("../../models/gdcp/ppmcdata_c_1pl_spm.rds")
-# } else {
-#   ppmc_data_spm_1pl <- fit_1d_1pl_spm %>% birtms::get_ppmcdatasets(
-#     ppmcMethod = 'C', post_responses = posterior_responses_spm_1pl)
-#   ppmc_data_spm_1pl %>% saveRDS("../../models/gdcp/ppmcdata_c_1pl_spm.rds")
-# }
-# 
-# if (file.exists("../../models/gdcp/ppmcdata_c_1pl_spm_outfit.rds")) {
-#   ppmc_data_spm_1pl_outfit <- readRDS("../../models/gdcp/ppmcdata_c_1pl_spm_outfit.rds")
-# } else {
-#   ppmc_data_spm_1pl_outfit <- birtms::get_ppmccriteria(model = fit_1d_1pl_spm,
-#     ppmcdata = ppmc_data_spm_1pl, ppmcMethod = 'C', criteria = 'outfit')
-#   ppmc_data_spm_1pl_outfit %>% saveRDS("../../models/gdcp/ppmcdata_c_1pl_spm_outfit.rds")
-# }
-
-if (file.exists("../../models/gdcp/ppmcdata_m_1pl_spm.rds")) {
-  ppmc_data_spm_1pl_mixed <- readRDS("../../models/gdcp/ppmcdata_m_1pl_spm.rds")
-} else {
-  ppmc_data_spm_1pl_mixed <- fit_1d_1pl_spm %>% birtms::get_ppmcdatasets(
-    ppmcMethod = 'M', post_responses = posterior_responses_spm_1pl)
-  ppmc_data_spm_1pl_mixed %>% saveRDS("../../models/gdcp/ppmcdata_m_1pl_spm.rds")
-}
-
-if (file.exists("../../models/gdcp/ppmcdata_m_1pl_spm_outfit.rds")) {
-  ppmc_data_spm_1pl_outfit_mixed <- readRDS("../../models/gdcp/ppmcdata_m_1pl_spm_outfit.rds")
-} else {
-  ppmc_data_spm_1pl_outfit_mixed <- birtms::get_ppmccriteria(model = fit_1d_1pl_spm,
-    ppmcdata = ppmc_data_spm_1pl_mixed, ppmcMethod = 'M', criteria = 'outfit')
-  ppmc_data_spm_1pl_outfit_mixed %>% saveRDS("../../models/gdcp/ppmcdata_m_1pl_spm_outfit.rds")
-}
-```
-
-```{r echo=TRUE, message = FALSE, eval=FALSE}
-# ppmc_data_spm_1pl <- fit_1d_1pl_spm %>% birtms::get_ppmcdatasets(
-#   ppmcMethod = 'C', post_responses = posterior_responses_spm_1pl)
-# 
-# ppmc_data_spm_1pl_outfit <- fit_1d_1pl_spm %>% birtms::get_ppmccriteria(
-#   ppmcdata = ppmc_data_spm_1pl, ppmcMethod = 'C', criteria = 'outfit')
-
-ppmc_data_spm_1pl_mixed <- fit_1d_1pl_spm %>% birtms::get_ppmcdatasets(
-  ppmcMethod = 'M', crit = ll, post_responses = posterior_responses_spm_1pl)
-
-ppmc_data_spm_1pl_outfit_mixed <- fit_1d_1pl_spm %>% birtms::get_ppmccriteria(
-  ppmcdata = ppmc_data_spm_1pl_mixed, ppmcMethod = 'M', criteria = 'outfit')
+<diV style="float: left; width: 100%;">
+```{r echo = TRUE, eval=FALSE}
+cowplot::plot_grid(
+  birtms::plot_itemparameter(
+    fit_1d_2pl_spm, pars = "slope", 
+    style = "halfeye", items = c(1,4),
+    alphacut = c(.4, .6, 2),
+    thresholds = c(0,4)),
+  birtms::plot_itemparameter(
+    fit_1d_2pl_spm, pars = "difficulty", 
+    style = "halfeye", items = c(1,4), 
+    thresholds = c(-3,3)), 
+  nrow = 2
+  )
 ```
 
 ## Bayes'sche IRT-Modellierung in R
 
-```{r, include=FALSE}
-outfit_skim_1pl <- ppmc_data_spm_1pl_outfit_mixed %>% group_by(item) %>% select(item, crit) %>% birtms::custom_skim()
+<diV style="float: left; width: 100%;">
+<center>
+```{r echo = FALSE}
+cowplot::plot_grid(birtms::plot_itemparameter(fit_1d_2pl_spm, pars = "slope", style = "halfeye", items = c(1,4), alphacut = c(.4, .6, 2), thresholds = c(0,4)),
+birtms::plot_itemparameter(fit_1d_2pl_spm, pars = "difficulty", style = "halfeye", items = c(1,4), thresholds = c(-3,3)), nrow = 2)
 ```
-
-```{r, echo=TRUE}
-outfit_skim_1pl %>% select(item, numeric.mean, numeric.mode, numeric.hdi.lower, numeric.hdi.upper) %>% mutate_if(is.numeric, ~round(.x, 2))
-```
-
-## Bayes'sche IRT-Modellierung in R
-<div style="width: 80%; margin:0px auto;">
-```{r message=FALSE, out.width="100%"}
-birtms::plot_fit_statistic(model = fit_1d_1pl_spm, data = ppmc_data_spm_1pl_outfit_mixed, 
-                           units = c(1,12), ppmcMethod = 'M')
-```
-</div>
-
-<div class="notes">
-- Mixed PPMC weniger konservativ
-- classic PPMC schneller / memory sparsamer
-  - ggf. n_samples reduzieren
-- Unterschiede teils nicht groß
-</div>
-
-## Bayes'sche IRT-Modellierung in R
-
-```{r echo=FALSE}
-# if (file.exists("../../models/gdcp/ppmcdata_c_2pl_spm.rds")) {
-#   ppmc_data_spm_2pl <- readRDS("../../models/gdcp/ppmcdata_c_2pl_spm.rds")
-# } else {
-#   ppmc_data_spm_2pl <- fit_1d_2pl_spm %>% birtms::get_ppmcdatasets(
-#     ppmcMethod = 'C', post_responses = posterior_responses_spm_2pl)
-#   ppmc_data_spm_2pl %>% saveRDS("../../models/gdcp/ppmcdata_c_2pl_spm.rds")
-# }
-# 
-# if (file.exists("../../models/gdcp/ppmcdata_c_2pl_spm_outfit.rds")) {
-#   ppmc_data_spm_2pl_outfit <- readRDS("../../models/gdcp/ppmcdata_c_2pl_spm_outfit.rds")
-# } else {
-#   ppmc_data_spm_2pl_outfit <- birtms::get_ppmccriteria(model = fit_1d_2pl_spm,
-#     ppmcdata = ppmc_data_spm_2pl, ppmcMethod = 'C', criteria = 'outfit')
-#   ppmc_data_spm_2pl_outfit %>% saveRDS("../../models/gdcp/ppmcdata_c_2pl_spm_outfit.rds")
-# }
-
-if (file.exists("../../models/gdcp/ppmcdata_m_2pl_spm.rds")) {
-  ppmc_data_spm_2pl_mixed <- readRDS("../../models/gdcp/ppmcdata_m_2pl_spm.rds")
-} else {
-  ppmc_data_spm_2pl_mixed <- fit_1d_2pl_spm %>% birtms::get_ppmcdatasets(
-    ppmcMethod = 'M', post_responses = posterior_responses_spm_2pl)
-  ppmc_data_spm_2pl_mixed %>% saveRDS("../../models/gdcp/ppmcdata_m_2pl_spm.rds")
-}
-
-if (file.exists("../../models/gdcp/ppmcdata_m_2pl_spm_outfit.rds")) {
-  ppmc_data_spm_2pl_outfit_mixed <- readRDS("../../models/gdcp/ppmcdata_m_2pl_spm_outfit.rds")
-} else {
-  ppmc_data_spm_2pl_outfit_mixed <- birtms::get_ppmccriteria(model = fit_1d_2pl_spm,
-    ppmcdata = ppmc_data_spm_2pl_mixed, ppmcMethod = 'M', criteria = 'outfit')
-  ppmc_data_spm_2pl_outfit_mixed %>% saveRDS("../../models/gdcp/ppmcdata_m_2pl_spm_outfit.rds")
-}
-```
-
-<div style="width: 80%; margin:0px auto;">
-```{r message=FALSE, warning=FALSE, out.width="100%"}
-ppmc_infit_data <- setNames(data.frame(
-  ppmc_data_spm_1pl_outfit_mixed[,c(1,5)],ppmc_data_spm_2pl_outfit_mixed[,c(5)]), 
-  c('item', '1pl', '2pl'))
-
-ggplot(data = ppmc_infit_data) +
-  geom_density(aes(`1pl`), colour = '#8b7d6b70', fill = '#8b7d6b70', alpha = 0.3) +
-  geom_density(aes(`2pl`), colour = '#008b4570', fill = '#008b4570', alpha = 0.3) +
-  facet_wrap("item", scales = "free") + xlim(c(-2,2))
-```
-</div>
-
-<div class="notes">
-- 2pl-Modell passt für viele Items besser
-- Outfit wesentich besser
-</div>
-
-## Bayes'sche IRT-Modellierung in R
-
-<div style="width: 80%; margin:0px auto;">
-```{r message=FALSE, warning=FALSE, out.width="100%"}
-fit_1d_1pl_spm %>% birtms::plot_wrightmap(classic = FALSE)
-```
-</div>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+</center></div>
 
 ## Bayes'sche IRT-Modellierung in R
 
@@ -1251,6 +1033,354 @@ abline(h = height, col = 'black', lty = 2, lwd = 2)
 </div>
 </div>
 
+## Bayes'sche IRT-Modellierung in R
+
+```{r echo=FALSE}
+if (file.exists("../../models/gdcp/post_responses_1pl_spm.rds")) {
+  posterior_responses_spm_1pl <- readRDS("../../models/gdcp/post_responses_1pl_spm.rds")
+} else {
+  posterior_responses_spm_1pl <- birtms::get_postdata(fit_1d_1pl_spm)
+  posterior_responses_spm_1pl %>% saveRDS("../../models/gdcp/post_responses_1pl_spm.rds")
+}
+```
+
+
+<diV style="float: left; width: 100%; margin-top: -20px;">
+```{r echo=TRUE, message = FALSE, eval=FALSE}
+g_spm_1pl <- birtms::ICC_check(fit_1d_1pl_spm, post_responses = posterior_responses_spm_1pl,
+                                num_groups = 6, item_id = 12)
+```
+
+  <figure>
+  <img src="icc_item12_1pl.svg" width = 70% class="center">
+  </figure>
+</div>
+
+## Bayes'sche IRT-Modellierung in R
+
+```{r echo=FALSE}
+if (file.exists("../../models/gdcp/post_responses_2pl_spm.rds")) {
+  posterior_responses_spm_2pl <- readRDS("../../models/gdcp/post_responses_2pl_spm.rds")
+} else {
+  posterior_responses_spm_2pl <- birtms::get_postdata(fit_1d_2pl_spm)
+  posterior_responses_spm_2pl %>% saveRDS("../../models/gdcp/post_responses_2pl_spm.rds")
+}
+```
+
+<diV style="float: left; width: 100%; margin-top: -20px;">
+```{r echo=TRUE, message = FALSE, eval=FALSE}
+g_spm_2pl <- birtms::ICC_check(fit_1d_2pl_spm, post_responses = posterior_responses_spm_1pl,
+                                num_groups = 6, item_id = 12)
+```
+
+  <figure>
+  <img src="icc_item12_2pl.svg" width = 70% class="center">
+  </figure>
+</div>
+
+## Bayes'sche IRT-Modellierung in R
+
+```{r echo=FALSE}
+if (file.exists("../../models/gdcp/post_responses_2pl_spm.rds")) {
+  posterior_responses_spm_2pl <- readRDS("../../models/gdcp/post_responses_2pl_spm.rds")
+} else {
+  posterior_responses_spm_2pl <- birtms::get_postdata(fit_1d_2pl_spm)
+  posterior_responses_spm_2pl %>% saveRDS("../../models/gdcp/post_responses_2pl_spm.rds")
+}
+```
+
+<diV style="float: left; width: 100%; margin-top: -20px;">
+```{r echo=TRUE, message = FALSE, eval=FALSE}
+g_spm_2pl <- birtms::ICC_check(fit_1d_2pl_spm, post_responses = posterior_responses_spm_1pl,
+                                num_groups = 10, item_id = 12)
+```
+
+  <figure>
+  <img src="icc_item12_2pl_10groups.svg" width = 70% class="center">
+  </figure>
+</div>
+
+<div class="notes">
+- hoher Outfit (2): von low-achievern erraten
+- Ratewahrscheinlichkeit: 12.5 %
+- G1: rät; G2: macht Fehler
+</div>
+
+## Bayes'sche IRT-Modellierung in R
+
+```{r echo=FALSE, message = FALSE}
+if (file.exists("../../models/gdcp/ppmcdata_m_1pl_spm.rds")) {
+  ppmc_data_spm_1pl_mixed <- readRDS("../../models/gdcp/ppmcdata_m_1pl_spm.rds")
+} else {
+  ppmc_data_spm_1pl_mixed <- fit_1d_1pl_spm %>% birtms::get_ppmcdatasets(
+    ppmcMethod = 'M', post_responses = posterior_responses_spm_1pl)
+  ppmc_data_spm_1pl_mixed %>% saveRDS("../../models/gdcp/ppmcdata_m_1pl_spm.rds")
+}
+
+if (file.exists("../../models/gdcp/ppmcdata_m_1pl_spm_outfit.rds")) {
+  ppmc_data_spm_1pl_outfit_mixed <- readRDS("../../models/gdcp/ppmcdata_m_1pl_spm_outfit.rds")
+} else {
+  ppmc_data_spm_1pl_outfit_mixed <- birtms::get_ppmccriteria(model = fit_1d_1pl_spm,
+    ppmcdata = ppmc_data_spm_1pl_mixed, ppmcMethod = 'M', criteria = 'outfit')
+  ppmc_data_spm_1pl_outfit_mixed %>% saveRDS("../../models/gdcp/ppmcdata_m_1pl_spm_outfit.rds")
+}
+
+outfit_skim_1pl <- ppmc_data_spm_1pl_outfit_mixed %>% group_by(item) %>% 
+  select(item, crit) %>% birtms::custom_skim() %>% 
+  rename_all(~str_remove(.x, "numeric."))
+```
+
+```{r echo=TRUE, message = FALSE, eval=FALSE}
+ppmc_data_spm_1pl_mixed <- fit_1d_1pl_spm %>% birtms::get_ppmcdatasets(
+  ppmcMethod = 'M', post_responses = posterior_responses_spm_1pl)
+
+ppmc_data_spm_1pl_outfit_mixed <- fit_1d_1pl_spm %>% birtms::get_ppmccriteria(
+  ppmcdata = ppmc_data_spm_1pl_mixed, ppmcMethod = 'M', criteria = 'outfit')
+
+outfit_skim_1pl <- ppmc_data_spm_1pl_outfit_mixed %>% group_by(item) %>% 
+  select(item, crit) %>% birtms::custom_skim() %>% 
+  rename_all(~str_remove(.x, "numeric.")) %>% 
+  mutate_if(is.numeric, ~round(.x, 2))
+```
+
+## Bayes'sche IRT-Modellierung in R
+
+```{r, echo=TRUE}
+outfit_skim_1pl %>% select(item, mean, mode, hdi.lower, hdi.upper)
+```
+
+<div class="notes">
+mean entspricht klassischen Werten
+</div>
+
+
+## Bayes'sche IRT-Modellierung in R
+<div style="width: 100%;">
+<center>
+```{r echo=TRUE, message=FALSE, out.width="70%"}
+birtms::plot_fit_statistic(model = fit_1d_1pl_spm, data = ppmc_data_spm_1pl_outfit_mixed, 
+                           units = c(1,12), ppmcMethod = 'M')
+```
+</center>
+</div>
+
+<div class="notes">
+- Mixed PPMC weniger konservativ
+- classic PPMC schneller / memory sparsamer
+  - ggf. n_samples reduzieren
+- Unterschiede teils nicht groß
+</div>
+
+## Bayes'sche IRT-Modellierung in R
+
+```{r echo=FALSE}
+if (file.exists("../../models/gdcp/ppmcdata_m_2pl_spm.rds")) {
+  ppmc_data_spm_2pl_mixed <- readRDS("../../models/gdcp/ppmcdata_m_2pl_spm.rds")
+} else {
+  ppmc_data_spm_2pl_mixed <- fit_1d_2pl_spm %>% birtms::get_ppmcdatasets(
+    ppmcMethod = 'M', post_responses = posterior_responses_spm_2pl)
+  ppmc_data_spm_2pl_mixed %>% saveRDS("../../models/gdcp/ppmcdata_m_2pl_spm.rds")
+}
+
+if (file.exists("../../models/gdcp/ppmcdata_m_2pl_spm_outfit.rds")) {
+  ppmc_data_spm_2pl_outfit_mixed <- readRDS("../../models/gdcp/ppmcdata_m_2pl_spm_outfit.rds")
+} else {
+  ppmc_data_spm_2pl_outfit_mixed <- birtms::get_ppmccriteria(model = fit_1d_2pl_spm,
+    ppmcdata = ppmc_data_spm_2pl_mixed, ppmcMethod = 'M', criteria = 'outfit')
+  ppmc_data_spm_2pl_outfit_mixed %>% saveRDS("../../models/gdcp/ppmcdata_m_2pl_spm_outfit.rds")
+}
+```
+
+<div style="width: 100%;">
+```{r echo=TRUE, message=FALSE, warning=FALSE, out.width="100%", eval=FALSE}
+ppmc_infit_data <- setNames(data.frame(ppmc_data_spm_1pl_outfit_mixed[,c(1,5)],
+             ppmc_data_spm_2pl_outfit_mixed[,c(5)]), c('item', '1pl', '2pl'))
+
+ggplot(data = ppmc_infit_data) + 
+  geom_density(aes(`1pl`), colour = '#8b7d6b70', fill = '#8b7d6b70', alpha = 0.3) +
+  geom_density(aes(`2pl`), colour = '#008b4570', fill = '#008b4570', alpha = 0.3) +
+  facet_wrap("item", scales = "free") + xlim(c(-2,2))
+```
+</div>
+
+## Bayes'sche IRT-Modellierung in R
+
+<div style="width: 100%;">
+<center>
+```{r eval=TRUE, results='hide', fig.keep='all', out.width="80%", warning=FALSE}
+ppmc_infit_data <- setNames(
+  data.frame(ppmc_data_spm_1pl_outfit_mixed[,c(1,5)],
+             ppmc_data_spm_2pl_outfit_mixed[,c(5)]), 
+  c('item', '1pl', '2pl'))
+
+ggplot(data = ppmc_infit_data) +
+  geom_density(aes(`1pl`), colour = '#8b7d6b70', 
+               fill = '#8b7d6b70', alpha = 0.3) +
+  geom_density(aes(`2pl`), colour = '#008b4570', 
+               fill = '#008b4570', alpha = 0.3) +
+  facet_wrap("item", scales = "free") + 
+  xlim(c(-2,2))
+```
+</center></div>
+
+<div class="notes">
+- 2pl-Modell passt für viele Items besser
+- Outfit wesentich besser
+</div>
+
+## Bayes'sche IRT-Modellierung in R
+
+<div style="width: 100%;">
+```{r echo=TRUE, eval=FALSE}
+fit_1d_1pl_spm %>% birtms::plot_wrightmap(classic = FALSE)
+```
+
+<center>
+```{r echo=FALSE, message=FALSE, warning=FALSE, out.width="75%"}
+fit_1d_1pl_spm %>% birtms::plot_wrightmap(classic = FALSE)
+```
+</center>
+</div>
+
+<div class="notes">
+nichts bayesianisches dabei
+</div>
+
+## Bayes'sche IRT-Modellierung in R
+
+```{r include=FALSE}
+if (file.exists("../../models/gdcp/ordata_1pl_spm.rds")) {
+  ordata_1pl_spm <- readRDS("../../models/gdcp/ordata_1pl_spm.rds")
+} else {
+  ordata_1pl_spm <- fit_1d_1pl_spm %>% birtms::get_or(zero_correction = 'Haldane')
+  ordata_1pl_spm %>% saveRDS("../../models/gdcp/ordata_1pl_spm.rds")
+}
+
+if (file.exists("../../models/gdcp/ordata_1pl_spm_fullbayes.rds")) {
+  ordata_1pl_spm_fullbayes <- readRDS("../../models/gdcp/ordata_1pl_spm_fullbayes.rds")
+} else {
+  ordata_1pl_spm_fullbayes <- fit_1d_1pl_spm %>% birtms::get_or(zero_correction = 'Bayes',
+                                                      ci_method = 'BayesHDI')
+  ordata_1pl_spm_fullbayes %>% saveRDS("../../models/gdcp/ordata_1pl_spm_fullbayes.rds")
+}
+```
+
+```{r}
+ordata_1pl_spm %>% birtms::plot_ppmc_or_heatmap(itemrange = c(1,12))
+ordata_1pl_spm_fullbayes %>% birtms::plot_ppmc_or_heatmap(itemrange = c(1,12))
+```
+
+Odds ratio
+
+## Bayes'sche IRT-Modellierung in R
+
+<div style="width: 50%; float: left; height: 800px;">
+<div class="lessspace">**Vorgehensweise:**</div>
+1. **Forschungsfragen aufstellen**
+1. Erhebung planen
+1. *Testinstrument entwickeln*
+1. Daten vorbereiten
+1. Modell formulieren
+1. Vorannahmen formulieren
+1. Modell fitten
+1. Modellpassung prüfen
+1. Itemselektion
+</div>
+
+<div style="float: right; width: 50%;">
+<div class="lessspace">**Personcheck mit birtms**</div>
+- Posterior Predictive Model Checks
+- Person Response Functions
+</div>
+
+## Bayes'sche IRT-Modellierung in R
+
+```{r include=FALSE}
+if (file.exists("../../models/gdcp/ppmcdata_c_1pl_spm.rds")) {
+  ppmc_data_spm_1pl <- readRDS("../../models/gdcp/ppmcdata_c_1pl_spm.rds")
+} else {
+  ppmc_data_spm_1pl <- fit_1d_1pl_spm %>% birtms::get_ppmcdatasets(
+    ppmcMethod = 'C', post_responses = posterior_responses_spm_1pl)
+  ppmc_data_spm_1pl %>% saveRDS("../../models/gdcp/ppmcdata_c_1pl_spm.rds")
+}
+
+if (file.exists("../../models/gdcp/ppmcdata_c_1pl_spm_person_ll.rds")) {
+  ppmc_data_spm_1pl_person_ll <- readRDS("../../models/gdcp/ppmcdata_c_1pl_spm_person_ll.rds")
+} else {
+  ppmc_data_spm_1pl_person_ll <- fit_1d_1pl_spm %>% birtms::get_ppmccriteria(
+    ppmcdata = ppmc_data_spm_1pl, ppmcMethod = 'C', criteria = 'll', group = .$var_specs$person)
+  ppmc_data_spm_1pl_person_ll %>% saveRDS("../../models/gdcp/ppmcdata_c_1pl_spm_person_ll.rds")
+}
+```
+
+```{r echo=TRUE, eval=FALSE}
+ppmc_data_spm_1pl <- fit_1d_1pl_spm %>% 
+  birtms::get_ppmcdatasets(
+    ppmcMethod = 'C', post_responses = posterior_responses_spm_1pl
+    )
+
+ppmc_data_spm_1pl_person_ll <- fit_1d_1pl_spm %>% 
+  birtms::get_ppmccriteria(
+    ppmcdata = ppmc_data_spm_1pl, ppmcMethod = 'C', criteria = 'll', 
+    group = .$var_specs$person
+    )
+
+fit_1d_1pl_spm %>% birtms::plot_fit_statistic(
+  data = ppmc_data_spm_1pl_person_ll, units = c(1,12), group = .$var_specs$person
+  )
+```
+
+## Bayes'sche IRT-Modellierung in R
+
+<div style="width: 100%;">
+<center>
+```{r message=FALSE, out.width="80%"}
+fit_1d_1pl_spm %>% birtms::plot_fit_statistic(data = ppmc_data_spm_1pl_person_ll, units = c(1,12), group = .$var_specs$person)
+```
+</center></div>
+
+## Bayes'sche IRT-Modellierung in R
+
+```{r include=FALSE}
+respfuncdata_1pl <- fit_1d_1pl_spm %>%birtms::calc_personresponsedata(
+  post_responses = posterior_responses_spm_1pl)
+```
+
+<div style="width: 100%;">
+```{r echo=TRUE, eval=FALSE}
+respfuncdata_1pl <- fit_1d_1pl_spm %>%birtms::calc_personresponsedata(
+  post_responses = posterior_responses_spm_1pl)
+
+birtms::plot_personresponsefunction(fit_1d_1pl_spm, respfuncdata_1pl, id = c(2:4))
+```
+
+<center>
+```{r echo=FALSE, message=FALSE, warning=FALSE, out.width="60%"}
+birtms::plot_personresponsefunction(fit_1d_1pl_spm, respfuncdata_1pl, id = c(2:4))
+```
+</center>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1303,29 +1433,20 @@ abline(h = height, col = 'black', lty = 2, lwd = 2)
 
 
 ## birtms
-
-<div style="float: right; width: 50%;">
-<div class="lessspace">**Itemcheck mit birtms**</div>
-- Item Characteristic Curves
-- Posterior Predictive Model Checks
-- Wrightmap
-
-- Odds Ratio Heatmaps
-- Itemparameterverteilungen
-- Persone Response Functions
-</div>
 
 <div style="float: right; width: 50%;">
 <div class="lessspace">**Modellcheck mit birtms**</div>
 - marginal loglikelihood Modellvergleiche
-- bayes'sche Variante des $R^2$-Bestimmtheitsmaß
 </div>
 
 
 
 ## birtms
 
-
+<div style="float: right; width: 50%;">
+<div class="lessspace">**latente Regression mit birtms**</div>
+- bayes'sche Variante des $R^2$-Bestimmtheitsmaß
+</div>
 
 ## Ausblick {.smaller}
 
