@@ -34,6 +34,9 @@ library(tidyverse)
 
 <div style="float: left; width: 50%;">
 1. Motivation
+1. Item Response Theorie
+1. IRT-Modelle in R
+
 1. Inferenzstatistik
 1. Satz von Bayes
 1. Bayes'sche Statistik-Pakete in R
@@ -42,11 +45,18 @@ library(tidyverse)
 </div>
 
 <div style="float: right; width: 50%;">
-### Was 
+<div class="lessspace">**Was ich voraussetze:**</div>
+- R & RStudio
+- Pipeoperator `%>%`
+- Item Response Theorie
+</div>
+
+<div class="notes">
+**Was**
 - Methodik: Bayes'sche IRT-Modellierung
 - R-Package-Premiere: birtms
 
-### Was nicht
+**Was nich**
 - Funktionsweise unterschiedlicher MCMC-Algorithmen
 - Vielfalt verfügbarer Prior
 - fachdidaktische Erkenntnisse
@@ -181,6 +191,49 @@ library(tidyverse)
   - komplexere Modelle passen tendenziell besser
 - marginal loglik: Entscheidung für Model 2
 </div>
+
+## Item Response Theorie {.build}
+
+<div style="width: 50%; float: left">
+- latente Variablen
+  - Personenfähigkeiten $\theta_k$
+  - Itemparameter $\beta_i, \alpha_i, \dots$
+- logistisches Modell (GLM)
+- lokale Unabhängigkeit
+</div>
+
+<div style="width: 50%; float: right">
+<div class="nospace">**Raschmodell:**</div>
+$$P\left(1|\theta_k, \beta_i\right)=\frac{\exp\left(\theta_k + \beta_i\right)}{1+\exp\left(\theta_k + \beta_i\right)}$$
+</div>
+
+<div style="width: 50%; float: right; margin-top: 10px">
+  <figure>
+    <img src="rasch_icc.png" width = 100% class = "center">
+    <figcaption style="font-size: small; text-align: center;">Grafik aus @Grottke.2021</figcaption>
+  </figure>
+</div>
+
+<div style="width: 50%; float: left; padding-top: 20px">
+<div class="lessspace">*Ausnahmen:*</div>
+- latente Regression
+- Testlets
+</div>
+
+## IRT-Modelle in R
+
+[Packeges](https://cran.r-project.org/web/views/Psychometrics.html)
+- **TAM**, **mirt**
+- eRm, lme4
+- *flirt* <small>[@Jeon.2016]</small>
+
+```{r echo=FALSE}
+# data_spm <- rio::import("../data/data_spm.rda")
+```
+
+```{r eval=TRUE, include=FALSE}
+# mod1PL <- TAM::tam.mml(resp=data_spm)
+```
 
 ## Inferenzstatistik
 

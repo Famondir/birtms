@@ -67,3 +67,25 @@ small {
 smaller {
   font-size: .8rem;
 }
+
+big {
+  font-size: 1.5em
+}
+
+.nospace {
+  margin-bottom: -30px;
+}
+
+.lessspace {
+  margin-bottom: 10px;
+}
+
+.lang-small { /*Change made here*/
+  font-size: 70% !important;
+  line-height: 100%;
+  background-color: white;
+}
+
+.leftindent {
+  margin-left: 30px;
+}
