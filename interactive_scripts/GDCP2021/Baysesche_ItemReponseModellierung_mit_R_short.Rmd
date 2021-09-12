@@ -40,31 +40,35 @@ fit_1d_2pl_spm <- readRDS("../../models/gdcp/fit_1d_2pl_spm_full1b.rds")
 
 <div style="float: left; width: 50%;">
 1. Motivation
-1. Item Response Theorie
-1. IRT-Modelle in R
-
 1. Inferenzstatistik
-1. Satz von Bayes
-1. Bayes'sche Statistik-Pakete in R
-1. IRT und GLM
+1. Item Response Theorie
 1. Bayes'sche IRT in R
+1. Showroom: birtms
+</div>
+
+<div style="float: right; width: 50%;">
+<div class="lessspace">**Was:**</div>
+- Methodik: Bayes'sche IRT-Modellierung
+- R-Package-Premiere: birtms
+</div>
+
+<div style="float: right; width: 50%;">
+<div class="lessspace">**Was nicht:**</div>
+- fachdidaktische Erkenntnisse
+- birtms Tutorial
+</div>
+
+<div style="float: left; width: 50%;">
+  <figure>
+  <img src="videosymbol.svg" width = 300px>
+    <figcaption style="font-size: small; text-align: center; margin-top: 5px">Link zur umfassenden Präsentation folgt im Beitragsband</figcaption>
+  </figure>
 </div>
 
 <div style="float: right; width: 50%;">
 <div class="lessspace">**Was ich voraussetze:**</div>
-- R & RStudio
-- Pipeoperator `%>%`
 - Item Response Theorie
-- Differenzierung zw. frequentistischer und Bayesianischer Inferenzstatistik
-</div>
-
-<div class="notes">
-**Was**
-- Methodik: Bayes'sche IRT-Modellierung
-- R-Package-Premiere: birtms
-
-**Was nich**
-- fachdidaktische Erkenntnisse
+- Interesse an Statistik
 </div>
 
 ## Motivation
@@ -148,6 +152,7 @@ fit_1d_2pl_spm <- readRDS("../../models/gdcp/fit_1d_2pl_spm_full1b.rds")
 
 <div class="notes">
 - Prior-Einfluss verschwindet ab 500 Beobachtungen
+- Wechsel zur Bayes'schen Methodik
 </div>
 
 ## Motivation
