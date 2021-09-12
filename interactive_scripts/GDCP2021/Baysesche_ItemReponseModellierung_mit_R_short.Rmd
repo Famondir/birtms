@@ -30,10 +30,13 @@ library(tidyverse)
     })
 </script>
 
-```{r echo=FALSE}
+```{r include=FALSE}
 fit_1d_1pl_spm <- readRDS("../../models/gdcp/fit_1d_1pl_spm_full1b.rds")                            
-
 fit_1d_2pl_spm <- readRDS("../../models/gdcp/fit_1d_2pl_spm_full1b.rds")
+
+data_spm <- rio::import("../../data/data_spm.rda")
+
+data_spm_long <- data_spm %>% birtms::compose_dataset(response_columns = i1:i12)
 ```
 
 ## Überblick {.build}
@@ -58,10 +61,10 @@ fit_1d_2pl_spm <- readRDS("../../models/gdcp/fit_1d_2pl_spm_full1b.rds")
 - birtms Tutorial
 </div>
 
-<div style="float: left; width: 50%;">
+<div style="float: left; width: 50%; margin-top: 0px">
   <figure>
-  <img src="videosymbol.svg" width = 300px>
-    <figcaption style="font-size: small; text-align: center; margin-top: 5px">Link zur umfassenden Präsentation folgt im Beitragsband</figcaption>
+  <img src="videosymbol.svg" width = 150px style="margin-left: 75px">
+    <figcaption style="font-size: small; margin-top: 5px; width: 300px; text-align: center">Link zum umfassenden Videotutorial folgt im Beitragsband</figcaption>
   </figure>
 </div>
 
@@ -216,7 +219,7 @@ fit_1d_2pl_spm <- readRDS("../../models/gdcp/fit_1d_2pl_spm_full1b.rds")
 - marginal loglik: Entscheidung für Model 2
 </div>
 
-## Inferenzstatistik
+## Inferenzstatistik {.build}
 
 <div style="float: right; width: 50%; margin-top: -60px">
   <figure>
@@ -272,7 +275,7 @@ fit_1d_2pl_spm <- readRDS("../../models/gdcp/fit_1d_2pl_spm_full1b.rds")
 ## Inferenzstatistik
 
 <div style="width: 50%; float: left;">
-### Pro frequentistische Methodik
+### Vorteile frequentistischer Methodik
 
 - Akzeptanz / Bekanntheit
 - eigener Wissensstand
@@ -281,10 +284,31 @@ fit_1d_2pl_spm <- readRDS("../../models/gdcp/fit_1d_2pl_spm_full1b.rds")
   - Effizienz
 </div>
 
-## Bayesianische Methodik
+## Inferenzstatistik
 
 <div style="width: 50%; float: left;">
-### Pro
+### Vorteile Bayes'scher Methodik
+
+- flexible Modellierung
+- valide für kleine Stichproben
+- Auswertung unabhängig von
+  - Abschlusskriterium der Studie
+  - Anzahl und Art der Tests
+- intuitive Interpretation
+- Vorwissen nutzbar
+- Parameterverteilung
+</div>
+
+<div class="notes">
+- nicht auf etablierte Modelle beschränkt
+- likelihood unabhängig vom Vorgehen
+- seltene Fälle berücksichtigen (z. B.Krankheiten)
+</div>
+
+## Inferenzstatistik
+
+<div style="width: 50%; float: left;">
+### Vorteile Bayes'scher Methodik
 
 - flexible Modellierung
 - valide für kleine Stichproben
@@ -297,7 +321,36 @@ fit_1d_2pl_spm <- readRDS("../../models/gdcp/fit_1d_2pl_spm_full1b.rds")
 </div>
 
 <div style="width: 50%; float: right;">
-### Contra
+### Probleme Bayes'scher Methodik
+
+- Software-Verfügbarkeit
+- Hardwareanforderungen
+
+Variable | TAM | brms
+----------|--------|----------------
+Zeit in s | 0.06  |  138
+Iterationen | 36 | 4000 + **4000 + X**
+Speicher in MB |  0.46 | 34.73
+Werte je Parameter | 3 | 4000
+</div>
+
+## Inferenzstatistik
+
+<div style="width: 50%; float: left;">
+### Vorteile Bayes'scher Methodik
+
+- flexible Modellierung
+- valide für kleine Stichproben
+- Auswertung unabhängig von
+  - Abschlusskriterium der Studie
+  - Anzahl und Art der Tests
+- intuitive Interpretation
+- Vorwissen nutzbar
+- Parameterverteilung
+</div>
+
+<div style="width: 50%; float: right;">
+### Probleme Bayes'scher Methodik
 
 - Software-Verfügbarkeit
 - Hardwareanforderungen
@@ -309,22 +362,21 @@ fit_1d_2pl_spm <- readRDS("../../models/gdcp/fit_1d_2pl_spm_full1b.rds")
   </figure>
 </div>
 
-<div class="notes">
-- nicht auf etablierte Modelle beschränkt
-- likelihood unabhängig vom Vorgehen
-- seltene Fälle berücksichtigen (z. B.Krankheiten)
+## Parameterverteilungen {.build}
+
+<diV style="float: left; width: 100%; margin-top: -20px">
+```{r echo=TRUE, class.output = "small"}
+i1_easyness <- brms::ranef(fit_1d_1pl_spm, summary = FALSE)$item[,"i1",1]
+head(i1_easyness, n = 48) %>% round(2)
+```
 </div>
 
-## Parameterverteilungen
-
-```{r}
-i1_easyness <- brms::ranef(fit_1d_1pl_spm, summary = FALSE)$item[,"i1",1]
-```
-
 <diV style="float: left; width: 50%;">
+- MCMC-Verfahren
 - Wahrscheinlichkeit(sdichte)
 - Breite $\sim$ Unsicherheit
 - Unsicherheit in Folgeanalysen nutzbar
+- **HDI als Basis für Inferenz**
 </div>
 
 <diV style="float: right; width: 50%;">
@@ -333,19 +385,14 @@ i1_easyness %>% birtms::plot_ppmc_distribution()
 ```
 </div>
 
-<diV style="float: left; width: 100%;">
-```{r echo=TRUE}
-# i1_easyness <- brms::ranef(fit_1d_1pl_spm, summary = FALSE)$item[,"i1",1]
-head(i1_easyness, n = 24) %>% round(2)
-```
-</div>
-
-## Bayes'sche IRT-Modellierung in R
+<div style="background-color: rgba(255,50,50,0.25); position: absolute; top: 409px; left: 695px; width: 25px; height: 208px;"></div>
 
 <div class="notes">
-  - Bimodale und schiefe Verteilungen identifizierbar
-  - Maße zentraler Tendenz und CI wählbar
+  - Markow-Chain-Monte-Carlo
+  - zusätzliches ROPE, um Meehls Paradoxon zu überwinden
 </div>
+
+## Parameterverteilungen {.build}
 
 <div style="width: 50%; float: left;">
   <figure>
@@ -419,7 +466,12 @@ abline(h = height, col = 'black', lty = 2, lwd = 2)
 </div>
 </div>
 
-## Item Response Theorie {.build}
+<div class="notes">
+  - Bimodale und schiefe Verteilungen identifizierbar
+  - Maße zentraler Tendenz und CI wählbar
+</div>
+
+## Item Response Theorie
 
 <div style="width: 50%; float: left">
 - latente Variablen
@@ -429,8 +481,29 @@ abline(h = height, col = 'black', lty = 2, lwd = 2)
 - lokale Unabhängigkeit
 </div>
 
-<div style="width: 50%; float: right">
-<div class="nospace">**Raschmodell:**</div>
+## Item Response Theorie
+
+<div style="width: 50%; float: left">
+- latente Variablen
+  - Personenfähigkeiten $\theta_k$
+  - Itemparameter $\beta_i, \alpha_i, \dots$
+- logistisches Modell (GLM)
+- lokale Unabhängigkeit
+
+<div class="nospace" style="padding-top: 20px">**Raschmodell:**</div>
+$$P\left(1|\theta_k, \beta_i\right)=\frac{\exp\left(\theta_k + \beta_i\right)}{1+\exp\left(\theta_k + \beta_i\right)}$$
+</div>
+
+## Item Response Theorie
+
+<div style="width: 50%; float: left">
+- latente Variablen
+  - Personenfähigkeiten $\theta_k$
+  - Itemparameter $\beta_i, \alpha_i, \dots$
+- logistisches Modell (GLM)
+- lokale Unabhängigkeit
+
+<div class="nospace" style="padding-top: 20px">**Raschmodell:**</div>
 $$P\left(1|\theta_k, \beta_i\right)=\frac{\exp\left(\theta_k + \beta_i\right)}{1+\exp\left(\theta_k + \beta_i\right)}$$
 </div>
 
@@ -441,369 +514,82 @@ $$P\left(1|\theta_k, \beta_i\right)=\frac{\exp\left(\theta_k + \beta_i\right)}{1
   </figure>
 </div>
 
-<div style="width: 50%; float: left; padding-top: 20px">
+## Item Response Theorie
+
+<div style="width: 50%; float: left">
+- latente Variablen
+  - Personenfähigkeiten $\theta_k$
+  - Itemparameter $\beta_i, \alpha_i, \dots$
+- logistisches Modell (GLM)
+- lokale Unabhängigkeit
+
+<div class="nospace" style="padding-top: 20px">**Raschmodell:**</div>
+$$P\left(1|\theta_k, \beta_i\right)=\frac{\exp\left(\theta_k + \beta_i\right)}{1+\exp\left(\theta_k + \beta_i\right)}$$
+</div>
+
+<div style="width: 50%; float: right; margin-top: 10px">
+  <figure>
+    <img src="rasch_icc.png" width = 100% class = "center">
+    <figcaption style="font-size: small; text-align: center;">Grafik aus @Grottke.2021</figcaption>
+  </figure>
+</div>
+
+<div style="width: 50%; float: right; padding-top: 20px">
 <div class="lessspace">*Ausnahmen:*</div>
 - latente Regression
 - Testlets
-</div>
-
-## Bayes'sche IRT-Modellierung in R
-
-<div style="width: 50%; float: left;">
-<div class="lessspace">**Vorgehensweise:**</div>
-1. **Forschungsfragen aufstellen**
-1. Erhebung planen
-1. *Testinstrument entwickeln*
-1. <big>Daten vorbereiten</big>
-</div>
-
-```{r echo=FALSE}
-data_spm <- rio::import("../../data/data_spm.rda")
-```
-
-<diV style="float: right; width: 50%;">
-```{r echo=TRUE, class.output = "small"}
-(data_spm_long <- data_spm %>%
-  birtms::compose_dataset(
-    response_columns = i1:i12))
-```
-</div>
-
-<div class="notes">
-- daten im long format
-</div>
-
-## Bayes'sche IRT-Modellierung in R
-
-<div style="width: 50%; float: left;">
-<div class="lessspace">**Vorgehensweise:**</div>
-1. **Forschungsfragen aufstellen**
-1. Erhebung planen
-1. *Testinstrument entwickeln*
-1. Daten vorbereiten
-1. <big>Modell formulieren</big>
-</div>
-
-<diV style="float: right; width: 50%;">
-<div class="lessspace">**Modelle spezifizieren**</div>
-- Stan syntax:
-  - rstan
-  - edstan
-- GLM syntax: **brms**
-- Keyword based: **birtms**
-</div>
-
-<div class="notes">
-- Stan syntax:
-  - rstan
-  - edstan: 1pl-, 2pl- und ordinale Modelle
-- GLM syntax: **brms**
-  - vlg. lme4
-- Keyword based: **birtms**
-  - @Jeon.2016
-</div>
 
 ## Bayes'sche IRT-Modellierung in R {.build}
 
-<div style="width: 100%;">
-<diV style="float: left; width: 50%;">
-```{r echo=TRUE, eval=FALSE}
-(formula1PL <- birtms::build_formula())
-```
-</div>
-
-<diV style="float: right; width: 50%;">
-```{r echo=FALSE}
-(formula1PL <- birtms::build_formula())
-```
-</div>
-</div>
-
-<div style="width: 100%;">
-<diV style="float: left; width: 50%;">
-```{r echo=TRUE, eval=FALSE}
-(formula1PL_fw <- birtms::build_formula(
-  variable_specifications = list(
-    person_covariables_main_effect = "fw"
-)))
-```
-</div>
-
-<diV style="float: right; width: 50%;">
-```{r echo=FALSE}
-(formula1PL_fw <- birtms::build_formula(
-  variable_specifications = list(
-    person_covariables_main_effect = "fw"
-)))
-```
-</div>
-</div>
-
-<diV style="float: left; width: 100%;">
-```{r echo=TRUE}
-(formula2PL <- birtms::build_formula(model_specifications = list(item_parameter_number = 2)))
-```
-</div>
-
-<div class="notes">
-Itemparameter als random effects, gegen Ausreißer [@Burkner.23.05.2019]
-</div>
-
-## Bayes'sche IRT-Modellierung in R
-
-<div style="width: 100%;">
-<div class="lessspace">**Vorgehensweise:**</div>
-1. **Forschungsfragen aufstellen**
-1. Erhebung planen
-1. *Testinstrument entwickeln*
+<div style="width: 50%; float: left;">
 1. Daten vorbereiten
 1. Modell formulieren
-1. <big>Vorannahmen formulieren</big>
+1. Vorannahmen formulieren
+1. Modell fitten
 </div>
 
-<diV style="width: 100%;">
+<div style="width: 50%; float: right;">
+```{r echo=TRUE}
+data_spm_long <- data_spm %>%
+  birtms::compose_dataset(
+    response_columns = i1:i12)
+```
+</div>
+
+<div style="width: 50%; float: right;">
+```{r echo=TRUE, eval=TRUE}
+(formula1PL <- birtms::build_formula())
+```
+</div>
+
+<div style="width: 100%; float: right;">
 ```{r echo=TRUE}
 prior_1PL <- brms::prior("normal(0, 3)", class = "sd", group = "person") +
   brms::prior("normal(0, 3)", class = "sd", group = "item")
 ```
 </div>
 
-## Bayes'sche IRT-Modellierung in R
-
-<div style="width: 100%;">
-<div class="lessspace">**Vorgehensweise:**</div>
-1. **Forschungsfragen aufstellen**
-1. Erhebung planen
-1. *Testinstrument entwickeln*
-1. Daten vorbereiten
-1. Modell formulieren
-1. <big>Vorannahmen formulieren</big>
-</div>
-
-<diV style="width: 100%;">
-```{r echo=TRUE}
-prior_1PL_gender <- brms::prior("normal(0, 3)", class = "sd", group = "person") +
-  brms::prior("normal(0, 3)", class = "sd", group = "item") +
-  brms::prior("constant(0)", class = "b", coef = "genderm") +
-  brms::prior("normal(1, 0.5)", class = "b", group = "genderw")
-```
-</div>
-
-<div class="notes">
-- Kategorie m als Referenz
-  - Nominalskalen ab 2pl unabdingbar
-- Vorannahme: Geschlecht hoher Einfluss
-  - z.B. aus meta-Studies
-- viele Prädiktoren:
-  - horse-shoe-Prior
-</div>
-
-## Bayes'sche IRT-Modellierung in R
-
-<div style="width: 100%;">
+<div style="width: 100%; float: right;">
 ```{r echo=TRUE, eval=FALSE}
-data_spm_long_gender <- data_spm_long %>% mutate(
-  gender = ifelse(as.integer(person) %% 2 == 1, "m", "w"),
-  gender = ifelse(as.integer(person) %% 23 == 1, "d", gender))
-
-brms::get_prior(formula = formula1PL_gender,
-                data = data_spm_long_gender)
-```
-
-```{r echo=FALSE}
-options(width = 100)
-
-formula1PL_gender <- birtms::build_formula(
-  variable_specifications = list(
-    person_covariables_main_effect = "gender"
-))
-
-data_spm_long_gender <- data_spm_long %>% mutate(
-  gender = ifelse(as.integer(person) %% 2 == 1, "m", "w"),
-  gender = ifelse(as.integer(person) %% 23 == 1, "d", gender))
-
-brms::get_prior(formula = formula1PL_gender,
-                data = data_spm_long_gender)
+fit_1d_1pl_spm <- birtms::birtm(
+  data = data_spm_long, formula = formula1PL, 
+  prior = prior_1PL, file = "models/fit_1d_1pl_spm"
+  )
 ```
 </div>
 
-## Bayes'sche IRT-Modellierung in R
+## Konvergenz prüfen {.build}
 
-<div style="width: 50%; float: left;">
-<div class="lessspace">**Vorgehensweise:**</div>
-1. **Forschungsfragen aufstellen**
-1. Erhebung planen
-1. *Testinstrument entwickeln*
-1. Daten vorbereiten
-1. Modell formulieren
-1. Vorannahmen formulieren
-1. <big>Modell fitten</big>
-</div>
-
-<diV style="float: right; width: 50%;">
-  <figure>
-  <img src="modeltransformation.svg">
-  <figcaption style="font-size: small; text-align: center; margin-top: 5px;">Code- und Modell-Transformation</figcaption>
-  </figure>
-</div>
-
-<diV style="float: right; width: 50%; margin-top: 40px;">
-Variable | TAM | brms
-----------|--------|----------------
-Zeit in s | 0.06  |  57 + **81**
-Iterationen | 36 | 4000 + **4000 + X**
-Speicher in MB |  0.46 | 34.73
-Werte je Parameter | 3 | 4000
-</div>
-
-<diV style="bottom: 50px; position: absolute">
-[MCMC-Sampling-Applets](https://elevanth.org/blog/2017/11/28/build-a-better-markov-chain/)
-</div>
-
-<div class="notes">
-- 3pl-Testletmodell
-  - bis zu 1 Tag
-  - 1 GB groß 
-    - 270 Items
-    - 100 Personen
-    - 38 Dimensionen (immer 2 paarweise)
-
-**EM Algorithmus**
-
-- Start: Itemschwierigkeit $\sim$ Lösungshäufigkeit
-- bis zur Konvergenz:
-  - Wähle SD der random effect Verteilung
-  - Wähle random effect Werte
-  - maximiere die Likelihood
-    - analytisch oder per Newton-Verfahren
-    - effektiv für weniger Dimensionen
-- Präsentiere beste Punktschätzer
-- Präsentiere Schätze CI
-
-**MCMC Algorithmus**
-
-- Burn-in / warmup-Pahse
-- Sampling-Phase
-- Präsentiere Postsamples
-- Deskriptive Statistik der Postsamples
-
-Schritte:
-- Wähle Parameter in der Imgebung
-- berechne Likelihood
-  - besser: akzeptiere Werte
-  - schlechter: werfe biased Münze
-    - Kopf: akzeptiere Werte
-    - Zahl: verwerfe Werte, wähle neue
-</div>
-
-## Bayes'sche IRT-Modellierung in R
-
-<div style="width: 100%;">
-```{r echo=TRUE, eval=FALSE}
-fit_1d_1pl_spm <- birtms::birtm(data = data_spm_long,
-                                formula = formula1PL,
-                                prior = prior_1PL,
-                                file = "models/fit_1d_1pl_spm",
-                                cores = 4
-                                )
-```
-</div>
-
-<div style="width: 100%;">
-```{r echo=TRUE, eval=FALSE}
-fit_1d_1pl_spm_gender <- birtms::birtm(data = data_spm_long,
-                                       formula = formula1PL_gender,
-                                       prior = prior_1PL_gender,
-                                       file = "models/fit_1d_1pl_spm_gender",
-                                       variable_specifications = list(
-                                         person_covariables_main_effect = "gender"
-                                         )
-                                       )
-```
-</div>
-
-<div class="notes">
-- speichert MCMC-Zeit
-- refit-Befehl (nun auch in brms)
-- check_prior_influence: Prior-Plots
-- prepare_bf: Bridgemapling
-- $\dots$-Argument: adjust Stan-code via brms
-</div>
-
-## Bayes'sche IRT-Modellierung in R
-
-<div style="width: 100%;">
-```{r echo=TRUE, eval=FALSE}
-fit_1d_2pl_spm <- birtms::birtm(data = data_spm_long,
-                                formula = formula2PL,
-                                prior = prior_2PL,
-                                file = "models/fit_1d_2pl_spm",
-                                model_specifications = list(
-                                  item_parameter_number = 2
-                                  )
-                                )
-```
-</div>
-
-<div style="width: 100%;">
-```{r echo=TRUE, eval=FALSE}
-fit_1d_2pl_spm <- birtms::birtm_aio(data = data_spm,
-                                    response_columns = i1:i12,
-                                    prior = prior_2PL,
-                                    file = "models/fit_1d_2pl_spm",
-                                    model_specifications = list(
-                                      item_parameter_number = 2
-                                      )
-                                    )
-```
-</div>
-
-<div class="notes">
-- aio: spart ein wenig Schreibaufwand
-- kein get_priors möglich
-</div>
-
-## Bayes'sche IRT-Modellierung in R
-
-<div style="width: 50%; float: left; height: 800px;">
-<div class="lessspace">**Vorgehensweise:**</div>
-1. **Forschungsfragen aufstellen**
-1. Erhebung planen
-1. *Testinstrument entwickeln*
-1. Daten vorbereiten
-1. Modell formulieren
-1. Vorannahmen formulieren
-1. Modell fitten
-1. <big>Modellpassung prüfen</big>
-</div>
-
-<diV style="float: right; width: 50%;">
-```{r echo=TRUE, out.width="100%"}
-plot(fit_1d_1pl_spm)
-```
-</div>
-
-<div style="float: right; width: 50%;">
-<https://mc-stan.org/shinystan/>
-</div>
-
-<div class="notes">
-- MCMC trace plots
-- sd_item__Intercept schief
-</div>
-
-## Bayes'sche IRT-Modellierung in R {.build}
 <diV style="width: 100%;">
 ```{r echo=TRUE, class.output = "small"}
 summary(fit_1d_1pl_spm, robust = TRUE)
 ```
 </div>
 
-<div style="background-color: rgba(255,50,50,0.25); position: absolute; top: 405px; left: 590px; width: 50px; height: 25px;"></div>
+<div style="background-color: rgba(50,50,255,0.25); position: absolute; top: 407px; left: 590px; width: 50px; height: 20px;"></div>
 
-<div style="background-color: rgba(50,255,50,0.25); position: absolute; top: 405px; left: 675px; width: 150px; height: 25px;"></div>
+<div style="background-color: rgba(50,255,50,0.25); position: absolute; top: 407px; left: 675px; width: 150px; height: 20px;"></div>
 
-<div style="background-color: rgba(50,50,255,0.25); position: absolute; top: 405px; left: 265px; width: 50px; height: 25px;"></div>
 
 <div class="notes">
 - Konvergenz: $\hat{r}$
@@ -812,7 +598,7 @@ summary(fit_1d_1pl_spm, robust = TRUE)
 - Multimodalität
 </div>
 
-## Bayes'sche IRT-Modellierung in R
+## Konvergenz prüfen
 
 <diV style="float: left; width: 50%;">
 ```{r echo=TRUE, out.width="100%"}
@@ -829,115 +615,36 @@ bayesplot::mcmc_trace(
   </figure>
 </div>
 
-## Bayes'sche IRT-Modellierung in R
+## birtms-Featurelist
 
-<div style="width: 50%; float: left; height: 800px;">
-<div class="lessspace">**Vorgehensweise:**</div>
-1. **Forschungsfragen aufstellen**
-1. Erhebung planen
-1. *Testinstrument entwickeln*
-1. Daten vorbereiten
-1. Modell formulieren
-1. Vorannahmen formulieren
-1. Modell fitten
-1. <big>Modellpassung prüfen</big>
-</div>
-
-<div style="width: 50%; float: right;">
-1. Konvergenz
-2. ESS
-</div>
-
-## Bayes'sche IRT-Modellierung in R
-
-<div style="width: 50%; float: left; height: 800px;">
-<div class="lessspace">**Vorgehensweise:**</div>
-1. **Forschungsfragen aufstellen**
-1. Erhebung planen
-1. *Testinstrument entwickeln*
-1. Daten vorbereiten
-1. Modell formulieren
-1. Vorannahmen formulieren
-1. Modell fitten
-1. Modellpassung prüfen
-1. <big>Itemselektion</big>
-</div>
-
-<div style="float: right; width: 50%;">
-<div class="lessspace">**Itemcheck mit birtms**</div>
+<div style="float: left; width: 100%;">
+<div class="lessspace">**Itemchecks:**</div>
 - Itemparameterverteilungen
 - Item Characteristic Curves
 - Posterior Predictive Model Checks
-- Wrightmap
-- Odds Ratio Heatmaps
 </div>
 
-## Bayes'sche IRT-Modellierung in R
+<div class="notes">
+- bisher alles mit **brms** möglich
+- IRT-spezifische Auswertung mit **birtms**
+</div>
 
-<diV style="float: left; width: 100%;">
-```{r echo = TRUE, eval=FALSE}
-cowplot::plot_grid(
-  birtms::plot_itemparameter(
-    fit_1d_2pl_spm, pars = "slope", 
-    style = "halfeye", items = c(1,4),
-    alphacut = c(.4, .6, 2),
-    thresholds = c(0,4)),
-  birtms::plot_itemparameter(
-    fit_1d_2pl_spm, pars = "difficulty", 
-    style = "halfeye", items = c(1,4), 
-    thresholds = c(-3,3)), 
-  nrow = 2
-  )
-```
-
-## Bayes'sche IRT-Modellierung in R
+## Itemchecks
 
 <diV style="float: left; width: 100%;">
 <center>
 ```{r echo = FALSE}
-cowplot::plot_grid(birtms::plot_itemparameter(fit_1d_2pl_spm, pars = "slope", style = "halfeye", items = c(1,4), alphacut = c(.4, .6, 2), thresholds = c(0,4)),
-birtms::plot_itemparameter(fit_1d_2pl_spm, pars = "difficulty", style = "halfeye", items = c(1,4), thresholds = c(-3,3)), nrow = 2)
+cowplot::plot_grid(birtms::plot_itemparameter(fit_1d_2pl_spm, pars = "slope", style = "halfeye", items = c(6,9), alphacut = c(.4, .6, 2), thresholds = c(0,4)),
+birtms::plot_itemparameter(fit_1d_2pl_spm, pars = "difficulty", style = "halfeye", items = c(6,9), thresholds = c(-2,2)), nrow = 2)
 ```
 </center></div>
 
-## Bayes'sche IRT-Modellierung in R
-
-```{r echo=FALSE}
-if (file.exists("../../models/gdcp/post_responses_1pl_spm.rds")) {
-  posterior_responses_spm_1pl <- readRDS("../../models/gdcp/post_responses_1pl_spm.rds")
-} else {
-  posterior_responses_spm_1pl <- birtms::get_postdata(fit_1d_1pl_spm)
-  posterior_responses_spm_1pl %>% saveRDS("../../models/gdcp/post_responses_1pl_spm.rds")
-}
-```
-
-
-<diV style="float: left; width: 100%; margin-top: -20px;">
+## Itemchecks
+<diV style="float: left; width: 100%; margin-top: -35px;">
 ```{r echo=TRUE, message = FALSE, eval=FALSE}
-g_spm_1pl <- birtms::ICC_check(fit_1d_1pl_spm, post_responses = posterior_responses_spm_1pl,
-                                num_groups = 6, item_id = 12)
-```
-
-  <figure>
-  <img src="icc_item12_1pl.svg" width = 70% class="center">
-  </figure>
-</div>
-
-## Bayes'sche IRT-Modellierung in R
-
-```{r echo=FALSE}
-if (file.exists("../../models/gdcp/post_responses_2pl_spm.rds")) {
-  posterior_responses_spm_2pl <- readRDS("../../models/gdcp/post_responses_2pl_spm.rds")
-} else {
-  posterior_responses_spm_2pl <- birtms::get_postdata(fit_1d_2pl_spm)
-  posterior_responses_spm_2pl %>% saveRDS("../../models/gdcp/post_responses_2pl_spm.rds")
-}
-```
-
-<diV style="float: left; width: 100%; margin-top: -20px;">
-```{r echo=TRUE, message = FALSE, eval=FALSE}
-g_spm_2pl <- birtms::ICC_check(fit_1d_2pl_spm, post_responses = posterior_responses_spm_1pl,
-                                num_groups = 6, item_id = 12)
+g_spm_2pl <- birtms::ICC_check(
+  fit_1d_2pl_spm, post_responses = posterior_responses_spm_2pl,
+  num_groups = 6, item_id = 12, ellipse_type = "axisparallel")
 ```
 
   <figure>
@@ -945,159 +652,74 @@ g_spm_2pl <- birtms::ICC_check(fit_1d_2pl_spm, post_responses = posterior_respon
   </figure>
 </div>
 
-## Bayes'sche IRT-Modellierung in R
+<div class="notes">
+- Achsen-parallele Ellipsen sind besser sichtbar
+- sonst lieber "t" oder "norm" nutzen
+</div>
 
-```{r echo=FALSE}
-if (file.exists("../../models/gdcp/post_responses_2pl_spm.rds")) {
-  posterior_responses_spm_2pl <- readRDS("../../models/gdcp/post_responses_2pl_spm.rds")
+## birtms-Featurelist
+
+<div style="float: left; width: 50%;">
+<div class="lessspace">**Itemchecks:**</div>
+- Itemparameterverteilungen
+- Item Characteristic Curves
+- Itemfit
+
+<div class="lessspace">**Modellvergleiche:**</div>
+- **marginal loo-cv**
+- Itemweise:
+  - PPMC
+  - Odds-Ratios
+  - *ICCs*
+</div>
+
+## Modellvergleiche
+
+### leave-one-out crossvalidation
+
+<div style="float: left; width: 100%">
+```{r include=FALSE}
+if (file.exists("../../models/gdcp/marg_loo1pl.rds")) {
+  marg_loo1pl <- readRDS("../../models/gdcp/marg_loo1pl.rds")
 } else {
-  posterior_responses_spm_2pl <- birtms::get_postdata(fit_1d_2pl_spm)
-  posterior_responses_spm_2pl %>% saveRDS("../../models/gdcp/post_responses_2pl_spm.rds")
+  marg_loo1pl <- birtms::loo_marginal(fit_1d_1pl_spm)
+  marg_loo1pl %>% saveRDS("../../models/gdcp/marg_loo1pl.rds")
+}
+
+if (file.exists("../../models/gdcp/marg_loo2pl.rds")) {
+  marg_loo2pl <- readRDS("../../models/gdcp/marg_loo2pl.rds")
+} else {
+  marg_loo2pl <- birtms::loo_marginal(fit_1d_2pl_spm)
+  marg_loo2pl %>% saveRDS("../../models/gdcp/marg_loo2pl.rds")
 }
 ```
 
-<diV style="float: left; width: 100%; margin-top: -20px;">
-```{r echo=TRUE, message = FALSE, eval=FALSE}
-g_spm_2pl <- birtms::ICC_check(fit_1d_2pl_spm, post_responses = posterior_responses_spm_1pl,
-                                num_groups = 10, item_id = 12)
+```{r echo=TRUE, eval=FALSE}
+marg_loo1pl <- birtms::loo_marginal(fit_1d_1pl_spm)
+marg_loo2pl <- birtms::loo_marginal(fit_1d_2pl_spm)
 ```
 
-  <figure>
-  <img src="icc_item12_2pl_10groups.svg" width = 70% class="center">
-  </figure>
+```{r echo=TRUE}
+loo::loo_compare(marg_loo1pl, marg_loo2pl)
+```
+
 </div>
 
 <div class="notes">
-- hoher Outfit (2): von low-achievern erraten
-- Ratewahrscheinlichkeit: 12.5 %
-- G1: rät; G2: macht Fehler
+[elpd_se Interpretation](https://avehtari.github.io/modelselection/CV-FAQ.html#15_How_to_interpret_in_Standard_error_(SE)_of_elpd_difference_(elpd_diff))
+- elpd_diff > 4 und > 2*se => Modell passt besser
 </div>
 
-## Bayes'sche IRT-Modellierung in R
+## Modellvergleiche
 
-```{r echo=FALSE, message = FALSE}
-if (file.exists("../../models/gdcp/ppmcdata_m_1pl_spm.rds")) {
-  ppmc_data_spm_1pl_mixed <- readRDS("../../models/gdcp/ppmcdata_m_1pl_spm.rds")
-} else {
-  ppmc_data_spm_1pl_mixed <- fit_1d_1pl_spm %>% birtms::get_ppmcdatasets(
-    ppmcMethod = 'M', post_responses = posterior_responses_spm_1pl)
-  ppmc_data_spm_1pl_mixed %>% saveRDS("../../models/gdcp/ppmcdata_m_1pl_spm.rds")
-}
+<div style="width: 100%; margin-top: -40px;">
+### Posterior Predictive Model Checks
 
-if (file.exists("../../models/gdcp/ppmcdata_m_1pl_spm_outfit.rds")) {
-  ppmc_data_spm_1pl_outfit_mixed <- readRDS("../../models/gdcp/ppmcdata_m_1pl_spm_outfit.rds")
-} else {
-  ppmc_data_spm_1pl_outfit_mixed <- birtms::get_ppmccriteria(model = fit_1d_1pl_spm,
-    ppmcdata = ppmc_data_spm_1pl_mixed, ppmcMethod = 'M', criteria = 'outfit')
-  ppmc_data_spm_1pl_outfit_mixed %>% saveRDS("../../models/gdcp/ppmcdata_m_1pl_spm_outfit.rds")
-}
-
-outfit_skim_1pl <- ppmc_data_spm_1pl_outfit_mixed %>% group_by(item) %>% 
-  select(item, crit) %>% birtms::custom_skim() %>% 
-  rename_all(~str_remove(.x, "numeric."))
-```
-
-```{r echo=TRUE, message = FALSE, eval=FALSE}
-ppmc_data_spm_1pl_mixed <- fit_1d_1pl_spm %>% birtms::get_ppmcdatasets(
-  ppmcMethod = 'M', post_responses = posterior_responses_spm_1pl)
-
-ppmc_data_spm_1pl_outfit_mixed <- fit_1d_1pl_spm %>% birtms::get_ppmccriteria(
-  ppmcdata = ppmc_data_spm_1pl_mixed, ppmcMethod = 'M', criteria = 'outfit')
-
-outfit_skim_1pl <- ppmc_data_spm_1pl_outfit_mixed %>% group_by(item) %>% 
-  select(item, crit) %>% birtms::custom_skim() %>% 
-  rename_all(~str_remove(.x, "numeric.")) %>% 
-  mutate_if(is.numeric, ~round(.x, 2))
-```
-
-## Bayes'sche IRT-Modellierung in R
-
-```{r, echo=TRUE}
-outfit_skim_1pl %>% select(item, mean, mode, hdi.lower, hdi.upper)
-```
-
-<div class="notes">
-mean entspricht klassischen Werten
-</div>
-
-
-## Bayes'sche IRT-Modellierung in R
-<div style="width: 100%;">
-<center>
-```{r echo=TRUE, message=FALSE, out.width="70%", eval=FALSE}
-birtms::plot_fit_statistic(model = fit_1d_1pl_spm, data = ppmc_data_spm_1pl_outfit_mixed, 
-                           units = c(1,12), ppmcMethod = 'M')
-```
-
-  <figure>
-  <img src="ppmc_1pl_mixed.svg" width = 70% class="center">
-  <figcaption style="font-size: small; text-align: center; margin-top: 5px;"></figcaption>
-  </figure>
-</center>
-</div>
-
-<div class="notes">
-- Mixed PPMC weniger konservativ
-- classic PPMC schneller / memory sparsamer
-  - ggf. n_samples reduzieren
-- Unterschiede teils nicht groß
-</div>
-
-## Bayes'sche IRT-Modellierung in R
-
-```{r echo=FALSE}
-if (file.exists("../../models/gdcp/ppmcdata_m_2pl_spm.rds")) {
-  ppmc_data_spm_2pl_mixed <- readRDS("../../models/gdcp/ppmcdata_m_2pl_spm.rds")
-} else {
-  ppmc_data_spm_2pl_mixed <- fit_1d_2pl_spm %>% birtms::get_ppmcdatasets(
-    ppmcMethod = 'M', post_responses = posterior_responses_spm_2pl)
-  ppmc_data_spm_2pl_mixed %>% saveRDS("../../models/gdcp/ppmcdata_m_2pl_spm.rds")
-}
-
-if (file.exists("../../models/gdcp/ppmcdata_m_2pl_spm_outfit.rds")) {
-  ppmc_data_spm_2pl_outfit_mixed <- readRDS("../../models/gdcp/ppmcdata_m_2pl_spm_outfit.rds")
-} else {
-  ppmc_data_spm_2pl_outfit_mixed <- birtms::get_ppmccriteria(model = fit_1d_2pl_spm,
-    ppmcdata = ppmc_data_spm_2pl_mixed, ppmcMethod = 'M', criteria = 'outfit')
-  ppmc_data_spm_2pl_outfit_mixed %>% saveRDS("../../models/gdcp/ppmcdata_m_2pl_spm_outfit.rds")
-}
-```
-
-<div style="width: 100%;">
-```{r echo=TRUE, message=FALSE, warning=FALSE, out.width="100%", eval=FALSE, cache=FALSE}
-ppmc_infit_data <- setNames(data.frame(ppmc_data_spm_1pl_outfit_mixed[,c(1,5)],
-             ppmc_data_spm_2pl_outfit_mixed[,c(5)]), c('item', '1pl', '2pl'))
-
-ggplot(data = ppmc_infit_data) + 
-  geom_density(aes(`1pl`), colour = '#8b7d6b70', fill = '#8b7d6b70', alpha = 0.3) +
-  geom_density(aes(`2pl`), colour = '#008b4570', fill = '#008b4570', alpha = 0.3) +
-  facet_wrap("item", scales = "free") + xlim(c(-2,2))
-```
-</div>
-
-## Bayes'sche IRT-Modellierung in R
-
-<div style="width: 100%;">
 <center>
   <figure>
   <img src="ppmc_1pl_vs_2pl.svg" width = 80% class="center">
   <figcaption style="font-size: small; text-align: center; margin-top: 5px;"></figcaption>
   </figure>
-
-```{r eval=FALSE, results='hide', fig.keep='all', out.width="80%", warning=FALSE, cache=FALSE}
-ppmc_infit_data <- setNames(
-  data.frame(ppmc_data_spm_1pl_outfit_mixed[,c(1,5)],
-             ppmc_data_spm_2pl_outfit_mixed[,c(5)]), 
-  c('item', '1pl', '2pl'))
-
-ggplot(data = ppmc_infit_data) +
-  geom_density(aes(`1pl`), colour = '#8b7d6b70', 
-               fill = '#8b7d6b70', alpha = 0.3) +
-  geom_density(aes(`2pl`), colour = '#008b4570', 
-               fill = '#008b4570', alpha = 0.3) +
-  facet_wrap("item", scales = "free") + 
-  xlim(c(-2,2))
-```
 </center></div>
 
 <div class="notes">
@@ -1105,47 +727,15 @@ ggplot(data = ppmc_infit_data) +
 - Outfit wesentich besser
 </div>
 
-## Bayes'sche IRT-Modellierung in R
-
-<div style="width: 100%;">
-```{r echo=TRUE, eval=FALSE}
-fit_1d_1pl_spm %>% birtms::plot_wrightmap(classic = FALSE)
-```
-
-<center>
-```{r echo=FALSE, message=FALSE, warning=FALSE, out.width="75%"}
-fit_1d_1pl_spm %>% birtms::plot_wrightmap(classic = FALSE)
-```
-</center>
-</div>
-
-<div class="notes">
-nichts bayesianisches dabei
-</div>
-
-## Bayes'sche IRT-Modellierung in R
+## Modellvergleiche
 
 ```{r include=FALSE}
-if (file.exists("../../models/gdcp/ordata_1pl_spm.rds")) {
-  ordata_1pl_spm <- readRDS("../../models/gdcp/ordata_1pl_spm.rds")
-} else {
-  ordata_1pl_spm <- fit_1d_1pl_spm %>% birtms::get_or(zero_correction = 'Haldane')
-  ordata_1pl_spm %>% saveRDS("../../models/gdcp/ordata_1pl_spm.rds")
-}
-
 if (file.exists("../../models/gdcp/ordata_1pl_spm_fullbayes.rds")) {
   ordata_1pl_spm_fullbayes <- readRDS("../../models/gdcp/ordata_1pl_spm_fullbayes.rds")
 } else {
   ordata_1pl_spm_fullbayes <- fit_1d_1pl_spm %>% birtms::get_or(zero_correction = 'Bayes',
                                                       ci_method = 'BayesHDI')
   ordata_1pl_spm_fullbayes %>% saveRDS("../../models/gdcp/ordata_1pl_spm_fullbayes.rds")
-}
-
-if (file.exists("../../models/gdcp/ordata_2pl_spm.rds")) {
-  ordata_2pl_spm <- readRDS("../../models/gdcp/ordata_2pl_spm.rds")
-} else {
-  ordata_2pl_spm <- fit_1d_2pl_spm %>% birtms::get_or(zero_correction = 'Haldane')
-  ordata_2pl_spm %>% saveRDS("../../models/gdcp/ordata_2pl_spm.rds")
 }
 
 if (file.exists("../../models/gdcp/ordata_2pl_spm_fullbayes.rds")) {
@@ -1156,20 +746,6 @@ if (file.exists("../../models/gdcp/ordata_2pl_spm_fullbayes.rds")) {
   ordata_2pl_spm_fullbayes %>% saveRDS("../../models/gdcp/ordata_2pl_spm_fullbayes.rds")
 }
 ```
-
-```{r echo=TRUE, eval=FALSE}
-ordata_1pl_spm <- fit_1d_1pl_spm %>% birtms::get_or(zero_correction = 'Haldane')
-
-ordata_1pl_spm_fullbayes <- fit_1d_1pl_spm %>% birtms::get_or(zero_correction = 'Bayes',
-                                                      ci_method = 'BayesHDI')
-
-ordata_2pl_spm <- fit_1d_2pl_spm %>% birtms::get_or(zero_correction = 'Haldane')
-
-ordata_2pl_spm_fullbayes <- fit_1d_2pl_spm %>% birtms::get_or(zero_correction = 'Bayes',
-                                                      ci_method = 'BayesHDI')
-```
-
-## Bayes'sche IRT-Modellierung in R
 
 <div style="margin-top: -50px">
 ### Odds-ratio PPMC
@@ -1207,63 +783,36 @@ ordata_1pl_spm_fullbayes %>% birtms::plot_ppmc_or_heatmap(itemrange = c(1,12))
 - 2pl besser
 </div>
 
-## Bayes'sche IRT-Modellierung in R
+## Modellvergleiche
 
 <div style="margin-top: -50px">
 ### Odds-ratio-Limit-Check
 
 <div style="float: left; width: 50%;">
 ```{r echo=TRUE, eval=FALSE}
-ordata_1pl_spm_fullbayes %>% 
-  birtms::plot_or_heatmap()
+ordata_2pl_spm_fullbayes %>% 
+  birtms::plot_or_heatmap(
+    model = fit_1d_2pl_spm)
 ```
 </div>
 
 <div style="float: right; width: 50%;">
-```{r echo=TRUE, eval=FALSE}
-ordata_2pl_spm_fullbayes %>% 
-  birtms::plot_or_heatmap(model = fit_1d_2pl_spm)
-```
-</div>
-
-<div style="float: left; width: 50%; margin-left: -150px">
-```{r out.width="130%"}
-ordata_2pl_spm_fullbayes %>% birtms::plot_or_heatmap(itemrange = c(1,12))
-```
-</div>
-
-<div style="float: right; width: 50%; margin-right: 100px">
-```{r out.width="130%"}
-ordata_2pl_spm_fullbayes %>% birtms::plot_or_heatmap(itemrange = c(1,12), model = fit_1d_2pl_spm)
-```
-</div>
-</div>
-
-<div class="notes">
-- 2pl besser
-- @Haberman.2007
-</div>
-
-## Bayes'sche IRT-Modellierung in R
-
-<div style="margin-top: -50px">
-### Odds-ratio-Limit-Check
-
-<div style="float: left; width: 50%;">
 ```{r bayesian_or_map, echo=TRUE, eval=FALSE, cache=FALSE}
-ordata_1pl_spm_fullbayes %>% 
-  birtms::plot_or_heatmap(model = fit_1d_2pl_spm, bayesian = TRUE)
-```
-</div>
-
-<div style="float: right; width: 50%;">
-```{r echo=TRUE, eval=FALSE}
 ordata_2pl_spm_fullbayes %>% 
-  birtms::plot_or_heatmap(model = fit_1d_2pl_spm)
+  birtms::plot_or_heatmap(
+    model = fit_1d_2pl_spm, bayesian = TRUE)
 ```
 </div>
 
-<div style="float: left; width: 50%; margin-left: -100px">
+<div style="float: left; width: 50%; margin-left: -100px; margin-top: -20px;">
+```{r out.width="130%"}
+ordata_2pl_spm_fullbayes %>% birtms::plot_or_heatmap(itemrange = c(1,12),
+                                                     model = fit_1d_2pl_spm)
+```
+</div>
+</div>
+
+<div style="float: right; width: 50%; margin-right: 100px; margin-top: -20px;">
   <figure>
   <img src="bayes_or_map.svg" width = 130% class="center">
   <figcaption style="font-size: small; text-align: center; margin-top: 5px;"></figcaption>
@@ -1276,186 +825,247 @@ ordata_2pl_spm_fullbayes %>% birtms::plot_or_heatmap(itemrange = c(1,12),
 ```
 </div>
 
-<div style="float: right; width: 50%; margin-right: 100px">
-```{r out.width="130%"}
-ordata_2pl_spm_fullbayes %>% birtms::plot_or_heatmap(itemrange = c(1,12)
-                                                     , model = fit_1d_2pl_spm)
-```
-</div>
-</div>
-
 <div class="notes">
 - 2pl besser
 - @Haberman.2007
 </div>
 
-## Bayes'sche IRT-Modellierung in R
+## birtms-Featurelist
 
-<div style="width: 50%; float: left; height: 800px;">
-<div class="lessspace">**Vorgehensweise:**</div>
-1. **Forschungsfragen aufstellen**
-1. Erhebung planen
-1. *Testinstrument entwickeln*
-1. Daten vorbereiten
-1. Modell formulieren
-1. Vorannahmen formulieren
-1. Modell fitten
-1. Modellpassung prüfen
-1. Itemselektion
+<div style="float: left; width: 50%;">
+<div class="lessspace">**Itemchecks:**</div>
+- Itemparameterverteilungen
+- Item Characteristic Curves
+- *Itemfit*
+
+<div class="lessspace">**Modellvergleiche:**</div>
+- **marginal loo-cv**
+- Itemweise:
+  - PPMC
+  - Odds-Ratios
+  - *ICCs*
 </div>
 
 <div style="float: right; width: 50%;">
-<div class="lessspace">**Personcheck mit birtms**</div>
-- Posterior Predictive Model Checks
+<div class="lessspace">**latente Regression:**</div>
+- *Parameterverteilungen*
+- bayes'sche Variante des $R^2$-Bestimmtheitsmaß
+
+<div class="lessspace">**Personchecks:**</div>
 - Person Response Functions
-</div>
+- Personfit
 
-## Bayes'sche IRT-Modellierung in R
-
-```{r include=FALSE}
-if (file.exists("../../models/gdcp/ppmcdata_c_1pl_spm.rds")) {
-  ppmc_data_spm_1pl <- readRDS("../../models/gdcp/ppmcdata_c_1pl_spm.rds")
-} else {
-  ppmc_data_spm_1pl <- fit_1d_1pl_spm %>% birtms::get_ppmcdatasets(
-    ppmcMethod = 'C', post_responses = posterior_responses_spm_1pl)
-  ppmc_data_spm_1pl %>% saveRDS("../../models/gdcp/ppmcdata_c_1pl_spm.rds")
-}
-
-if (file.exists("../../models/gdcp/ppmcdata_c_1pl_spm_person_ll.rds")) {
-  ppmc_data_spm_1pl_person_ll <- readRDS("../../models/gdcp/ppmcdata_c_1pl_spm_person_ll.rds")
-} else {
-  ppmc_data_spm_1pl_person_ll <- fit_1d_1pl_spm %>% birtms::get_ppmccriteria(
-    ppmcdata = ppmc_data_spm_1pl, ppmcMethod = 'C', criteria = 'll', group = .$var_specs$person)
-  ppmc_data_spm_1pl_person_ll %>% saveRDS("../../models/gdcp/ppmcdata_c_1pl_spm_person_ll.rds")
-}
-```
-
-```{r echo=TRUE, eval=FALSE}
-ppmc_data_spm_1pl <- fit_1d_1pl_spm %>% 
-  birtms::get_ppmcdatasets(
-    ppmcMethod = 'C', post_responses = posterior_responses_spm_1pl
-    )
-
-ppmc_data_spm_1pl_person_ll <- fit_1d_1pl_spm %>% 
-  birtms::get_ppmccriteria(
-    ppmcdata = ppmc_data_spm_1pl, ppmcMethod = 'C', criteria = 'll', 
-    group = .$var_specs$person
-    )
-
-fit_1d_1pl_spm %>% birtms::plot_fit_statistic(
-  data = ppmc_data_spm_1pl_person_ll, units = c(1,12), group = .$var_specs$person
-  )
-```
-
-## Bayes'sche IRT-Modellierung in R
-
-<div style="width: 100%;">
-<center>
-  <figure>
-  <img src="person_ll_cowplot.svg" width = 80% class="center">
-  <figcaption style="font-size: small; text-align: center; margin-top: 5px;"></figcaption>
-  </figure>
-
-```{r}
-# include_graphics("person_ll_cowplot.svg")
-```
-
-```{r eval=FALSE, message=FALSE, out.width="80%", cache=FALSE}
-fit_1d_1pl_spm %>% birtms::plot_fit_statistic(data = ppmc_data_spm_1pl_person_ll, units = c(1,12), group = .$var_specs$person)
-```
-</center>
-</div>
-
-## Bayes'sche IRT-Modellierung in R
-
-```{r include=FALSE}
-respfuncdata_1pl <- fit_1d_1pl_spm %>%birtms::calc_personresponsedata(
-  post_responses = posterior_responses_spm_1pl)
-```
-
-<div style="width: 100%;">
-```{r echo=TRUE, eval=FALSE}
-respfuncdata_1pl <- fit_1d_1pl_spm %>%birtms::calc_personresponsedata(
-  post_responses = posterior_responses_spm_1pl)
-
-birtms::plot_personresponsefunction(fit_1d_1pl_spm, respfuncdata_1pl, id = c(2:4))
-```
-
-<center>
-```{r echo=FALSE, message=FALSE, warning=FALSE, out.width="60%"}
-birtms::plot_personresponsefunction(fit_1d_1pl_spm, respfuncdata_1pl, id = c(2:4))
-```
-</center>
-</div>
-
-## Bayes'sche IRT-Modellierung in R
-
-<div style="width: 50%; float: left; margin-top: -40px;">
-<div class="lessspace">**Vorgehensweise:**</div>
-1. **Forschungsfragen aufstellen**
-1. Erhebung planen
-1. *Testinstrument entwickeln*
-1. Daten vorbereiten
-1. Modell formulieren
-1. Vorannahmen formulieren
-1. Modell fitten
-1. Modellpassung prüfen
-1. Itemselektion
-1. <big>Forschungsfragen untersuchen</big>
-</div>
-
-<div style="width: 50%; float: right;">
-<div class="lessspace">**Theoretisches Konstrukt:**</div>
-- Dimensionsanalyse
-- **Modellvergleiche mit birtms**
-</div>
-
-<div style="float: right; width: 50%;">
-- leave-one-out crossvalidation
-  - marginal loglikelihood
-  - entferne alle Antworten einer Person
-</div>
-
-<div style="float: right; width: 50%;">
-<div class="lessspace">*Alternativen*</div>
-- grouped k-fold crossvalidation
-- Bayes Factor via bridgesampling
+<div class="lessspace">**Sonstiges:**</div>
+- Wrightmap
 </div>
 
 <div class="notes">
-- Bürkner favorisiert PSIS LOO-CV
-  - conditional LOO bevorzugt komplexere Modelle
-  - marginal LOO weist auf Probleme mit PSIS hin
-  - LOO oder k-fold können bei komplexeren Modellen sehr lange dauern
-- BayesFaktor via BridgeSampling braucht viele Posterior Samples
-  - Bayes-Faktor prior-sensibel
-  - Bridge Sampling: 110000 statt 2000
-  - preparing_bf = TRUE
-  - brms::bayes_factor()
-- Kruschke schlägt vor, mehrere Modell in einem Obermodell zusammenzufassen
-  - in Stan schwerlich möglich, da keine diskreten Variablen gezogen werden
+- bisher alles mit **brms** möglich
+- IRT-spezifische Auswertung mit **birtms**
 </div>
 
-## Bayes'sche IRT-Modellierung in R
+## birtms-Featurelist
 
-<div style="float: left; width: 50%; bottom: 200px">
-  <figure>
-  <img src="conditional.png" height = 300px class="center">
-  <figcaption style="font-size: small; text-align: center; margin-top: 5px;">conditional loo</figcaption>
-  </figure>
+<div style="float: left; width: 50%;">
+<div class="lessspace">**Itemchecks:**</div>
+- Itemparameterverteilungen
+- Item Characteristic Curves
+- *Itemfit*
+
+<div style="background-color: rgba(50,50,255,0.25); width: 50%;">
+<div class="lessspace">**Modellvergleiche:**</div>
+- **marginal loo-cv**
+- Itemweise:
+  - PPMC
+  - Odds-Ratios
+  - *ICCs*
+</div>
 </div>
 
-<div style="float: right; width: 50%; bottom: 200px">
-  <figure>
-  <img src="marginal.png" height = 300px class="center">
-  <figcaption style="font-size: small; text-align: center; margin-top: 5px;">marginal loo</figcaption>
-  </figure>
+<div style="float: right; width: 50%;">
+<div class="lessspace">**latente Regression:**</div>
+- *Parameterverteilungen*
+- bayes'sche Variante des $R^2$-Bestimmtheitsmaß
+
+<div class="lessspace">**Personchecks:**</div>
+- Person Response Functions
+- Personfit
+
+<div class="lessspace">**Sonstiges:**</div>
+- Wrightmap
 </div>
 
-## Bayes'sche IRT-Modellierung in R
+<div class="notes">
+<div style="width: 50%; float: left;">
+**Theoretisches Konstrukt**
+- Dimensionsanalyse
+- Modellvergleiche
+</div>
+</div>
+
+## birtms-Featurelist
+
+<div style="float: left; width: 50%;">
+<div class="lessspace">**Itemchecks:**</div>
+- Itemparameterverteilungen
+- Item Characteristic Curves
+- *Itemfit*
+
+<div style="background-color: rgba(50,50,255,0.25); width: 50%;">
+<div class="lessspace">**Modellvergleiche:**</div>
+- **marginal loo-cv**
+- Itemweise:
+  - PPMC
+  - Odds-Ratios
+  - *ICCs*
+</div>
+</div>
+
+<div style="float: right; width: 50%;">
+<div style="background-color: rgba(50,255,50,0.25); width: 80%;">
+<div class="lessspace">**latente Regression:**</div>
+- *Parameterverteilungen*
+- bayes'sche Variante des $R^2$-Bestimmtheitsmaß
+</div>
+
+<div class="lessspace">**Personchecks:**</div>
+- Person Response Functions
+- Personfit
+
+<div class="lessspace">**Sonstiges:**</div>
+- Wrightmap
+</div>
+
+<div class="notes">
+<div style="width: 50%; float: left;">
+**Theoretisches Konstrukt**
+- Dimensionsanalyse
+- Modellvergleiche
+</div>
+
+<div style="width: 50%; float: right;">
+**Prädiktoren:**
+- latente Regression
+- ROPE + HDI
+- Varianzanalyse
+</div>
+</div>
+
+## Schluss
+<div style="float: left; width: 50%">
+### Bitte
+- um Nutzung
+- um Bugreport
+- um Fragen
+- um Feedback
+</div>
+
+## Schluss
+<div style="float: left; width: 50%">
+### Bitte
+- um Nutzung
+- um Bugreport
+- um Fragen
+- um Feedback
+- um Austausch
+- um Zusammenarbeit
+- um kritischen Prüfung
+</div>
+
+## Schluss
+<div style="float: left; width: 50%">
+### Bitte
+- um Nutzung
+- um Bugreport
+- um Fragen
+- um Feedback
+- um Austausch
+- um Zusammenarbeit
+- um kritischen Prüfung
+</div>
+
+<div style="float: right; width: 50%">
+### Kontakt
+<simon.d.schaefer@hu-berlin.de>
+
+[github](https://github.com/Famondir/birtms)
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## Wrightmap
+
+<div style="width: 100%;">
+```{r echo=TRUE, eval=FALSE}
+fit_1d_1pl_spm %>% birtms::plot_wrightmap(classic = FALSE)
+```
 
 <center>
-```{r}
+```{r echo=FALSE, message=FALSE, warning=FALSE, out.width="75%"}
+fit_1d_1pl_spm %>% birtms::plot_wrightmap(classic = FALSE)
+```
+</center>
+</div>
+
+<div class="notes">
+nichts bayesianisches dabei
+</div>
+
+## conditional and marginal loo-cv
+
+<div style="float: left; width: 50%;">
+  <center>
+  <figure>
+  <img src="conditional.png" height = 200px class="center">
+  <figcaption style="font-size: small; text-align: center; margin-top: 5px;">conditional loo</figcaption>
+  </figure>
+  
+  ```{r, out.width="90%"}
+  plot(brms::loo(fit_1d_1pl_spm))
+  ```
+  </center>
+</div>
+
+<div style="float: right; width: 50%;">
+  <center>
+  <figure>
+  <img src="marginal.png" height = 200px>
+  <figcaption style="font-size: small; text-align: center; margin-top: 5px;">marginal loo</figcaption>
+  </figure>
+  
+  ```{r, out.width="90%"}
+  plot(marg_loo1pl)
+  ```
+  </center>
+</div>
+
+## crossvalidation methods {.smaller}
+
+<center>
+```{r, out.width="66%"}
 ic_1pl_spm <- readRDS("../../models/gdcp/ic_1pl_spm.rds")
 
 crit_vec <- c("10-fold", "grouped 10-fold", "conditional PSIS loo", "marginal PSIS loo")
@@ -1473,133 +1083,22 @@ crit_data %>% ggplot(aes(x = information_crit, y = Estimate)) +
 ```
 </center>
 
-## Bayes'sche IRT-Modellierung in R
-
-<div style="float: left; width: 100%">
-```{r include=FALSE}
-if (file.exists("../../models/gdcp/marg_loo1pl.rds")) {
-  marg_loo1pl <- readRDS("../../models/gdcp/marg_loo1pl.rds")
-} else {
-  marg_loo1pl <- birtms::loo_marginal(fit_1d_1pl_spm)
-  marg_loo1pl %>% saveRDS("../../models/gdcp/marg_loo1pl.rds")
-}
-
-if (file.exists("../../models/gdcp/marg_loo2pl.rds")) {
-  marg_loo2pl <- readRDS("../../models/gdcp/marg_loo2pl.rds")
-} else {
-  marg_loo2pl <- birtms::loo_marginal(fit_1d_2pl_spm)
-  marg_loo2pl %>% saveRDS("../../models/gdcp/marg_loo2pl.rds")
-}
-```
-
-```{r echo=TRUE, eval=FALSE}
-marg_loo1pl <- birtms::loo_marginal(fit_1d_1pl_spm)
-marg_loo1pl <- birtms::loo_marginal(fit_1d_2pl_spm)
-```
-
-```{r echo=TRUE}
-loo::loo_compare(marg_loo1pl, marg_loo2pl)
-```
-
-</div>
+<div class="lessspace">*Alternativen*</div>
+- grouped k-fold crossvalidation
+- Bayes Factor via bridgesampling
 
 <div class="notes">
-[elpd_se Interpretation](https://avehtari.github.io/modelselection/CV-FAQ.html#15_How_to_interpret_in_Standard_error_(SE)_of_elpd_difference_(elpd_diff))
-- elpd_diff > 4 und > 2*se => Modell passt besser
-</div>
-
-## Bayes'sche IRT-Modellierung in R
-
-<div style="width: 50%; float: left; margin-top: -40px;">
-<div class="lessspace">**Vorgehensweise:**</div>
-1. **Forschungsfragen aufstellen**
-1. Erhebung planen
-1. *Testinstrument entwickeln*
-1. Daten vorbereiten
-1. Modell formulieren
-1. Vorannahmen formulieren
-1. Modell fitten
-1. Modellpassung prüfen
-1. Itemselektion
-1. <big>Forschungsfragen untersuchen</big>
-</div>
-
-<div style="width: 50%; float: right;">
-<div class="lessspace">**Prädiktoren:**</div>
-- latente Regression
-- ROPE + HDI
-- Varianzanalyse
-</div>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-## birtms
-
-<div style="float: right; width: 50%;">
-<div class="lessspace">**latente Regression mit birtms**</div>
-- bayes'sche Variante des $R^2$-Bestimmtheitsmaß
+- Bürkner favorisiert PSIS LOO-CV
+  - conditional LOO bevorzugt komplexere Modelle
+  - marginal LOO weist auf Probleme mit PSIS hin
+  - LOO oder k-fold können bei komplexeren Modellen sehr lange dauern
+- BayesFaktor via BridgeSampling braucht viele Posterior Samples
+  - Bayes-Faktor prior-sensibel
+  - Bridge Sampling: 110000 statt 2000
+  - preparing_bf = TRUE
+  - brms::bayes_factor()
+- Kruschke schlägt vor, mehrere Modell in einem Obermodell zusammenzufassen
+  - in Stan schwerlich möglich, da keine diskreten Variablen gezogen werden
 </div>
 
 ## Ausblick {.smaller}
@@ -1637,273 +1136,46 @@ loo::loo_compare(marg_loo1pl, marg_loo2pl)
   - Hoffnung: brms 3 Funktionalitäten
 </div>
 
-## Zusammenfassung
-- Aufruf
-  - zur Zusammenarbeit
-  - zur kritischen Prüfung
+## Sampling {.smaller}
 
+<div style="float: left; width: 50%">
+### EM Algorithmus
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-## Inferenzstatistik
-
-```{r, echo=FALSE, include=FALSE}
-x <- c(F, rep(T, 8))
-p <- round(sum(x)/length(x), 2)
-se <- sqrt(p*(1-p)/length(x))
-p_lci <- max(0, p-1.96*se) %>% round(2)
-p_uci <- min(1, p+1.96*se) %>% round(2)
-p_val <- (pbinom(1, 9, .5)+1-pbinom(8, 9, .5)) %>% round(3)
-```
-
-<div>
-<div style="float: left; width: 50%;">
-Münzwurf: `r as.numeric(x)`
+- Start: Itemschwierigkeit $\sim$ Lösungshäufigkeit
+- bis zur Konvergenz:
+  - Wähle SD der random effect Verteilung
+  - Wähle random effect Werte
+  - maximiere die Likelihood
+    - analytisch oder per Newton-Verfahren
+    - effektiv für weniger Dimensionen
+- Präsentiere beste Punktschätzer
+- Präsentiere Schätze CI
 </div>
 
-<div style="float: right; width: 50%;">
-$X \sim binom(n, p)$
-</div>
-</div>
+<div style="float: right; width: 50%">
+### MCMC Algorithmus
 
-```{r}
-data <- tibble::tribble(
-  ~"Aspekt", ~"Klassisch / Frequentistisch", ~"Bayes'sch / Bayesianisch",
-  "Wahrscheinlichkeit", "relative Häufigkeit", "Grad persönlicher Überzeugung",
-  "Vorannahme", "Münze fair", "Münze fair (SD = .10)",
-)
+- Burn-in / warmup-Pahse
+- Sampling-Phase
+- Präsentiere Postsamples
+- Deskriptive Statistik der Postsamples
 
-knitr::kable(data)
-```
-
-<div class="notes">
-Neben der gemeinsamen Datenbasis haben wir uns für ein gemeinsames Modell entschieden. Wir glauben, die Daten basieren auf einem Prozess, der mit der Binomialverteilung modelliert werden kann.
-</div>
-
-## Inferenzstatistik
-
-<div>
-<div style="float: left; width: 50%;">
-Münzwurf: `r as.numeric(x)`
+<div class="lessspace">Schritte:</div>
+- Wähle Parameter in der Imgebung
+- berechne Likelihood
+  - besser: akzeptiere Werte
+  - schlechter: werfe biased Münze
+    - Kopf: akzeptiere Werte
+    - Zahl: verwerfe Werte, wähle neue
+    
+[MCMC-Sampling-Applets](https://elevanth.org/blog/2017/11/28/build-a-better-markov-chain/)
 </div>
 
-<div style="float: right; width: 50%;">
-$X \sim binom(n, p)$
-</div>
-</div>
+## ROPE
 
-```{r}
-data <- tibble::tribble(
-  ~"Aspekt", ~"Klassisch / Frequentistisch", ~"Bayes'sch / Bayesianisch",
-  "Wahrscheinlichkeit", "relative Häufigkeit", "Grad persönlicher Überzeugung",
-  "Vorannahme", "Münze fair", "Münze fair (SD = .10)",
-  "P(X=1) =", paste0(p, " [", p_lci, ", ", p_uci, "]"), "",
-  "Hypothesentest", as.character(p_val), "",
-  "Entscheidung", "nicht fair", ""
-)
-
-knitr::kable(data)
-```
-
-## Inferenzstatistik
-
-<div>
-<div style="float: left; width: 50%;">
-Münzwurf: `r as.numeric(x)`
-</div>
-
-<div style="float: right; width: 50%;">
-$X \sim binom(n, p)$
-</div>
-</div>
-
-```{r}
-data <- tibble::tribble(
-  ~"Aspekt", ~"Klassisch / Frequentistisch", ~"Bayes'sch / Bayesianisch",
-  "Wahrscheinlichkeit", "relative Häufigkeit", "Grad persönlicher Überzeugung",
-  "Vorannahme", "Münze fair", "Münze fair (SD = .10)",
-  "P(X=1) =", paste0(p, " [", p_lci, ", ", p_uci, "]"), "",
-  "Hypothesentest", as.character(p_val), "",
-  "Entscheidung", "nicht fair", ""
-)
-
-knitr::kable(data)
-```
-
-<div style="margin-top: -184px; left: 650px; position: absolute">
+<div style="float: left; width: 100%;">
   <figure>
-  <img src="cointoss.svg" width = 390>
-  <figcaption style="font-size: small; text-align: center; margin-left: 270px; margin-top: -150px; transform: rotate(-90deg); width: 250px">Grafik erstellt mit @JASP2020</figcaption>
-  </figure>
-  </div>
-
-
-## Inferenzstatistik
-
-<div>
-<div style="float: left; width: 50%;">
-Münzwurf: `r as.numeric(x)`
-</div>
-
-<div style="float: right; width: 50%;">
-$X \sim binom(n, p)$
-</div>
-</div>
-
-```{r}
-data <- tibble::tribble(
-  ~"Aspekt", ~"Klassisch / Frequentistisch", ~"Bayes'sch / Bayesianisch",
-  "Wahrscheinlichkeit", "relative Häufigkeit", "Grad persönlicher Überzeugung",
-  "Vorannahme", "Münze fair", "Münze fair (SD = .29)",
-  "P(X=1) =", paste0(p, " [", p_lci, ", ", p_uci, "]"), "",
-  "Hypothesentest", as.character(p_val), "",
-  "Entscheidung", "nicht fair", ""
-)
-
-knitr::kable(data)
-```
-
-<div style="margin-top: -184px; left: 650px; position: absolute">
-  <figure>
-  <img src="cointoss uncertain.svg" width = 390>
-  <figcaption style="font-size: small; text-align: center; margin-left: 270px; margin-top: -150px; transform: rotate(-90deg); width: 250px">Grafik erstellt mit @JASP2020</figcaption>
-  </figure>
-  </div>
-
-<div class="notes">
-- Gefühle in der Wissenschaft?
-- Subjektivität = Willkür?
-- Wald-CI geschätzt (und nach oben beschnitten) vs. simulierte CIs
-</div>
-
-## Inferenzstatistik
-
-<div style="float: left; width: 70%">
-Modell: $X \sim binom(n, p)$
-
-Beendigung der Datenerhebung nach:
-
-1. 9 Würfen
-1. *8 mal Kopf*
-1. 1 Minute
-
-**p-value**:
-<cite>Die Wahrscheinlichkeit in einer Stichprobe der hypothetischen Population ein Ergebnis zu erhalten, dass mindestens so extrem wie das vorliegende Ergebnis ist, *wobei die beabsichtigten Erhebungs- und Auswertungsmethoden berücksichtigt werden müssen*.</cite>
-</div>
-
-<div style="float: right; width: 30%; margin-top: -50px">
-  <figure>
-  <img src="pvaluesamplespace.svg" width = 100%>
-  <figcaption style="font-size: small; text-align: center; margin-top: 5px;">Grafik aus @Kruschke.2015</figcaption>
-  </figure>
-</div>
-
-<div class="notes">
-- Intuitive Interpretation: nur in p % der Fälle kommt dieses Ergebnis zu stande
-- Uneindeutigkeit im frequentistischen oft unberücksichtigt
-- unterschiedliche p-values für einen Datensatz
-- Datenerhebung:
-  - Einzelperson: Power- oder Speedtest?
-    - Beantwortet Frage mit bestimmter Wahrscheinlichkeit
-    - Summenscore als Binomialverteilung (konstante Schwierigkeiten) oder Summe von Bernoulli-Versuchen (verallg. Binomialverteilt)
-    - Wie viele Fragen bearbeitet er?
-  - Was das Kriterium für die Stichprobe
-- Anzahl und Art zusätzlicher Tests verändert Imagionary Sample Space weiter
-- 8 mal Kopf erzeugt Bias
-  - Adaptives Testen: will keine neuen Daten erzeugen, sondern bewerten
-</div>
-
-## Inferenzstatistik {.smaller}
-<div>
-  <figure>
-  <img src="pvaluesNHSTcoin.svg" height = 300px class = "center">
-  <figcaption style="font-size: small; text-align: center; margin-top: 5px;">Grafik nach @Kruschke.2015</figcaption>
-  </figure>
-</div>
-
-<div>
-<br>
-zweite Münze 24 mal werfen: $p\left(\frac{z_1}{N_1}\right) = 0.063$
-<br>
-zweite Münze 12 mal werfen: $p\left(\frac{z_1}{N_1}\right) = 0.103$
-</div>
-
-<div class="notes">
-- Zweite Münze muss nicht mal geworfen werden!
-</div>
-
-## Inferenzstatistik {.build}
-
-<div style="float: left; width: 65%; margin-top: 0px">
-- sind Nägel fair?
-- 7 von 24 stehen
-- verwerfen die Hypothese nicht!
-  
-</div>
-
-<div style="float: left; width: 65%; margin-top: 0px">
-
-- Vorwissen berücksichtigen
-  - Berücksichtigung seltener Ereignisse
-  - bedeutsame Parametervergleiche
-  - Datensätze erweitern
-- Einfluss des Priors nimmt mit Datenmenge ab
-  
-</div>
-
-<div style="float: right; width: 35%; margin-top: -200px">
-  <figure>
-  <img src="bayesvsfrequentistxkcd.png" width = 100%>
-  <figcaption style="font-size: small; text-align: center; margin-top: 5px;"><https://xkcd.com/1132/></figcaption>
-  </figure>
-</div>
-
-<div class="notes">
-- schwache Prior führen quasi zu frequentistischen Ergebnissen
-- Einfluss des Priors kann überprüft werden
-</div>
-
-
-
-## Inferenzstatistik
-
-
-<div style="float: left; width: 50%;">
-### Mehls Paradox ROPE
-</div>
-
-<div style="float: right; width: 50%;">
-  <figure>
-  <img src="ROPErules.svg" width = 100%>
+  <img src="ROPErules.svg" width = 60% class="center">
   <figcaption style="font-size: small; text-align: center; margin-top: 5px;">Grafik aus @Waning.2001</figcaption>
   </figure>
 </div>
