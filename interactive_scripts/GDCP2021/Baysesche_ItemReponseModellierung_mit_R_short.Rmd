@@ -30,6 +30,12 @@ library(tidyverse)
     })
 </script>
 
+```{r echo=FALSE}
+fit_1d_1pl_spm <- readRDS("../../models/gdcp/fit_1d_1pl_spm_full1b.rds")                            
+
+fit_1d_2pl_spm <- readRDS("../../models/gdcp/fit_1d_2pl_spm_full1b.rds")
+```
+
 ## Überblick {.build}
 
 <div style="float: left; width: 50%;">
@@ -81,7 +87,30 @@ library(tidyverse)
 - Interesse, Motivation, Persönlichkeit, $\dots$
 </div>
 
-## Motivation {.build}
+## Motivation
+
+<div>
+- Professionswissens von Chemie-Studierenden mit Lehramtsoption
+- deklarativ-fachdidaktischer Wissenstest
+</div>
+
+<div style="bottom: 60px; left: 90px; position: absolute; width=500px">
+  <figure>
+  <img src="AufgabeMahaffyTetraederItem.png" width = 500>
+  <figcaption style="font-size: small; text-align: center; margin-top: 3px">Antwortoptionen 059MC</figcaption>
+  </figure>
+</div>
+
+<div class="notes">
+- real Multiple-Choice- und Sortier-Aufgaben<br>einzeln auswerten
+- Auswertungsmethoden:
+  - Alles-oder-nichts
+  - Partial-Credit / Ordinal
+  - jede Antwortoption / jeden Paarvergleich einzeln
+- Bifaktor-Struktur / Testlet-Modell
+</div>
+
+## Motivation
 
 <div>
 - Professionswissens von Chemie-Studierenden mit Lehramtsoption
@@ -100,15 +129,6 @@ library(tidyverse)
   <img src="testletmodell.svg" width = 500>
   <figcaption style="font-size: small; text-align: center; margin-top: 10px">Grafik aus @Zhang.2011</figcaption>
   </figure>
-</div>
-
-<div class="notes">
-- real Multiple-Choice- und Sortier-Aufgaben<br>einzeln auswerten
-- Auswertungsmethoden:
-  - Alles-oder-nichts
-  - Partial-Credit / Ordinal
-  - jede Antwortoption / jeden Paarvergleich einzeln
-- Bifaktor-Struktur / Testlet-Modell
 </div>
 
 ## Motivation
@@ -191,6 +211,209 @@ library(tidyverse)
 - marginal loglik: Entscheidung für Model 2
 </div>
 
+## Inferenzstatistik
+
+<div style="float: right; width: 50%; margin-top: -60px">
+  <figure>
+  <img src="NHSTvsPCIvalues.svg" width=100%>
+  <figcaption style="font-size: small; text-align: center; margin-top: 5px;">Grafik aus @Kruschke.2018</figcaption>
+  </figure>
+</div>
+
+<div style="float: left; width: 50%; margin-top: 0px">
+### Probleme mit NHST
+- abhängig von Datenerhebung/-auswertung
+- $H_0$ oft quatsch
+- contra Nullhypothese $\nLeftrightarrow$ <br>pro Alternativhypothese
+- Effektstärke?
+- Informationsverlust
+- Interpretation
+- Meehls Paradoxon <small>[@Meehl.1997]</small>
+</div>
+
+<div class="notes">
+- Bayes-Faktor: pro H0, ungewiss, pro H1
+- Informationsverlust
+  - behindert Metaaanalysen
+- Meehls Paradoxon <small>[@Meehl.1997]</small>
+  - NHST verwirft H0 mit vielen Daten immer
+</div>
+
+## Inferenzstatistik
+
+<div style="float: right; width: 50%; margin-top: -60px">
+  <figure>
+  <img src="NHSTvsPCIvalues.svg" width=100%>
+  <figcaption style="font-size: small; text-align: center; margin-top: 5px;">Grafik aus @Kruschke.2018</figcaption>
+  </figure>
+</div>
+
+<div style="float: left; width: 50%; margin-top: 0px">
+### Probleme mit "new statistics"
+- abhängig von Datenerhebung/-auswertung
+- Parameterverteilung?
+- Meehls Paradoxon <small>[@Meehl.1997]</small>
+</div>
+
+<div class="notes">
+- CI enthält Werte, die von NHST nicht abgelehnt würden
+- CI: Konfidenzintervall basiert auf Vorannahmen und Schätzungen
+  - Interpretationbasier auf vielen Wiederholungen:<br>der wahre Parameter in 95 % der Fälle im CI liegen
+- keine Informationen über Parameterverteilung
+  - Unimodalität
+  - Schiefe
+</div>
+
+## Inferenzstatistik
+
+<div style="width: 50%; float: left;">
+### Pro frequentistische Methodik
+
+- Akzeptanz / Bekanntheit
+- eigener Wissensstand
+- Werkzeuge
+  - Verfügbarkeit
+  - Effizienz
+</div>
+
+## Bayesianische Methodik
+
+<div style="width: 50%; float: left;">
+### Pro
+
+- flexible Modellierung
+- valide für kleine Stichproben
+- Auswertung unabhängig von
+  - Abschlusskriterium der Studie
+  - Anzahl und Art der Tests
+- intuitive Interpretation
+- Vorwissen nutzbar
+- Parameterverteilung
+</div>
+
+<div style="width: 50%; float: right;">
+### Contra
+
+- Software-Verfügbarkeit
+- Hardwareanforderungen
+- Kommunikationsaufwand
+
+<figure>
+    <img src="WAMBS.png" width = 55% class = "center">
+    <figcaption style="font-size: small; text-align: center;">[WAMBS-Checklist](https://www.rensvandeschoot.com/wambs-checklist/)</figcaption>
+  </figure>
+</div>
+
+<div class="notes">
+- nicht auf etablierte Modelle beschränkt
+- likelihood unabhängig vom Vorgehen
+- seltene Fälle berücksichtigen (z. B.Krankheiten)
+</div>
+
+## Parameterverteilungen
+
+```{r}
+i1_easyness <- brms::ranef(fit_1d_1pl_spm, summary = FALSE)$item[,"i1",1]
+```
+
+<diV style="float: left; width: 50%;">
+- Wahrscheinlichkeit(sdichte)
+- Breite $\sim$ Unsicherheit
+- Unsicherheit in Folgeanalysen nutzbar
+</div>
+
+<diV style="float: right; width: 50%;">
+```{r echo=TRUE, out.width="80%"}
+i1_easyness %>% birtms::plot_ppmc_distribution()
+```
+</div>
+
+<diV style="float: left; width: 100%;">
+```{r echo=TRUE}
+# i1_easyness <- brms::ranef(fit_1d_1pl_spm, summary = FALSE)$item[,"i1",1]
+head(i1_easyness, n = 24) %>% round(2)
+```
+</div>
+
+## Bayes'sche IRT-Modellierung in R
+
+<div class="notes">
+  - Bimodale und schiefe Verteilungen identifizierbar
+  - Maße zentraler Tendenz und CI wählbar
+</div>
+
+<div style="width: 50%; float: left;">
+  <figure>
+  <img src="skewposterior.svg">
+  <figcaption style="font-size: small; text-align: center;">Grafik aus @Kruschke.2015</figcaption>
+  </figure>
+</div>
+
+<div style="float: right; width: 50%;">
+<diV style="margin-top: -70px">
+```{r eval=TRUE, results='hide', fig.keep='last', out.width="100%"}
+alpha_conf <- .05
+alpha_1 <- 11
+beta_1 <- 30
+alpha_2 <- 25
+beta_2 <- 8
+
+mixture_density <- function(x, alpha_1, alpha_2, beta_1, beta_2) {
+  .5 * dbeta(x, alpha_1, beta_1) + .5 * dbeta(x, alpha_2, beta_2)
+}
+
+# generate data to compute empirical quantiles
+n_sim <- 1000000
+theta_1 <- rbeta(n_sim / 2, alpha_1, beta_1)
+theta_2 <- rbeta(n_sim / 2, alpha_2, beta_2)
+theta <- sort(c(theta_1, theta_2))
+
+lower_idx <- round((alpha_conf / 2) * n_sim)
+upper_idx <- round((1 - alpha_conf / 2) * n_sim)
+q_lower <- theta[lower_idx]
+q_upper <- theta[upper_idx]
+
+x <- seq(0,1, by = 0.001)
+y_val <- mixture_density(x, alpha_1, alpha_2, beta_1, beta_2)
+x_coord <- c(q_lower, x[x >= q_lower & x <= q_upper], q_upper)
+y_coord <- c(0, y_val[x >= q_lower & x <= q_upper], 0)
+
+plot(x, mixture_density(x, alpha_1, alpha_2, beta_1, beta_2),
+     type='l', col = 'black', lwd = 1,
+     xlab = expression(theta), ylab = 'density')
+polygon(x_coord, y_coord, col = 'skyblue', lwd = 1,  border = 'black')
+```
+</div>
+
+<diV style="margin-top: -100px">
+```{r eval=TRUE, results='hide', fig.keep='last', out.width="100%"}
+dens <- density(theta)
+HPD_region <- HDInterval::hdi(dens, allowSplit = TRUE)
+height <- attr(HPD_region, 'height')
+lower <- HPD_region[1,1]
+upper <- HPD_region[1,2]
+
+x_coord <- c(lower, x[x >= lower & x <= upper], upper)
+y_coord <- c(0, y_val[x >= lower & x <= upper], 0)
+
+plot(x, mixture_density(x, alpha_1, alpha_2, beta_1, beta_2),
+     type='l', col = 'black', lwd = 1,
+     xlab = expression(theta), ylab = 'density')
+polygon(x_coord, y_coord, col = 'skyblue', lwd = 1,  border = 'black')
+
+lower <- HPD_region[2,1]
+upper <- HPD_region[2,2]
+x_coord <- c(lower, x[x >= lower & x <= upper], upper)
+y_coord <- c(0, y_val[x >= lower & x <= upper], 0)
+polygon(x_coord, y_coord, col = 'skyblue', lwd = 1, border = 'black')
+
+abline(h = height, col = 'black', lty = 2, lwd = 2)
+```
+
+<div style="margin-top: -50px; width: 100%; text-align: center;"><small>Grafiken mittels Code von @Hyvonen.2019</small></div>
+</div>
+</div>
+
 ## Item Response Theorie {.build}
 
 <div style="width: 50%; float: left">
@@ -219,274 +442,6 @@ $$P\left(1|\theta_k, \beta_i\right)=\frac{\exp\left(\theta_k + \beta_i\right)}{1
 - Testlets
 </div>
 
-## Item Response Theorie {.build}
-
-<div style="width: 50%; float: left">
-<div class="lessspace">**Vorgehensweise:**</div>
-1. **Forschungsfragen aufstellen**
-1. Erhebung planen
-1. *Testinstrument entwickeln*
-1. Daten vorbereiten
-</div>
-
-<diV style="width: 100%; bottom: 50px; position: absolute;">
-```{r echo=FALSE}
-data_spm <- rio::import("../../data/data_spm.rda")
-head(data_spm)
-```
-</div>
-
-<div style="width: 50%; float: right; margin-top: -70px">
-  <figure>
-  <img src="RavenSPMeasy.jpg" width = 50% class="center">
-  <figcaption style="font-size: small; text-align: center; margin-top: 5px;">Einfaches Item aus Ravens SPM;<br>Grafik aus @Schoevers.2020</figcaption>
-  </figure>
-</div>
-
-<div class="notes">
-- @Burkner.2020
-- Ravens Standard Progressive Matrices
-- 12 komplexesten Items
-- daten im wide format
-</div>
-
-## Item Response Theorie {.build}
-
-<div style="width: 50%; float: left">
-<div class="lessspace">**Vorgehensweise:**</div>
-1. **Forschungsfragen aufstellen**
-1. Erhebung planen
-1. *Testinstrument entwickeln*
-1. Daten vorbereiten
-1. Modell formulieren
-1. <big>Modell fitten</big>
-</div>
-
-<div style="width: 50%; float: right">
-<div class="lessspace">[R Packages](https://cran.r-project.org/web/views/Psychometrics.html)</div>
-- **TAM**, **mirt**
-- eRm, lme4
-- *flirt* <small>[@Jeon.2016]</small>
-</div>
-
-<div class="notes">
-- Entscheidung für Raschmodell
-- Kurzer Blick auf TAM
-</div>
-
-## IRT-Modelle mit TAM
-
-<div style="float: left; width: 50%;">
-```{r eval=FALSE, echo=TRUE}
-mod1PL <- TAM::tam.mml(resp=data_spm[-1])
-```
-</div>
-
-```{r eval=TRUE, include=FALSE}
-mod1PL <- TAM::tam.mml(resp=data_spm[-1])
-```
-
-<div style="float: right; width: 50%;">
-```{r eval=TRUE}
-mod1PL
-```
-</div>
-
-## IRT-Modelle mit TAM
-
-<div style="float: left; width: 50%;">
-```{r eval=FALSE, echo=TRUE}
-mod1PL <- TAM::tam.mml(resp=data_spm[-1])
-
-head(mod1PL$item)
-```
-</div>
-
-<div style="float: right; width: 50%;">
-```{r eval=TRUE}
-head(mod1PL$item_irt)
-```
-</div>
-
-<div class="notes">
-**Achtung:** birtms gibt bei default Itemleichtigkeiten aus!
-</div>
-
-## Item Response Theorie
-
-<div style="width: 50%; float: left">
-<div class="lessspace">**Vorgehensweise:**</div>
-1. **Forschungsfragen aufstellen**
-1. Erhebung planen
-1. *Testinstrument entwickeln*
-1. Daten vorbereiten
-1. Modell formulieren
-1. Modell fitten
-1. <big>Modellpassung prüfen</big>
-</div>
-
-<div style="width: 50%; float: right;">
-1. Konvergenz
-2. Reliabilität
-</div>
-
-<div style="width: 50%; float: right;">
-```{r echo=TRUE}
-mod1PL$EAP.rel
-```
-</div>
-
-<div class="notes">
-
-</div>
-
-## Item Response Theorie
-
-<div style="width: 50%; float: left">
-<div class="lessspace">**Vorgehensweise:**</div>
-1. **Forschungsfragen aufstellen**
-1. Erhebung planen
-1. *Testinstrument entwickeln*
-1. Daten vorbereiten
-1. Modell formulieren
-1. Modell fitten
-1. Modellpassung prüfen
-1. <big>Itemselektion</big>
-
-```{r eval=FALSE, echo=TRUE}
-plot(mod1PL, items = c(8,12), 
-     ngroups = 6, export = FALSE)
-```
-</div>
-
-<div style="width: 50%; float: right; margin-top: -90px">
-```{r eval=TRUE, results='hide', fig.keep='all', out.width="100%"}
-plot(mod1PL, items = c(8,12), ngroups = 6, export = FALSE)
-```
-</div>
-
-<div class="notes">
-- Itembasiert:
-  - Item Characteristic Curves plots
-  - fit-Statistiken
-  - Itemparameter (neg. Trennschärfe?)
-- Testbasiert:
-  - Wrightmap
-</div>
-
-## IRT-Modelle mit TAM
-
-<div style="float: left; width: 50%;">
-```{r eval=FALSE, echo=TRUE}
-mod1PL <- TAM::tam.mml(resp=data_spm[-1])
-
-head(mod1PL$item)
-
-TAM::msq.itemfit(mod1PL) %>% 
-  mutate_if(is.numeric,
-            ~round(.x, 2)) %>% 
-  head()
-```
-</div>
-
-<div style="float: right; width: 50%;">
-```{r eval=TRUE, out.width="100%"}
-TAM::msq.itemfit(mod1PL)$itemfit[c(1,3,5,6,8)] %>% mutate_if(is.numeric, ~round(.x, 2)) #%>% head()
-```
-</div>
-
-## IRT-Modelle mit TAM
-
-<div style="float: left; width: 50%;">
-
-```{r eval=FALSE, echo=TRUE}
-mod1PL <- TAM::tam.mml(resp=data_spm[-1])
-
-head(mod1PL$item)
-
-TAM::msq.itemfit(mod1PL) %>% 
-  mutate_if(is.numeric,
-            ~round(.x, 2)) %>% 
-  head()
-
-thetas_1pl <- TAM::tam.wle(mod1PL)
-item_xsis_1pl <- mod1PL$xsi$xsi
-
-ShinyItemAnalysis::ggWrightMap(
-  thetas_1pl$theta,
-  item_xsis_1pl,
-  color = "#ffffff")
-```
-</div>
-
-```{r eval=TRUE, include=FALSE}
-thetas_1pl <- TAM::tam.wle(mod1PL)
-item_xsis_1pl <- mod1PL$xsi$xsi
-```
-
-<div style="float: right; width: 50%;">
-```{r eval=TRUE, out.width="100%"}
-ShinyItemAnalysis::ggWrightMap(
-  thetas_1pl$theta,
-  item_xsis_1pl,
-  color = "#ffffff")
-```
-</div>
-
-<div class="notes">
-
-</div>
-
-## Item Response Theorie {.build}
-
-<div style="width: 50%; float: left">
-<div class="lessspace">**Vorgehensweise:**</div>
-1. **Forschungsfragen aufstellen**
-1. Erhebung planen
-1. *Testinstrument entwickeln*
-1. Daten vorbereiten
-1. Modell formulieren
-1. Modell fitten
-1. Modellpassung prüfen
-1. Itemselektion
-1. <big>Forschungsfragen untersuchen</big>
-</div>
-
-<div style="width: 50%; float: right;">
-<div class="lessspace">**Theoretisches Konstrukt:**</div>
-- Dimensionsanalyse
-- Modellvergleiche
-</div>
-
-<div style="width: 50%; float: right;">
-<div class="lessspace">**Prädiktoren:**</div>
-- Varianzanalyse
-- Kriterien:
-  - Signifikanz
-  - Effektstärken
-</div>
-
-<div style="width: 50%; float: right;">
-<div class="lessspace">*Alternativen:*</div>
-- latente Regression
-- SEM
-</div>
-
-<div class="notes">
-- $\chi^2$-Test (nested)
-- Informationskriterien (AIC, BIC)
-- Ockhams Rasiermesser
-
-- ANOVA
-- Mediation, Moderation
-- keine Kausalität
-- DAGs
-- NHST, new statistics
-
-- Aufgaben meist nicht nur von einem Konstrukt abhängig
-- Itemselektion berücksichtigt meist nicht Informationen der Prädiktoren
-</div>
-
 ## Bayes'sche IRT-Modellierung in R
 
 <div style="width: 50%; float: left;">
@@ -497,8 +452,12 @@ ShinyItemAnalysis::ggWrightMap(
 1. <big>Daten vorbereiten</big>
 </div>
 
+```{r echo=FALSE}
+data_spm <- rio::import("../../data/data_spm.rda")
+```
+
 <diV style="float: right; width: 50%;">
-```{r echo=TRUE}
+```{r echo=TRUE, class.output = "small"}
 (data_spm_long <- data_spm %>%
   birtms::compose_dataset(
     response_columns = i1:i12))
@@ -734,12 +693,6 @@ Schritte:
 
 ## Bayes'sche IRT-Modellierung in R
 
-```{r echo=FALSE}
-fit_1d_1pl_spm <- readRDS("../../models/gdcp/fit_1d_1pl_spm_full1b.rds")                            
-
-fit_1d_2pl_spm <- readRDS("../../models/gdcp/fit_1d_2pl_spm_full1b.rds")
-```
-
 <div style="width: 100%;">
 ```{r echo=TRUE, eval=FALSE}
 fit_1d_1pl_spm <- birtms::birtm(data = data_spm_long,
@@ -944,95 +897,6 @@ birtms::plot_itemparameter(fit_1d_2pl_spm, pars = "difficulty", style = "halfeye
 
 ## Bayes'sche IRT-Modellierung in R
 
-<diV style="float: left; width: 100%;">
-```{r echo=TRUE}
-i1_easyness <- brms::ranef(fit_1d_1pl_spm, summary = FALSE)$item[,"i1",1]
-head(i1_easyness, n = 10) %>% round(2)
-```
-</div>
-
-<diV style="float: left; width: 50%;">
-```{r echo=TRUE, out.width="100%"}
-i1_easyness %>% birtms::plot_ppmc_distribution()
-```
-</div>
-
-## Bayes'sche IRT-Modellierung in R
-
-<div style="width: 50%; float: left;">
-  <figure>
-  <img src="skewposterior.svg">
-  <figcaption style="font-size: small; text-align: center;">Grafik aus @Kruschke.2015</figcaption>
-  </figure>
-</div>
-
-<div style="float: right; width: 50%;">
-<diV style="margin-top: -70px">
-```{r eval=TRUE, results='hide', fig.keep='last', out.width="100%"}
-alpha_conf <- .05
-alpha_1 <- 11
-beta_1 <- 30
-alpha_2 <- 25
-beta_2 <- 8
-
-mixture_density <- function(x, alpha_1, alpha_2, beta_1, beta_2) {
-  .5 * dbeta(x, alpha_1, beta_1) + .5 * dbeta(x, alpha_2, beta_2)
-}
-
-# generate data to compute empirical quantiles
-n_sim <- 1000000
-theta_1 <- rbeta(n_sim / 2, alpha_1, beta_1)
-theta_2 <- rbeta(n_sim / 2, alpha_2, beta_2)
-theta <- sort(c(theta_1, theta_2))
-
-lower_idx <- round((alpha_conf / 2) * n_sim)
-upper_idx <- round((1 - alpha_conf / 2) * n_sim)
-q_lower <- theta[lower_idx]
-q_upper <- theta[upper_idx]
-
-x <- seq(0,1, by = 0.001)
-y_val <- mixture_density(x, alpha_1, alpha_2, beta_1, beta_2)
-x_coord <- c(q_lower, x[x >= q_lower & x <= q_upper], q_upper)
-y_coord <- c(0, y_val[x >= q_lower & x <= q_upper], 0)
-
-plot(x, mixture_density(x, alpha_1, alpha_2, beta_1, beta_2),
-     type='l', col = 'black', lwd = 1,
-     xlab = expression(theta), ylab = 'density')
-polygon(x_coord, y_coord, col = 'skyblue', lwd = 1,  border = 'black')
-```
-</div>
-
-<diV style="margin-top: -100px">
-```{r eval=TRUE, results='hide', fig.keep='last', out.width="100%"}
-dens <- density(theta)
-HPD_region <- HDInterval::hdi(dens, allowSplit = TRUE)
-height <- attr(HPD_region, 'height')
-lower <- HPD_region[1,1]
-upper <- HPD_region[1,2]
-
-x_coord <- c(lower, x[x >= lower & x <= upper], upper)
-y_coord <- c(0, y_val[x >= lower & x <= upper], 0)
-
-plot(x, mixture_density(x, alpha_1, alpha_2, beta_1, beta_2),
-     type='l', col = 'black', lwd = 1,
-     xlab = expression(theta), ylab = 'density')
-polygon(x_coord, y_coord, col = 'skyblue', lwd = 1,  border = 'black')
-
-lower <- HPD_region[2,1]
-upper <- HPD_region[2,2]
-x_coord <- c(lower, x[x >= lower & x <= upper], upper)
-y_coord <- c(0, y_val[x >= lower & x <= upper], 0)
-polygon(x_coord, y_coord, col = 'skyblue', lwd = 1, border = 'black')
-
-abline(h = height, col = 'black', lty = 2, lwd = 2)
-```
-
-<div style="margin-top: -50px; width: 100%; text-align: center;"><small>Grafiken mittels Code von @Hyvonen.2019</small></div>
-</div>
-</div>
-
-## Bayes'sche IRT-Modellierung in R
-
 ```{r echo=FALSE}
 if (file.exists("../../models/gdcp/post_responses_1pl_spm.rds")) {
   posterior_responses_spm_1pl <- readRDS("../../models/gdcp/post_responses_1pl_spm.rds")
@@ -1155,10 +1019,15 @@ mean entspricht klassischen Werten
 ## Bayes'sche IRT-Modellierung in R
 <div style="width: 100%;">
 <center>
-```{r echo=TRUE, message=FALSE, out.width="70%"}
+```{r echo=TRUE, message=FALSE, out.width="70%", eval=FALSE}
 birtms::plot_fit_statistic(model = fit_1d_1pl_spm, data = ppmc_data_spm_1pl_outfit_mixed, 
                            units = c(1,12), ppmcMethod = 'M')
 ```
+
+  <figure>
+  <img src="ppmc_1pl_mixed.svg" width = 70% class="center">
+  <figcaption style="font-size: small; text-align: center; margin-top: 5px;"></figcaption>
+  </figure>
 </center>
 </div>
 
@@ -1190,7 +1059,7 @@ if (file.exists("../../models/gdcp/ppmcdata_m_2pl_spm_outfit.rds")) {
 ```
 
 <div style="width: 100%;">
-```{r echo=TRUE, message=FALSE, warning=FALSE, out.width="100%", eval=FALSE}
+```{r echo=TRUE, message=FALSE, warning=FALSE, out.width="100%", eval=FALSE, cache=FALSE}
 ppmc_infit_data <- setNames(data.frame(ppmc_data_spm_1pl_outfit_mixed[,c(1,5)],
              ppmc_data_spm_2pl_outfit_mixed[,c(5)]), c('item', '1pl', '2pl'))
 
@@ -1205,7 +1074,12 @@ ggplot(data = ppmc_infit_data) +
 
 <div style="width: 100%;">
 <center>
-```{r eval=TRUE, results='hide', fig.keep='all', out.width="80%", warning=FALSE}
+  <figure>
+  <img src="ppmc_1pl_vs_2pl.svg" width = 80% class="center">
+  <figcaption style="font-size: small; text-align: center; margin-top: 5px;"></figcaption>
+  </figure>
+
+```{r eval=FALSE, results='hide', fig.keep='all', out.width="80%", warning=FALSE, cache=FALSE}
 ppmc_infit_data <- setNames(
   data.frame(ppmc_data_spm_1pl_outfit_mixed[,c(1,5)],
              ppmc_data_spm_2pl_outfit_mixed[,c(5)]), 
@@ -1371,7 +1245,7 @@ ordata_2pl_spm_fullbayes %>% birtms::plot_or_heatmap(itemrange = c(1,12), model 
 ### Odds-ratio-Limit-Check
 
 <div style="float: left; width: 50%;">
-```{r echo=TRUE, eval=FALSE}
+```{r bayesian_or_map, echo=TRUE, eval=FALSE, cache=FALSE}
 ordata_1pl_spm_fullbayes %>% 
   birtms::plot_or_heatmap(model = fit_1d_2pl_spm, bayesian = TRUE)
 ```
@@ -1385,9 +1259,15 @@ ordata_2pl_spm_fullbayes %>%
 </div>
 
 <div style="float: left; width: 50%; margin-left: -100px">
-```{eval=TRUE, results='hide', fig.keep='all',r eval=TRUE, results='hide', fig.keep='all', out.width="130%", message=FALSE}
+  <figure>
+  <img src="bayes_or_map.svg" width = 130% class="center">
+  <figcaption style="font-size: small; text-align: center; margin-top: 5px;"></figcaption>
+  </figure>
+
+```{r eval=FALSE, results='hide', fig.keep='all', out.width="130%", message=FALSE}
 ordata_2pl_spm_fullbayes %>% birtms::plot_or_heatmap(itemrange = c(1,12),
                                                      model = fit_1d_2pl_spm, bayesian = TRUE)
+# hieght for plot: 432 px
 ```
 </div>
 
@@ -1466,7 +1346,16 @@ fit_1d_1pl_spm %>% birtms::plot_fit_statistic(
 
 <div style="width: 100%;">
 <center>
-```{r message=FALSE, out.width="80%"}
+  <figure>
+  <img src="person_ll_cowplot.svg" width = 80% class="center">
+  <figcaption style="font-size: small; text-align: center; margin-top: 5px;"></figcaption>
+  </figure>
+
+```{r}
+# include_graphics("person_ll_cowplot.svg")
+```
+
+```{r eval=FALSE, message=FALSE, out.width="80%", cache=FALSE}
 fit_1d_1pl_spm %>% birtms::plot_fit_statistic(data = ppmc_data_spm_1pl_person_ll, units = c(1,12), group = .$var_specs$person)
 ```
 </center>
@@ -1715,7 +1604,7 @@ loo::loo_compare(marg_loo1pl, marg_loo2pl)
 - **testlets**
 - **Shiny-App**
 - *3pl*
-- Itemkriterien <smaller>[vgl. @Scharl.2019]</smaller>
+- Itemkriterien <small>[vgl. @Scharl.2019]</small>
 - hierarchic
 - ordinal
 - multidim
@@ -1998,39 +1887,7 @@ zweite Münze 12 mal werfen: $p\left(\frac{z_1}{N_1}\right) = 0.103$
 - Einfluss des Priors kann überprüft werden
 </div>
 
-## Inferenzstatistik
 
-<div style="float: left; width: 60%; margin-top: 0px">
-- Ablehnen der Nullhypothese spricht nicht für Alternativhypothese
-- Bayes-Faktor: pro H0, ungewiss, pro H1
-- Informationsverlust
-  - behindert Metaaanalysen
-- Parameterwerte und CIs statt NHST?
-  - Effektstärke
-  - CI enthält Werte, die von NHST nicht abgelehnt würden
-  - frequentistische CIs auch vom Sample Space abhängig
-
-  <figure>
-  <img src="NHSTvsPCI.svg" height = 200px>
-  <figcaption style="font-size: small; text-align: center; margin-top: 5px;">Grafik aus @Kruschke.2018</figcaption>
-  </figure> 
-</div>
-
-<div style="float: right; width: 35%; margin-top: 0px">
-  <figure>
-  <img src="NHSTvsPCIvalues.svg">
-  <figcaption style="font-size: small; text-align: center; margin-top: 5px;">Grafik aus @Kruschke.2018</figcaption>
-  </figure>
-</div>
-
-<div class="notes">
-- NHST verkürzt unsere Informationen auf Ja/Nein
-- CI: Konfidenzintervall basiert auf Vorannahmen und Schätzungen
-  - Interpretation: bei vielen Wiederholungen wird der wahre Parameter in 95 % der Fälle im CI liegen
-  - keine Informationen über Parameterverteilung
-    - Unimodalität
-    - Schiefe
-</div>
 
 ## Inferenzstatistik
 
@@ -2044,195 +1901,6 @@ zweite Münze 12 mal werfen: $p\left(\frac{z_1}{N_1}\right) = 0.103$
   <img src="ROPErules.svg" width = 100%>
   <figcaption style="font-size: small; text-align: center; margin-top: 5px;">Grafik aus @Waning.2001</figcaption>
   </figure>
-</div>
-
-## Inferenzstatistik
-
-  <figure>
-  <img src="decisiontreestatisticaltests.gif" width = 900px>
-  <figcaption style="font-size: small; text-align: center; margin-top: 5px;">Grafik aus @Waning.2001</figcaption>
-  </figure>
-  
-<div class="notes">
-<div style="float: left; width: 50%;">
-### Frequentistisch
-- Problematisch für kleine Stichproben
-  - brauchen unterschiedliche Tests für unterschiedliche Szenarien
-
-</div>
-
-<div style="float: right; width: 50%;">
-### Bayes'sch
-- Prior können normal Gestalthaben, aber auch non-normale Daten fitten
-
-</div>
-</div>
-
-
-## Inferenzstatistik Backlog
-
-<div style="float: left; width: 40%;">
-### Klassisch
-- Parameter haben einen festen Wert, den wir schätzen wollen
-  - ein CI sagt nicht, dass der Wert einer Verteilung unterliegt, sondern nur, in welchem Beeich der wahre Wert liegen sollte
-- $\alpha$-Fehler Korrektur
-  - in höchstens $\alpha \, %$ der Wiederholungen ist überhaupt ein Parameter außerhalb der CI
-
-</div>
-
-<div style="float: right; width: 60%;">
-### Bayes'sch
-- CI: Kredibilitätsintervall Ergebnis von Simulation
-  - Parameterverteilung zeigt, die wahrscheinlichten Werte an
-  - Breite $\sim$ Unsicherheit
-  - HDI statt equallt tailed CI
-  - Median oder Modalwert statt Mittelwert
-  - Passendes zentrales Maß anhand der Parameterverteilung wählbar
-  - Bimodale und schiefe Verteilungen identifizierbar
-- Hardware
-  - braucht mehr Rechenzyklen
-  - braucht mehr Arbeitsspeicher (oder noch mehr Zeit)
-  - braucht mehr Festplattenspeicher
-- können Unsicherheit in Folgeanalysen mitberücksichtigen
-- prädiktive Modelle
-- Messunsicherheit berücksichtigen
-- fehlende Werte imputieren
-- nutzen wir die Möglichkeit der Priors in den IRT-Modellen schon?
-- likelihood / Posterior unabhängig von Testanzahl
-- poweranalysis by simulation
-- PPMC mit oder ohne p-value?
-</div>
-
-## Satz von Bayes {.build}
-
-<div>
-$$ P(A|B) = \frac{P(B|A) \cdot P(A)}{P(B)}$$
-</div>
-
-<div>
-Angewendet auf Modelle:
-$$ P(Parameter|Daten) = \frac{P(Daten|Parameter) \cdot P(Parameter)}{P(Daten)}$$
-</div>
-
-<div>
-Gesprochen:
-$$ \mathbf{Posterior\:Wahrs.} = \frac{\mathbf{Modellfunktion} \cdot \mathbf{Prior\:Wahrs.}}{\mathbf{Normierungsfaktor}}$$
-</div>
-
-<div class="notes">
-- Statt Parametern kann man auch von Hypothesen sprechen: ist $\beta_i = 0$?
-- Modellfunktion = Likelihood
-- Normierungsfaktor: marginale Wahrscheinlichkeit
-</div>
-
-## Bayes'sche Statistik-Pakete in R
-
-<div style="float: left; width: 50%;">
-### Modelle fitten
-
-- Stan:
-  - *rstan*
-  - *rstanarm*
-  - **brms**
-- JAGS: *rjags*
-- *rethinking*
-- *BayesFactor*
-- *blavaan*
-
-</div>
-
-<div style="float: right; width: 50%;">
-### Modelle auswerten
-
-- *tidybayes*
-- *loo*
-- *bayestestR*
-- *bayesplot*
-- *coda*, *plotMCMC*
-- *bridgesampling*
-
-</div>
-
-
-<div class="notes">
-<div style="float: left; width: 50%;">
-
-- Stan oder JAGS brauchen compiler-Zeit
-- kleine Modelle besser direkt simulieren
-
-- Stan: Hameltonian Monte Carlo sampling 
-  - *rstan*: Stan syntax
-  - *rstanarm*: Gelman et al. (früher *arm* genutzt)
-  - **brms**: bayesian GLMs
-- JAGS: *rjags*: Gibbs sampling; JAGS/WinBUGS syntax
-- *rethinking*: McElreath
-- *BayesFactor*: Hypothesis checking
-- *blavaan*: SEMs in Stan (neu) oder JAGS
-
-</div>
-
-<div style="float: right; width: 50%;">
-
-- *tidybayes*: plots and long data extraction
-- *loo*: Modellvergleiche mit leave-one-out CV
-- *bayestestR*: model checking and evaluation
-- *coda*, *plotMCMC*: MCMC-chain plots
-- *bridgesampling*: Bayes factor for whole models
-
-</div>
-</div>
-
-## Hypothesentests und Modellvergleiche
-
-<div style="float: left; width: 50%;">
-- Hypothesen-Modell-Beziehung N:M
-- Modell verwerfen $\nLeftrightarrow$ Hypothese verwerfen
-
-$$\begin{align}
-y &\sim item + person + fw \\
-y &\sim item + person + fw^2 \\
-y &\sim item + person + fw*rpk
-\end{align}$$
-
-$fw$: Fachwissen<br>$rpk$: Repräsentationskenntnis
-</div>
-
-<div style="float: right; width: 50%;">
-
-<figure>
-  <img src="modelsandhypothesis.svg" width = 500>
-  <figcaption style="font-size: small; text-align: center; margin-top: 5px">Grafik aus @McElreath.2020</figcaption>
-</figure>
-
-</div>
-
-<div class="notes">
-- Fachwissenseinfluss kann vielei Gestalt haben
-- Moderationsbeziehung mathematisch uneindeutig
-- Parameterbetrachtung selbst in suboptimalen Modellen
-</div>
-
-## Bayes'sche IRT
-
-1. Daten vorbereiten
-1. Modell formulieren
-1. Konvergenz der MCMC-Chains prüfen ($\hat{r}$, plots)
-1. Posterior Predictive Model Checking
-
-<div style="float: left; width: 50%;">
-### Modellvergleiche
-- Dimensionalitätsanalysen
-- Prädiktorenwahl
-- Wirkungsmodelle prüfen (DAGs)
-
-</div>
-
-<div style="float: right; width: 50%;">
-### Parameterinspektion
-- Itemselektion
-- DIF
-- Effektstärken
-- $\dots$
 </div>
 
 ## Literatur
