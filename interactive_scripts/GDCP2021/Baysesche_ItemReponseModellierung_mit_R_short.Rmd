@@ -41,7 +41,7 @@ data_spm_long <- data_spm %>% birtms::compose_dataset(response_columns = i1:i12)
 
 ## Überblick {.build}
 
-<div style="float: left; width: 50%;">
+<div style="float: left; width: 50%; opacity: 1;">
 1. Motivation
 1. Inferenzstatistik
 1. Item Response Theorie
@@ -49,7 +49,7 @@ data_spm_long <- data_spm %>% birtms::compose_dataset(response_columns = i1:i12)
 1. Showroom: birtms
 </div>
 
-<div style="float: right; width: 50%;">
+<div style="float: right; width: 50%;" class="nobuild">
 <div class="lessspace">**Was:**</div>
 - Methodik: Bayes'sche IRT-Modellierung
 - R-Package-Premiere: birtms
@@ -221,7 +221,7 @@ data_spm_long <- data_spm %>% birtms::compose_dataset(response_columns = i1:i12)
 
 ## Inferenzstatistik {.build}
 
-<div style="float: right; width: 50%; margin-top: -60px">
+<div style="float: right; width: 50%; margin-top: -60px; opacity: 1;">
   <figure>
   <img src="NHSTvsPCIvalues.svg" width=100%>
   <figcaption style="font-size: small; text-align: center; margin-top: 5px;">Grafik aus @Kruschke.2018</figcaption>
@@ -364,7 +364,7 @@ Werte je Parameter | 3 | 4000
 
 ## Parameterverteilungen {.build}
 
-<diV style="float: left; width: 100%; margin-top: -20px">
+<diV style="float: left; width: 100%; margin-top: -20px; opacity: 1;">
 ```{r echo=TRUE, class.output = "small"}
 i1_easyness <- brms::ranef(fit_1d_1pl_spm, summary = FALSE)$item[,"i1",1]
 head(i1_easyness, n = 48) %>% round(2)
@@ -394,7 +394,7 @@ i1_easyness %>% birtms::plot_ppmc_distribution()
 
 ## Parameterverteilungen {.build}
 
-<div style="width: 50%; float: left;">
+<div style="width: 50%; float: left; opacity: 1; margin-top: 100px;">
   <figure>
   <img src="skewposterior.svg">
   <figcaption style="font-size: small; text-align: center;">Grafik aus @Kruschke.2015</figcaption>
@@ -402,7 +402,7 @@ i1_easyness %>% birtms::plot_ppmc_distribution()
 </div>
 
 <div style="float: right; width: 50%;">
-<diV style="margin-top: -70px">
+<diV style="margin-top: -40px">
 ```{r eval=TRUE, results='hide', fig.keep='last', out.width="100%"}
 alpha_conf <- .05
 alpha_1 <- 11
@@ -541,7 +541,7 @@ $$P\left(1|\theta_k, \beta_i\right)=\frac{\exp\left(\theta_k + \beta_i\right)}{1
 
 ## Bayes'sche IRT-Modellierung in R {.build}
 
-<div style="width: 50%; float: left;">
+<div style="width: 50%; float: left; opacity: 1;">
 1. Daten vorbereiten
 1. Modell formulieren
 1. Vorannahmen formulieren
@@ -580,7 +580,7 @@ fit_1d_1pl_spm <- birtms::birtm(
 
 ## Konvergenz prüfen {.build}
 
-<diV style="width: 100%;">
+<diV style="width: 100%; opacity: 1;">
 ```{r echo=TRUE, class.output = "small"}
 summary(fit_1d_1pl_spm, robust = TRUE)
 ```
