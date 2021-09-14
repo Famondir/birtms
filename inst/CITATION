@@ -1,16 +1,16 @@
 citHeader("To cite birtms in publications use:")
 
 citEntry(entry = "Misc",
-  title        = "Famondir/birtms: birtms4GDCP2021",
+  title        = "Famondir/birtms: Bayesian Item Response Theory Models using Stan",
   author       = personList(as.person("Simon Schaefer")),
   journal      = "Zenodo",
   year         = "2021",
-  doi          = "https://doi.org/10.5281/ZENODO.5363669",
+  doi          = "10.5281/zenodo.5507637",
   url          = "https://github.com/Famondir/birtms",
 
   textVersion  =
   paste("Simon Schaefer (2021).",
-        "Famondir/birtms: birtms4GDCP2021",
-        "https://doi.org/10.5281/ZENODO.5363669",
+        "Famondir/birtms: Bayesian Item Response Theory Models using Stan",
+        "10.5281/zenodo.5507637",
         "URL https://github.com/Famondir/birtms.")
 )
