@@ -74,6 +74,11 @@ data_spm_long <- data_spm %>% birtms::compose_dataset(response_columns = i1:i12)
 - Interesse an Statistik
 </div>
 
+<div class="notes">
+- **brms**: bayesian regression models using Stan
+- Videosymbol: mehr Infos im Langvortrag oder auf Nachfrage in der Diskussion
+</div>
+
 ## Motivation
 
 <div>
@@ -143,7 +148,7 @@ data_spm_long <- data_spm %>% birtms::compose_dataset(response_columns = i1:i12)
 <div>
 - Professionswissens von Chemie-Studierenden mit Lehramtsoption
 - deklarativ-fachdidaktischer Wissenstest
-- Bayes'sches MIRT-Modell ab 100 Personen <small>[@Fujimoto.2020]</small>
+- Bayes'sches MIRT-Modell ab 100 Personen <br><small>[@Fujimoto.2020]</small>
 </div>
 
 <div style="position: absolute; bottom: 60px; width: 1000px">
@@ -163,15 +168,8 @@ data_spm_long <- data_spm %>% birtms::compose_dataset(response_columns = i1:i12)
 <div>
 - Professionswissens von Chemie-Studierenden mit Lehramtsoption
 - deklarativ-fachdidaktischer Wissenstest
-- Bayes'sches MIRT-Modell ab 100 Personen <small>[@Fujimoto.2020]</small>
-- Bayes'sche IRT Modellierung mit brms <small>[@Burkner.23.05.2019]</small>
-</div>
-
-<div style="position: absolute; bottom: 60px; width: 1000px">
-  <figure class="txtover">
-  <img src="BuerknerSPMPPMC.svg" width = 85% class="center">
-  <figcaption style="font-size: small; text-align: center; margin-top: 5px">Posterior Predictive Model Check (**PPMC**); Grafik aus @Burkner.2020</figcaption>
-  </figure>
+- Bayes'sches MIRT-Modell ab 100 Personen <br><small>[@Fujimoto.2020]</small>
+- Bayes'sche IRT Modellierung mit brms <br><small>[@Burkner.23.05.2019]</small>
 </div>
 
 <div class="notes">
@@ -198,15 +196,22 @@ data_spm_long <- data_spm %>% birtms::compose_dataset(response_columns = i1:i12)
 <div>
 - Professionswissens von Chemie-Studierenden mit Lehramtsoption
 - deklarativ-fachdidaktischer Wissenstest
-- Bayes'sches MIRT-Modell ab 100 Personen <small>[@Fujimoto.2020]</small>
-- Bayes'sche IRT Modellierung mit brms <small>[@Burkner.23.05.2019]</small>
-- Marginal Likelihood für Modellvergleiche <small>[@Merkle.2019]</small>
+- Bayes'sches MIRT-Modell ab 100 Personen <br><small>[@Fujimoto.2020]</small>
+- Bayes'sche IRT Modellierung mit brms <br><small>[@Burkner.23.05.2019]</small>
+- Marginal Likelihood für Modellvergleiche <br><small>[@Merkle.2019]</small>
 </div>
 
-<div style="position: absolute; bottom: 60px; width: 1000px">
+<div style="position: absolute; bottom: 60px; right: 50px; width: 350px">
   <figure>
-  <img src="MerkleMarginalIC.svg" width = 55% class="center">
-  <figcaption style="font-size: small; text-align: center; margin-top: 5px">Informationskriterien unter Nutzung der conditional und marginal likelihood; Grafik aus @Merkle.2019</figcaption>
+  <img src="MerkleMarginalIC.svg" width = 100% class="center">
+  <figcaption style="font-size: small; text-align: center; margin-top: 5px">Informationskriterium über Modellkomplexität unter Nutzung der conditional und marginal likelihood; Grafik aus @Merkle.2019</figcaption>
+  </figure>
+</div>
+
+<div style="position: absolute; bottom: 60px; width: 100px">
+<figure>
+  <img src="videosymbol.svg" width = 60px class="center">
+    <figcaption style="font-size: small; margin-top: 5px; width: 100px; text-align: center">leave-one-out<br>cross-validation</figcaption>
   </figure>
 </div>
 
@@ -231,7 +236,7 @@ data_spm_long <- data_spm %>% birtms::compose_dataset(response_columns = i1:i12)
 <div style="float: left; width: 50%; margin-top: 0px">
 ### Probleme mit NHST
 - abhängig von Datenerhebung/-auswertung
-- $H_0$ oft quatsch
+- $H_0$ selten bedeutsam
 - contra Nullhypothese $\nLeftrightarrow$ <br>pro Alternativhypothese
 - Effektstärke?
 - Informationsverlust
@@ -287,6 +292,16 @@ data_spm_long <- data_spm %>% birtms::compose_dataset(response_columns = i1:i12)
 ## Inferenzstatistik
 
 <div style="width: 50%; float: left;">
+### Vorteile frequentistischer Methodik
+
+- Akzeptanz / Bekanntheit
+- eigener Wissensstand
+- Werkzeuge
+  - Verfügbarkeit
+  - Effizienz
+</div>
+
+<div style="width: 50%; float: right;">
 ### Vorteile Bayes'scher Methodik
 
 - flexible Modellierung
@@ -307,7 +322,7 @@ data_spm_long <- data_spm %>% birtms::compose_dataset(response_columns = i1:i12)
 
 ## Inferenzstatistik
 
-<div style="width: 50%; float: left;">
+<div style="width: 50%; float: right;">
 ### Vorteile Bayes'scher Methodik
 
 - flexible Modellierung
@@ -320,7 +335,7 @@ data_spm_long <- data_spm %>% birtms::compose_dataset(response_columns = i1:i12)
 - Parameterverteilung
 </div>
 
-<div style="width: 50%; float: right;">
+<div style="width: 50%; float: left;">
 ### Probleme Bayes'scher Methodik
 
 - Software-Verfügbarkeit
@@ -336,7 +351,7 @@ Werte je Parameter | 3 | 4000
 
 ## Inferenzstatistik
 
-<div style="width: 50%; float: left;">
+<div style="width: 50%; float: right;">
 ### Vorteile Bayes'scher Methodik
 
 - flexible Modellierung
@@ -349,7 +364,7 @@ Werte je Parameter | 3 | 4000
 - Parameterverteilung
 </div>
 
-<div style="width: 50%; float: right;">
+<div style="width: 50%; float: left;">
 ### Probleme Bayes'scher Methodik
 
 - Software-Verfügbarkeit
@@ -372,21 +387,30 @@ head(i1_easyness, n = 48) %>% round(2)
 </div>
 
 <diV style="float: left; width: 50%;">
-- MCMC-Verfahren
+- [MCMC-Verfahren](https://elevanth.org/blog/2017/11/28/build-a-better-markov-chain/)
 - Wahrscheinlichkeit(sdichte)
 - Breite $\sim$ Unsicherheit
 - Unsicherheit in Folgeanalysen nutzbar
 - **HDI als Basis für Inferenz**
-- ROPE 
 </div>
 
 <diV style="float: right; width: 50%;">
-```{r echo=TRUE, out.width="80%"}
+```{r echo=TRUE, eval=FALSE, class.source="smallrsource"}
 i1_easyness %>% birtms::plot_ppmc_distribution()
+```
+
+```{r echo=FALSE, out.width="80%"}
+i1_easyness %>% birtms::plot_ppmc_distribution() +
+  geom_vline(xintercept = 0, color = "red")
 ```
 </div>
 
-<div style="background-color: rgba(255,50,50,0.25); position: absolute; top: 409px; left: 695px; width: 25px; height: 208px;"></div>
+<div style="position: absolute; bottom: 60px; width: 100px; right: 50px">
+<figure>
+  <img src="videosymbol.svg" width = 60px class="center">
+    <figcaption style="font-size: small; margin-top: 5px; width: 100px; text-align: center">ROPE</figcaption>
+  </figure>
+</div>
 
 <div class="notes">
   - Markow-Chain-Monte-Carlo
@@ -395,7 +419,7 @@ i1_easyness %>% birtms::plot_ppmc_distribution()
 
 ## Parameterverteilungen {.build}
 
-<div style="width: 50%; float: left; opacity: 1; margin-top: 100px;">
+<div style="width: 50%; float: left; opacity: 1; margin-top: 50px;">
   <figure>
   <img src="skewposterior.svg">
   <figcaption style="font-size: small; text-align: center;">Grafik aus @Kruschke.2015</figcaption>
@@ -403,8 +427,8 @@ i1_easyness %>% birtms::plot_ppmc_distribution()
 </div>
 
 <div style="float: right; width: 50%;">
-<diV style="margin-top: -40px">
-```{r eval=TRUE, results='hide', fig.keep='last', out.width="100%"}
+<figure style="margin-top: 90px">
+```{r eval=TRUE, fig.keep='last', out.width="100%", message=FALSE, warning=FALSE}
 alpha_conf <- .05
 alpha_1 <- 11
 beta_1 <- 30
@@ -428,18 +452,7 @@ q_upper <- theta[upper_idx]
 
 x <- seq(0,1, by = 0.001)
 y_val <- mixture_density(x, alpha_1, alpha_2, beta_1, beta_2)
-x_coord <- c(q_lower, x[x >= q_lower & x <= q_upper], q_upper)
-y_coord <- c(0, y_val[x >= q_lower & x <= q_upper], 0)
 
-plot(x, mixture_density(x, alpha_1, alpha_2, beta_1, beta_2),
-     type='l', col = 'black', lwd = 1,
-     xlab = expression(theta), ylab = 'density')
-polygon(x_coord, y_coord, col = 'skyblue', lwd = 1,  border = 'black')
-```
-</div>
-
-<diV style="margin-top: -100px">
-```{r eval=TRUE, results='hide', fig.keep='last', out.width="100%"}
 dens <- density(theta)
 HPD_region <- HDInterval::hdi(dens, allowSplit = TRUE)
 height <- attr(HPD_region, 'height')
@@ -461,20 +474,24 @@ y_coord <- c(0, y_val[x >= lower & x <= upper], 0)
 polygon(x_coord, y_coord, col = 'skyblue', lwd = 1, border = 'black')
 
 abline(h = height, col = 'black', lty = 2, lwd = 2)
+abline(v = modeest::hsm(theta), col = '#289548', lty = 1, lwd = 2)
+abline(v = median(theta), col = '#D9861C', lty = 1, lwd = 2)
+abline(v = mean(theta), col = '#C20E1A', lty = 1, lwd = 2)
 ```
 
-<div style="margin-top: -50px; width: 100%; text-align: center;"><small>Grafiken mittels Code von @Hyvonen.2019</small></div>
-</div>
+<figcaption style="font-size: small; text-align: center; margin-top: -40px;">Grafiken mittels Code von @Hyvonen.2019</small></figcaption>
+</figure>
 </div>
 
 <div class="notes">
   - Bimodale und schiefe Verteilungen identifizierbar
   - Maße zentraler Tendenz und CI wählbar
+  - zentrale Maße beschreiben nicht vollständig
 </div>
 
-## Item Response Theorie
+## Item Response Theorie {.build}
 
-<div style="width: 50%; float: left">
+<div style="width: 50%; float: left; opacity: 1">
 - latente Variablen
   - Personenfähigkeiten $\theta_k$
   - Itemparameter $\beta_i, \alpha_i, \dots$
@@ -482,101 +499,27 @@ abline(h = height, col = 'black', lty = 2, lwd = 2)
 - lokale Unabhängigkeit
 </div>
 
-## Item Response Theorie
-
-<div style="width: 50%; float: left">
-- latente Variablen
-  - Personenfähigkeiten $\theta_k$
-  - Itemparameter $\beta_i, \alpha_i, \dots$
-- logistisches Modell (GLM)
-- lokale Unabhängigkeit
-
+<div style="width: 50%; float: right; margin-top: -30px">
 <div class="nospace" style="padding-top: 20px">**Raschmodell:**</div>
 $$P\left(1|\theta_k, \beta_i\right)=\frac{\exp\left(\theta_k + \beta_i\right)}{1+\exp\left(\theta_k + \beta_i\right)}$$
-</div>
 
-## Item Response Theorie
-
-<div style="width: 50%; float: left">
-- latente Variablen
-  - Personenfähigkeiten $\theta_k$
-  - Itemparameter $\beta_i, \alpha_i, \dots$
-- logistisches Modell (GLM)
-- lokale Unabhängigkeit
-
-<div class="nospace" style="padding-top: 20px">**Raschmodell:**</div>
-$$P\left(1|\theta_k, \beta_i\right)=\frac{\exp\left(\theta_k + \beta_i\right)}{1+\exp\left(\theta_k + \beta_i\right)}$$
-</div>
-
-<div style="width: 50%; float: right; margin-top: 10px">
   <figure>
     <img src="rasch_icc.png" width = 100% class = "center">
-    <figcaption style="font-size: small; text-align: center;">Grafik aus @Grottke.2021</figcaption>
+    <figcaption style="font-size: small; text-align: center;">IRT-Tutorial mit TAM; Grafik aus @Grottke.2021</figcaption>
   </figure>
 </div>
 
-## Item Response Theorie
-
-<div style="width: 50%; float: left">
-- latente Variablen
-  - Personenfähigkeiten $\theta_k$
-  - Itemparameter $\beta_i, \alpha_i, \dots$
-- logistisches Modell (GLM)
-- lokale Unabhängigkeit
-
-<div class="nospace" style="padding-top: 20px">**Raschmodell:**</div>
-$$P\left(1|\theta_k, \beta_i\right)=\frac{\exp\left(\theta_k + \beta_i\right)}{1+\exp\left(\theta_k + \beta_i\right)}$$
-</div>
-
-<div style="width: 50%; float: right; margin-top: 10px">
-  <figure>
-    <img src="rasch_icc.png" width = 100% class = "center">
-    <figcaption style="font-size: small; text-align: center;">Grafik aus @Grottke.2021</figcaption>
-  </figure>
-</div>
-
-<div style="width: 50%; float: right; padding-top: 20px">
+<div style="width: 50%; float: left;">
 <div class="lessspace">*Ausnahmen:*</div>
 - latente Regression
 - Testlets
-
-## Bayes'sche IRT-Modellierung in R {.build}
-
-<div style="width: 50%; float: left; opacity: 1;">
-1. Daten vorbereiten
-1. Modell formulieren
-1. Vorannahmen formulieren
-1. Modell fitten
 </div>
 
-<div style="width: 50%; float: right;">
-```{r echo=TRUE}
-data_spm_long <- data_spm %>%
-  birtms::compose_dataset(
-    response_columns = i1:i12)
-```
-</div>
-
-<div style="width: 50%; float: right;">
-```{r echo=TRUE, eval=TRUE}
-(formula1PL <- birtms::build_formula())
-```
-</div>
-
-<div style="width: 100%; float: right;">
-```{r echo=TRUE}
-prior_1PL <- brms::prior("normal(0, 3)", class = "sd", group = "person") +
-  brms::prior("normal(0, 3)", class = "sd", group = "item")
-```
-</div>
-
-<div style="width: 100%; float: right;">
-```{r echo=TRUE, eval=FALSE}
-fit_1d_1pl_spm <- birtms::birtm(
-  data = data_spm_long, formula = formula1PL, 
-  prior = prior_1PL, file = "models/fit_1d_1pl_spm"
-  )
-```
+<div style="position: absolute; bottom: 60px; width: 100px;">
+<figure>
+  <img src="videosymbol.svg" width = 60px class="center">
+    <figcaption style="font-size: small; margin-top: 5px; width: 100px; text-align: center">IRT mit TAM</figcaption>
+  </figure>
 </div>
 
 ## Konvergenz prüfen {.build}
@@ -591,6 +534,12 @@ summary(fit_1d_1pl_spm, robust = TRUE)
 
 <div style="background-color: rgba(50,255,50,0.25); position: absolute; top: 407px; left: 675px; width: 150px; height: 20px;"></div>
 
+<div style="position: absolute; bottom: 60px; width: 100px; right: 50px;">
+<figure>
+  <img src="videosymbol.svg" width = 60px class="center">
+    <figcaption style="font-size: small; margin-top: 5px; width: 100px; text-align: center">Modelfitting<br>mit birtms</figcaption>
+  </figure>
+</div>
 
 <div class="notes">
 - Konvergenz: $\hat{r}$
@@ -618,44 +567,36 @@ bayesplot::mcmc_trace(
 
 ## birtms-Featurelist
 
-<div style="float: left; width: 100%;">
+<div style="float: left; width: 50%;">
 <div class="lessspace">**Itemchecks:**</div>
 - Itemparameterverteilungen
 - Item Characteristic Curves
-- Posterior Predictive Model Checks
+- *Itemfit*
+
+<div class="lessspace">**Modellvergleiche:**</div>
+- **marginal loo-cv**
+- Itemweise:
+  - PPMC
+  - Odds-Ratios
+  - *ICCs*
+</div>
+
+<div style="float: right; width: 50%;">
+<div class="lessspace">**latente Regression:**</div>
+- *Parameterverteilungen*
+- bayes'sche Variante des $R^2$-Bestimmtheitsmaß
+
+<div class="lessspace">**Personchecks:**</div>
+- Person Response Functions
+- Personfit
+
+<div class="lessspace">**Sonstiges:**</div>
+- Wrightmap
 </div>
 
 <div class="notes">
 - bisher alles mit **brms** möglich
 - IRT-spezifische Auswertung mit **birtms**
-</div>
-
-## Itemchecks
-
-<diV style="float: left; width: 100%;">
-<center>
-```{r echo = FALSE}
-cowplot::plot_grid(birtms::plot_itemparameter(fit_1d_2pl_spm, pars = "slope", style = "halfeye", items = c(6,9), alphacut = c(.4, .6, 2), thresholds = c(0,4)),
-birtms::plot_itemparameter(fit_1d_2pl_spm, pars = "difficulty", style = "halfeye", items = c(6,9), thresholds = c(-2,2)), nrow = 2)
-```
-</center></div>
-
-## Itemchecks
-<diV style="float: left; width: 100%; margin-top: -35px;">
-```{r echo=TRUE, message = FALSE, eval=FALSE}
-g_spm_2pl <- birtms::ICC_check(
-  fit_1d_2pl_spm, post_responses = posterior_responses_spm_2pl,
-  num_groups = 6, item_id = 12, ellipse_type = "axisparallel")
-```
-
-  <figure>
-  <img src="icc_item12_2pl.svg" width = 70% class="center">
-  </figure>
-</div>
-
-<div class="notes">
-- Achsen-parallele Ellipsen sind besser sichtbar
-- sonst lieber "t" oder "norm" nutzen
 </div>
 
 ## birtms-Featurelist
@@ -664,14 +605,37 @@ g_spm_2pl <- birtms::ICC_check(
 <div class="lessspace">**Itemchecks:**</div>
 - Itemparameterverteilungen
 - Item Characteristic Curves
-- Itemfit
+- *Itemfit*
 
+<div style="background-color: rgba(50,50,255,0.25); width: 50%;">
 <div class="lessspace">**Modellvergleiche:**</div>
 - **marginal loo-cv**
 - Itemweise:
   - PPMC
   - Odds-Ratios
   - *ICCs*
+</div>
+</div>
+
+<div style="float: right; width: 50%;">
+<div class="lessspace">**latente Regression:**</div>
+- *Parameterverteilungen*
+- bayes'sche Variante des $R^2$-Bestimmtheitsmaß
+
+<div class="lessspace">**Personchecks:**</div>
+- Person Response Functions
+- Personfit
+
+<div class="lessspace">**Sonstiges:**</div>
+- Wrightmap
+</div>
+
+<div class="notes">
+<div style="width: 50%; float: left;">
+**Theoretisches Konstrukt**
+- Dimensionsanalyse
+- Modellvergleiche
+</div>
 </div>
 
 ## Modellvergleiche
@@ -711,7 +675,250 @@ loo::loo_compare(marg_loo1pl, marg_loo2pl)
 - elpd_diff > 4 und > 2*se => Modell passt besser
 </div>
 
-## Modellvergleiche
+## birtms-Featurelist
+
+<div style="float: left; width: 50%;">
+<div class="lessspace">**Itemchecks:**</div>
+- Itemparameterverteilungen
+- Item Characteristic Curves
+- *Itemfit*
+
+<div style="background-color: rgba(50,50,255,0.25); width: 50%;">
+<div class="lessspace">**Modellvergleiche:**</div>
+- **marginal loo-cv**
+- Itemweise:
+  - PPMC
+  - Odds-Ratios
+  - *ICCs*
+</div>
+</div>
+
+<div style="float: right; width: 50%;">
+<div style="background-color: rgba(50,255,50,0.25); width: 80%;">
+<div class="lessspace">**latente Regression:**</div>
+- *Parameterverteilungen*
+- bayes'sche Variante des $R^2$-Bestimmtheitsmaß
+</div>
+
+<div class="lessspace">**Personchecks:**</div>
+- Person Response Functions
+- Personfit
+
+<div class="lessspace">**Sonstiges:**</div>
+- Wrightmap
+</div>
+
+<div class="notes">
+<div style="width: 50%; float: left;">
+**Theoretisches Konstrukt**
+- Dimensionsanalyse
+- Modellvergleiche
+</div>
+
+<div style="width: 50%; float: right;">
+**Prädiktoren:**
+- latente Regression
+- ROPE + HDI
+- Varianzanalyse
+</div>
+</div>
+
+## birtms-Featurelist
+
+<div style="float: left; width: 50%;">
+<div style="background-color: rgba(255,125,00,0.25); width: 80%;">
+<div class="lessspace">**Itemchecks:**</div>
+- Itemparameterverteilungen
+- Item Characteristic Curves
+- *Itemfit*
+</div>
+
+<div style="background-color: rgba(50,50,255,0.25); width: 50%;">
+<div class="lessspace">**Modellvergleiche:**</div>
+- **marginal loo-cv**
+- Itemweise:
+  - PPMC
+  - Odds-Ratios
+  - *ICCs*
+</div>
+</div>
+
+<div style="float: right; width: 50%;">
+<div style="background-color: rgba(50,255,50,0.25); width: 80%;">
+<div class="lessspace">**latente Regression:**</div>
+- *Parameterverteilungen*
+- bayes'sche Variante des $R^2$-Bestimmtheitsmaß
+</div>
+
+<div class="lessspace">**Personchecks:**</div>
+- Person Response Functions
+- Personfit
+
+<div class="lessspace">**Sonstiges:**</div>
+- Wrightmap
+</div>
+
+<div class="notes">
+<div style="width: 50%; float: left;">
+**Theoretisches Konstrukt**
+- Dimensionsanalyse
+- Modellvergleiche
+</div>
+
+<div style="width: 50%; float: right;">
+**Prädiktoren:**
+- latente Regression
+- ROPE + HDI
+- Varianzanalyse
+</div>
+</div>
+
+<div class="notes">
+Itemselektion und latente Regression nicht trennen
+</div>
+
+## birtms-Featurelist
+
+<div style="float: left; width: 50%;">
+<div style="background-color: rgba(255,125,00,0.25); width: 80%;">
+<div class="lessspace">**Itemchecks:**</div>
+- Itemparameterverteilungen
+- Item Characteristic Curves
+- *Itemfit*
+</div>
+
+<div style="background-color: rgba(50,50,255,0.25); width: 50%;">
+<div class="lessspace">**Modellvergleiche:**</div>
+- **marginal loo-cv**
+- Itemweise:
+  - PPMC
+  - Odds-Ratios
+  - *ICCs*
+</div>
+</div>
+
+<div style="float: right; width: 50%;">
+<div style="background-color: rgba(50,255,50,0.25); width: 80%;">
+<div class="lessspace">**latente Regression:**</div>
+- *Parameterverteilungen*
+- bayes'sche Variante des $R^2$-Bestimmtheitsmaß
+</div>
+
+<div class="lessspace">**Personchecks:**</div>
+- Person Response Functions
+- Personfit
+
+<div class="lessspace">**Sonstiges:**</div>
+- Wrightmap
+</div>
+
+<div class="notes">
+<div style="width: 50%; float: left;">
+**Theoretisches Konstrukt**
+- Dimensionsanalyse
+- Modellvergleiche
+</div>
+
+<div style="width: 50%; float: right;">
+**Prädiktoren:**
+- latente Regression
+- ROPE + HDI
+- Varianzanalyse
+</div>
+</div>
+
+<div style="position: absolute; bottom: 60px; width: 100px; right: 50px;">
+<figure>
+  <img src="videosymbol.svg" width = 60px class="center">
+    <figcaption style="font-size: small; margin-top: 5px; width: 100px; text-align: center">Modellevaluation<br>mit birtms</figcaption>
+  </figure>
+</div>
+
+## Schluss
+<div style="float: left; width: 50%" class="dottedul">
+### Bitte um $\dots$
+- Nutzung
+- Bugreport
+- Fragen
+- Feedback
+</div>
+
+## Schluss
+<div style="float: left; width: 50%">
+### Bitte um $\dots$
+- Nutzung
+- Bugreport
+- Fragen
+- Feedback
+- Austausch
+- Zusammenarbeit
+- kritischen Prüfung
+</div>
+
+## Schluss
+<div style="float: left; width: 50%">
+### Bitte um $\dots$
+- Nutzung
+- Bugreport
+- Fragen
+- Feedback
+- Austausch
+- Zusammenarbeit
+- kritischen Prüfung
+</div>
+
+<div style="float: right; width: 50%">
+### Kontakt
+<simon.d.schaefer@hu-berlin.de>
+
+<ruediger.tiemann@chemie.hu-berlin.de>
+
+<div style="float: left; width: 40%; margin-left: -20px;">
+  <figure>
+  <img src="qrgithub.png" width = 150px class="center">
+  <figcaption style="font-size: small; text-align: center; margin-top: 5px"><https://github.com/Famondir/birtms></figcaption>
+  </figure>
+</div>
+
+<div style="float: left; right: 40%; margin-left: 40px;">
+  <figure>
+  <img src="qrtiemannlab.png" width = 150px class="center">
+  <figcaption style="font-size: small; text-align: center; margin-top: 5px"><https://tiemannlab.de/research/projects/></figcaption>
+  </figure>
+</div>
+
+</div>
+
+## birtms-Showroom - Itemchecks
+
+<diV style="float: left; width: 100%;">
+<center>
+```{r echo = FALSE, out.width="80%"}
+cowplot::plot_grid(birtms::plot_itemparameter(fit_1d_2pl_spm, pars = "slope", style = "halfeye", items = c(6,9), alphacut = c(.4, .6, 2), thresholds = c(0,4)),
+birtms::plot_itemparameter(fit_1d_2pl_spm, pars = "difficulty", style = "halfeye", items = c(6,9), thresholds = c(-2,2)), nrow = 2)
+```
+</center></div>
+
+## birtms-Showroom - Itemchecks
+
+<diV style="float: left; width: 100%; margin-top: -35px;">
+```{r echo=TRUE, message = FALSE, eval=FALSE}
+g_spm_2pl <- birtms::ICC_check(
+  fit_1d_2pl_spm, post_responses = posterior_responses_spm_2pl,
+  num_groups = 6, item_id = 12, ellipse_type = "axisparallel")
+```
+
+  <figure>
+  <img src="icc_item12_2pl.svg" width = 70% class="center">
+  </figure>
+</div>
+
+<div class="notes">
+- Achsen-parallele Ellipsen sind besser sichtbar
+- sonst lieber "t" oder "norm" nutzen
+</div>
+
+## birtms-Showroom - Modellvergleiche
 
 <div style="width: 100%; margin-top: -40px;">
 ### Posterior Predictive Model Checks
@@ -728,7 +935,7 @@ loo::loo_compare(marg_loo1pl, marg_loo2pl)
 - Outfit wesentich besser
 </div>
 
-## Modellvergleiche
+## birtms-Showroom - Modellvergleiche
 
 ```{r include=FALSE}
 if (file.exists("../../models/gdcp/ordata_1pl_spm_fullbayes.rds")) {
@@ -784,13 +991,13 @@ ordata_1pl_spm_fullbayes %>% birtms::plot_ppmc_or_heatmap(itemrange = c(1,12))
 - 2pl besser
 </div>
 
-## Modellvergleiche
+## birtms-Showroom - Modellvergleiche
 
 <div style="margin-top: -50px">
 ### Odds-ratio-Limit-Check
 
 <div style="float: left; width: 50%;">
-```{r echo=TRUE, eval=FALSE}
+```{r echo=TRUE, eval=FALSE, class.source="smallrsource"}
 ordata_2pl_spm_fullbayes %>% 
   birtms::plot_or_heatmap(
     model = fit_1d_2pl_spm)
@@ -798,7 +1005,7 @@ ordata_2pl_spm_fullbayes %>%
 </div>
 
 <div style="float: right; width: 50%;">
-```{r bayesian_or_map, echo=TRUE, eval=FALSE, cache=FALSE}
+```{r bayesian_or_map, echo=TRUE, eval=FALSE, cache=FALSE, class.source="smallrsource"}
 ordata_2pl_spm_fullbayes %>% 
   birtms::plot_or_heatmap(
     model = fit_1d_2pl_spm, bayesian = TRUE)
@@ -831,191 +1038,61 @@ ordata_2pl_spm_fullbayes %>% birtms::plot_or_heatmap(itemrange = c(1,12),
 - @Haberman.2007
 </div>
 
-## birtms-Featurelist
 
-<div style="float: left; width: 50%;">
-<div class="lessspace">**Itemchecks:**</div>
-- Itemparameterverteilungen
-- Item Characteristic Curves
-- *Itemfit*
 
-<div class="lessspace">**Modellvergleiche:**</div>
-- **marginal loo-cv**
-- Itemweise:
-  - PPMC
-  - Odds-Ratios
-  - *ICCs*
-</div>
 
-<div style="float: right; width: 50%;">
-<div class="lessspace">**latente Regression:**</div>
-- *Parameterverteilungen*
-- bayes'sche Variante des $R^2$-Bestimmtheitsmaß
 
-<div class="lessspace">**Personchecks:**</div>
-- Person Response Functions
-- Personfit
 
-<div class="lessspace">**Sonstiges:**</div>
-- Wrightmap
-</div>
 
-<div class="notes">
-- bisher alles mit **brms** möglich
-- IRT-spezifische Auswertung mit **birtms**
-</div>
 
-## birtms-Featurelist
 
-<div style="float: left; width: 50%;">
-<div class="lessspace">**Itemchecks:**</div>
-- Itemparameterverteilungen
-- Item Characteristic Curves
-- *Itemfit*
 
-<div style="background-color: rgba(50,50,255,0.25); width: 50%;">
-<div class="lessspace">**Modellvergleiche:**</div>
-- **marginal loo-cv**
-- Itemweise:
-  - PPMC
-  - Odds-Ratios
-  - *ICCs*
-</div>
-</div>
 
-<div style="float: right; width: 50%;">
-<div class="lessspace">**latente Regression:**</div>
-- *Parameterverteilungen*
-- bayes'sche Variante des $R^2$-Bestimmtheitsmaß
 
-<div class="lessspace">**Personchecks:**</div>
-- Person Response Functions
-- Personfit
 
-<div class="lessspace">**Sonstiges:**</div>
-- Wrightmap
-</div>
 
-<div class="notes">
-<div style="width: 50%; float: left;">
-**Theoretisches Konstrukt**
-- Dimensionsanalyse
-- Modellvergleiche
-</div>
-</div>
 
-## birtms-Featurelist
 
-<div style="float: left; width: 50%;">
-<div class="lessspace">**Itemchecks:**</div>
-- Itemparameterverteilungen
-- Item Characteristic Curves
-- *Itemfit*
 
-<div style="background-color: rgba(50,50,255,0.25); width: 50%;">
-<div class="lessspace">**Modellvergleiche:**</div>
-- **marginal loo-cv**
-- Itemweise:
-  - PPMC
-  - Odds-Ratios
-  - *ICCs*
-</div>
-</div>
 
-<div style="float: right; width: 50%;">
-<div style="background-color: rgba(50,255,50,0.25); width: 80%;">
-<div class="lessspace">**latente Regression:**</div>
-- *Parameterverteilungen*
-- bayes'sche Variante des $R^2$-Bestimmtheitsmaß
-</div>
+## Bayes'sche IRT-Modellierung in R {.build}
 
-<div class="lessspace">**Personchecks:**</div>
-- Person Response Functions
-- Personfit
-
-<div class="lessspace">**Sonstiges:**</div>
-- Wrightmap
-</div>
-
-<div class="notes">
-<div style="width: 50%; float: left;">
-**Theoretisches Konstrukt**
-- Dimensionsanalyse
-- Modellvergleiche
+<div style="width: 50%; float: left; opacity: 1;">
+1. Daten vorbereiten
+1. Modell formulieren
+1. Vorannahmen formulieren
+1. Modell fitten
 </div>
 
 <div style="width: 50%; float: right;">
-**Prädiktoren:**
-- latente Regression
-- ROPE + HDI
-- Varianzanalyse
-</div>
-</div>
-
-## Schluss
-<div style="float: left; width: 50%">
-### Bitte
-- um Nutzung
-- um Bugreport
-- um Fragen
-- um Feedback
+```{r echo=TRUE}
+data_spm_long <- data_spm %>%
+  birtms::compose_dataset(
+    response_columns = i1:i12)
+```
 </div>
 
-## Schluss
-<div style="float: left; width: 50%">
-### Bitte
-- um Nutzung
-- um Bugreport
-- um Fragen
-- um Feedback
-- um Austausch
-- um Zusammenarbeit
-- um kritischen Prüfung
+<div style="width: 50%; float: right;">
+```{r echo=TRUE, eval=TRUE}
+(formula1PL <- birtms::build_formula())
+```
 </div>
 
-## Schluss
-<div style="float: left; width: 50%">
-### Bitte
-- um Nutzung
-- um Bugreport
-- um Fragen
-- um Feedback
-- um Austausch
-- um Zusammenarbeit
-- um kritischen Prüfung
+<div style="width: 100%; float: right;">
+```{r echo=TRUE}
+prior_1PL <- brms::prior("normal(0, 3)", class = "sd", group = "person") +
+  brms::prior("normal(0, 3)", class = "sd", group = "item")
+```
 </div>
 
-<div style="float: right; width: 50%">
-### Kontakt
-<simon.d.schaefer@hu-berlin.de>
-
-[github](https://github.com/Famondir/birtms)
+<div style="width: 100%; float: right;">
+```{r echo=TRUE, eval=FALSE}
+fit_1d_1pl_spm <- birtms::birtm(
+  data = data_spm_long, formula = formula1PL, 
+  prior = prior_1PL, file = "models/fit_1d_1pl_spm"
+  )
+```
 </div>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 ## Wrightmap
 
