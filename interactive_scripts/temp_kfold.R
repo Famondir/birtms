@@ -1,8 +1,8 @@
 library(future)
-options(mc.cores=3)
+options(mc.cores=10)
 plan(multisession)
 
-fit_1d_1pl_spm <- readRDS("models/gdcp/fit_1d_1pl_spm_full1b.rds")
+fit_1d_1pl_spm <- readRDS("../models/gdcp/fit_1d_1pl_spm_full1b.rds")
 
 # kfol1 + kfold2 brauchten 6:17 min
 # kfold1 <- brms::kfold(fit_1d_1pl_spm_full1, chains = 1)
@@ -10,12 +10,13 @@ fit_1d_1pl_spm <- readRDS("models/gdcp/fit_1d_1pl_spm_full1b.rds")
 #                       folds = "grouped", group = "person")
 kfold3 <- brms::kfold(fit_1d_1pl_spm, chains = 1,
                       folds = "grouped", group = "person",
-                      K = length(unique(fit_1d_1pl_spm$data$person)))
+                      # K = length(unique(fit_1d_1pl_spm$data$person)))
+                      K = 20)
 # 150 Modelle in 1 h; nach 16 h bei 466 von 499 Modellen
 # 471 nach 16.5 h
 # Arbeitsspeicher vollgelaufen
 
-saveRDS(kfold3, "models/gdcp/kfold3.rds")
+saveRDS(kfold3, "../models/gdcp/kfold3.rds")
 #
 # loo1 <- brms::loo(fit_1d_1pl_spm_full1)
 # # loo_marginal brauchte 40 s
