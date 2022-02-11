@@ -18,7 +18,6 @@ Imports:
     dplyr,
     brms,
     glue,
-    zeallot,
     magrittr,
     stringr,
     purrr,

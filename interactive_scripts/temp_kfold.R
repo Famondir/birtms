@@ -1,5 +1,5 @@
 library(future)
-options(mc.cores=3)
+options(mc.cores=4)
 plan(multisession)
 
 fit_1d_1pl_spm_full1 <- readRDS("../models/gdcp/fit_1d_1pl_spm_full1b.rds")

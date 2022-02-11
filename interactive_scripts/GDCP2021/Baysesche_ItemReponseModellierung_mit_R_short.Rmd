@@ -138,7 +138,7 @@ data_spm_long <- data_spm %>% birtms::compose_dataset(response_columns = i1:i12)
 
 <div style="bottom: 60px; left: 550px; position: absolute">
   <figure>
-  <img src="testletmodell.svg" width = 500>
+  <img src="testletmodell2.svg" width = 500>
   <figcaption style="font-size: small; text-align: center; margin-top: 10px">Grafik aus @Zhang.2011</figcaption>
   </figure>
 </div>
@@ -170,10 +170,6 @@ data_spm_long <- data_spm %>% birtms::compose_dataset(response_columns = i1:i12)
 - deklarativ-fachdidaktischer Wissenstest
 - Bayes'sches MIRT-Modell ab 100 Personen <br><small>[@Fujimoto.2020]</small>
 - Bayes'sche IRT Modellierung mit brms <br><small>[@Burkner.23.05.2019]</small>
-</div>
-
-<div class="notes">
-- deutlich: loglik-Kriterium für Item 1 und 4 (5, 6, 9, 10, 12) nicht reproduziert durch geschätzte Schwierigkeit allein
 </div>
 
 ## Motivation
@@ -236,11 +232,20 @@ data_spm_long <- data_spm %>% birtms::compose_dataset(response_columns = i1:i12)
 <div style="float: left; width: 50%; margin-top: 0px">
 ### Probleme mit NHST
 - abhängig von Datenerhebung/-auswertung
+- Interpretation
+</div>
+
+<div style="float: left; width: 50%; margin-top: 0px">
 - $H_0$ selten bedeutsam
 - contra Nullhypothese $\nLeftrightarrow$ <br>pro Alternativhypothese
+</div>
+
+<div style="float: left; width: 50%; margin-top: 0px">
 - Effektstärke?
 - Informationsverlust
-- Interpretation
+</div>
+
+<div style="float: left; width: 50%; margin-top: 0px">
 - Meehls Paradoxon <small>[@Meehl.1997]</small>
 </div>
 
@@ -264,8 +269,8 @@ data_spm_long <- data_spm %>% birtms::compose_dataset(response_columns = i1:i12)
 <div style="float: left; width: 50%; margin-top: 0px">
 ### Probleme mit "new statistics"
 - abhängig von Datenerhebung/-auswertung
-- Parameterverteilung?
 - Meehls Paradoxon <small>[@Meehl.1997]</small>
+- Parameterverteilung?
 </div>
 
 <div class="notes">
@@ -287,6 +292,7 @@ data_spm_long <- data_spm %>% birtms::compose_dataset(response_columns = i1:i12)
 - Werkzeuge
   - Verfügbarkeit
   - Effizienz
+- bekannte Fehlerraten
 </div>
 
 ## Inferenzstatistik
@@ -299,6 +305,7 @@ data_spm_long <- data_spm %>% birtms::compose_dataset(response_columns = i1:i12)
 - Werkzeuge
   - Verfügbarkeit
   - Effizienz
+- bekannte Fehlerraten
 </div>
 
 <div style="width: 50%; float: right;">
@@ -530,10 +537,6 @@ summary(fit_1d_1pl_spm, robust = TRUE)
 ```
 </div>
 
-<div style="background-color: rgba(50,50,255,0.25); position: absolute; top: 407px; left: 590px; width: 50px; height: 20px;"></div>
-
-<div style="background-color: rgba(50,255,50,0.25); position: absolute; top: 407px; left: 675px; width: 150px; height: 20px;"></div>
-
 <div style="position: absolute; bottom: 60px; width: 100px; right: 50px;">
 <figure>
   <img src="videosymbol.svg" width = 60px class="center">
@@ -541,11 +544,17 @@ summary(fit_1d_1pl_spm, robust = TRUE)
   </figure>
 </div>
 
+<div style="background-color: rgba(50,50,255,0.25); position: absolute; top: 407px; left: 590px; width: 50px; height: 20px;"></div>
+
+<div style="background-color: rgba(50,255,50,0.25); position: absolute; top: 407px; left: 675px; width: 150px; height: 20px;"></div>
+
+<div style="background-color: rgba(255,125,0,0.25); position: absolute; top: 407px; left: 363px; width: 50px; height: 20px;"></div>
+
 <div class="notes">
+- TAM liefert Ergebnis nur bei Konvergenz
 - Konvergenz: $\hat{r}$
 - ESS
-- Schiefe
-- Multimodalität
+- Est. Error
 </div>
 
 ## Konvergenz prüfen
@@ -897,6 +906,7 @@ Itemselektion und latente Regression nicht trennen
 cowplot::plot_grid(birtms::plot_itemparameter(fit_1d_2pl_spm, pars = "slope", style = "halfeye", items = c(6,9), alphacut = c(.4, .6, 2), thresholds = c(0,4)),
 birtms::plot_itemparameter(fit_1d_2pl_spm, pars = "difficulty", style = "halfeye", items = c(6,9), thresholds = c(-2,2)), nrow = 2)
 ```
+<small>Code nach @Kay.2021</small>
 </center></div>
 
 ## birtms-Showroom - Itemchecks
