@@ -345,7 +345,6 @@ add_skillintercept <- function(skillintercept = NULL) {
 #' @return brmsformula
 #' @importFrom glue glue
 #' @importFrom rlang expr
-#' @importFrom zeallot %<-%
 build_formula_nonlinear <- function(var_specs, mod_specs) {
   item_parameter_number <- mod_specs$item_parameter_number
 
@@ -356,9 +355,13 @@ build_formula_nonlinear <- function(var_specs, mod_specs) {
 
   # adds person skill related terms (theta and possibly alpha)
   if (mod_specs$item_parameter_number == 1) {
-    c(x, nl_formulae) %<-% add_skill_terms_1PL(x, nl_formulae, var_specs, mod_specs$add_common_dimension)
+    zeal_temp <- add_skill_terms_1PL(x, nl_formulae, var_specs, mod_specs$add_common_dimension)
+    x <- zeal_temp[[1]]
+    nl_formulae <- zeal_temp[[2]]
   } else if (item_parameter_number %in% c(2, 3, 4)) {
-    c(x, nl_formulae) %<-% add_skill_terms_2PL(x, nl_formulae, var_specs, mod_specs)
+    zeal_temp <- add_skill_terms_2PL(x, nl_formulae, var_specs, mod_specs)
+    x <- zeal_temp[[1]]
+    nl_formulae <- zeal_temp[[2]]
   }
 
   # sets item grouping term
@@ -375,15 +378,21 @@ build_formula_nonlinear <- function(var_specs, mod_specs) {
 
   # sets terms for person covariables
   person_covariables <- var_specs$person_covariables_main_effect
-  c(x, nl_formulae) %<-% add_covars_nonlinear(x, nl_formulae, person_covariables)
+  zeal_temp <- add_covars_nonlinear(x, nl_formulae, person_covariables)
+  x <- zeal_temp[[1]]
+  nl_formulae <- zeal_temp[[2]]
 
   # sets terms for item covariables
   item_covariables_intercept <- var_specs$item_covariables_intercept
-  c(x, nl_formulae) %<-% add_covars_nonlinear(x, nl_formulae, item_covariables_intercept)
+  zeal_temp <- add_covars_nonlinear(x, nl_formulae, item_covariables_intercept)
+  x <- zeal_temp[[1]]
+  nl_formulae <- zeal_temp[[2]]
 
   # sets terms for situation covariables
   situation_covariables <- var_specs$situation_covariables
-  c(x, nl_formulae) %<-% add_covars_nonlinear(x, nl_formulae, situation_covariables)
+  zeal_temp <- add_covars_nonlinear(x, nl_formulae, situation_covariables)
+  x <- zeal_temp[[1]]
+  nl_formulae <- zeal_temp[[2]]
 
   if (item_parameter_number %in% c(1, 2)) {
     # creating the formula should be the last step,

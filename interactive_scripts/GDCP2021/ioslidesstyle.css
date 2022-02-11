@@ -89,3 +89,11 @@ big {
 .leftindent {
   margin-left: 30px;
 }
+
+.csl-entry {
+  font-size: 0.375em;
+}
+
+.smallrsource {
+  font-size: 0.66em;
+}

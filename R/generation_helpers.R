@@ -9,7 +9,6 @@
 #'
 #' @return a list
 #' @importFrom glue glue
-#' @importFrom zeallot %<-%
 check_and_set_specifications <- function(specifications) {
   # extracts the first part (using prefix notation `[[`(x,i)) of the passed variable name (cuts at "_").
   type <- rlang::enexpr(specifications) %>% rlang::as_string() %>% strsplit(split = "_") %>% `[[`(1) %>% `[[`(1)
@@ -24,7 +23,9 @@ check_and_set_specifications <- function(specifications) {
   if (type == 'variable') {
     for (i in c(specifications$regular_dimensions, specifications$unregular_dimensions, 'common')) {
       keep <- drop <- NULL
-      c(keep, drop) %<-% create_droplist(eval(expr(`$`(specifications, !!glue::glue('person_covariables_{i}')))))
+      zeal_temp <- create_droplist(eval(expr(`$`(specifications, !!glue::glue('person_covariables_{i}')))))
+      keep <- zeal_temp[[1]]
+      drop <- zeal_temp[[2]]
       eval(expr(`<-`(`$`(specifications, !!glue::glue('drop_person_covariables_{i}')),!!drop)))
       eval(expr(`<-`(`$`(specifications, !!glue::glue('person_covariables_{i}')),!!keep)))
     }

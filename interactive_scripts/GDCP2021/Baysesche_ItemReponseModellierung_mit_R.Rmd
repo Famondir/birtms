@@ -58,8 +58,6 @@ library(tidyverse)
 - R-Package-Premiere: birtms
 
 **Was nich**
-- Funktionsweise unterschiedlicher MCMC-Algorithmen
-- Vielfalt verfügbarer Prior
 - fachdidaktische Erkenntnisse
 </div>
 
@@ -83,7 +81,7 @@ library(tidyverse)
 - Interesse, Motivation, Persönlichkeit, $\dots$
 </div>
 
-## Motivation
+## Motivation {.build}
 
 <div>
 - Professionswissens von Chemie-Studierenden mit Lehramtsoption
@@ -1263,14 +1261,148 @@ if (file.exists("../../models/gdcp/ordata_1pl_spm_fullbayes.rds")) {
                                                       ci_method = 'BayesHDI')
   ordata_1pl_spm_fullbayes %>% saveRDS("../../models/gdcp/ordata_1pl_spm_fullbayes.rds")
 }
+
+if (file.exists("../../models/gdcp/ordata_2pl_spm.rds")) {
+  ordata_2pl_spm <- readRDS("../../models/gdcp/ordata_2pl_spm.rds")
+} else {
+  ordata_2pl_spm <- fit_1d_2pl_spm %>% birtms::get_or(zero_correction = 'Haldane')
+  ordata_2pl_spm %>% saveRDS("../../models/gdcp/ordata_2pl_spm.rds")
+}
+
+if (file.exists("../../models/gdcp/ordata_2pl_spm_fullbayes.rds")) {
+  ordata_2pl_spm_fullbayes <- readRDS("../../models/gdcp/ordata_2pl_spm_fullbayes.rds")
+} else {
+  ordata_2pl_spm_fullbayes <- fit_1d_2pl_spm %>% birtms::get_or(zero_correction = 'Bayes',
+                                                      ci_method = 'BayesHDI')
+  ordata_2pl_spm_fullbayes %>% saveRDS("../../models/gdcp/ordata_2pl_spm_fullbayes.rds")
+}
 ```
 
-```{r}
-ordata_1pl_spm %>% birtms::plot_ppmc_or_heatmap(itemrange = c(1,12))
+```{r echo=TRUE, eval=FALSE}
+ordata_1pl_spm <- fit_1d_1pl_spm %>% birtms::get_or(zero_correction = 'Haldane')
+
+ordata_1pl_spm_fullbayes <- fit_1d_1pl_spm %>% birtms::get_or(zero_correction = 'Bayes',
+                                                      ci_method = 'BayesHDI')
+
+ordata_2pl_spm <- fit_1d_2pl_spm %>% birtms::get_or(zero_correction = 'Haldane')
+
+ordata_2pl_spm_fullbayes <- fit_1d_2pl_spm %>% birtms::get_or(zero_correction = 'Bayes',
+                                                      ci_method = 'BayesHDI')
+```
+
+## Bayes'sche IRT-Modellierung in R
+
+<div style="margin-top: -50px">
+### Odds-ratio PPMC
+
+<div style="float: left; width: 49%;">
+```{r echo=TRUE, eval=FALSE}
+ordata_1pl_spm_fullbayes %>% 
+  birtms::plot_ppmc_or_heatmap()
+```
+</div>
+
+<div style="float: right; width: 50%;">
+```{r echo=TRUE, eval=FALSE}
+ordata_2pl_spm_fullbayes %>% 
+  birtms::plot_ppmc_or_heatmap()
+```
+</div>
+
+<div style="float: right; width: 50%; margin-right: 150px">
+```{r out.width="130%"}
+ordata_2pl_spm_fullbayes %>% birtms::plot_ppmc_or_heatmap(itemrange = c(1,12))
+```
+</div>
+
+<div style="float: left; width: 50%; margin-left: -150px">
+```{r out.width="130%"}
 ordata_1pl_spm_fullbayes %>% birtms::plot_ppmc_or_heatmap(itemrange = c(1,12))
 ```
+</div>
+</div>
 
-Odds ratio
+<div class="notes">
+- Rechenbedarf $\sim$ Itemanzahl$^2$
+- Unterschied zw. Bayes und klassisch klein
+- 2pl besser
+</div>
+
+## Bayes'sche IRT-Modellierung in R
+
+<div style="margin-top: -50px">
+### Odds-ratio-Limit-Check
+
+<div style="float: left; width: 50%;">
+```{r echo=TRUE, eval=FALSE}
+ordata_1pl_spm_fullbayes %>% 
+  birtms::plot_or_heatmap()
+```
+</div>
+
+<div style="float: right; width: 50%;">
+```{r echo=TRUE, eval=FALSE}
+ordata_2pl_spm_fullbayes %>% 
+  birtms::plot_or_heatmap(model = fit_1d_2pl_spm)
+```
+</div>
+
+<div style="float: left; width: 50%; margin-left: -150px">
+```{r out.width="130%"}
+ordata_2pl_spm_fullbayes %>% birtms::plot_or_heatmap(itemrange = c(1,12))
+```
+</div>
+
+<div style="float: right; width: 50%; margin-right: 100px">
+```{r out.width="130%"}
+ordata_2pl_spm_fullbayes %>% birtms::plot_or_heatmap(itemrange = c(1,12), model = fit_1d_2pl_spm)
+```
+</div>
+</div>
+
+<div class="notes">
+- 2pl besser
+- @Haberman.2007
+</div>
+
+## Bayes'sche IRT-Modellierung in R
+
+<div style="margin-top: -50px">
+### Odds-ratio-Limit-Check
+
+<div style="float: left; width: 50%;">
+```{r echo=TRUE, eval=FALSE}
+ordata_1pl_spm_fullbayes %>% 
+  birtms::plot_or_heatmap(model = fit_1d_2pl_spm, bayesian = TRUE)
+```
+</div>
+
+<div style="float: right; width: 50%;">
+```{r echo=TRUE, eval=FALSE}
+ordata_2pl_spm_fullbayes %>% 
+  birtms::plot_or_heatmap(model = fit_1d_2pl_spm)
+```
+</div>
+
+<div style="float: left; width: 50%; margin-left: -100px">
+```{eval=TRUE, results='hide', fig.keep='all',r eval=TRUE, results='hide', fig.keep='all', out.width="130%", message=FALSE}
+ordata_2pl_spm_fullbayes %>% birtms::plot_or_heatmap(itemrange = c(1,12),
+                                                     model = fit_1d_2pl_spm, bayesian = TRUE)
+```
+</div>
+
+<div style="float: right; width: 50%; margin-right: 100px">
+```{r out.width="130%"}
+ordata_2pl_spm_fullbayes %>% birtms::plot_or_heatmap(itemrange = c(1,12)
+                                                     , model = fit_1d_2pl_spm)
+```
+</div>
+</div>
+
+<div class="notes">
+- 2pl besser
+- @Haberman.2007
+</div>
 
 ## Bayes'sche IRT-Modellierung in R
 
@@ -1337,7 +1469,8 @@ fit_1d_1pl_spm %>% birtms::plot_fit_statistic(
 ```{r message=FALSE, out.width="80%"}
 fit_1d_1pl_spm %>% birtms::plot_fit_statistic(data = ppmc_data_spm_1pl_person_ll, units = c(1,12), group = .$var_specs$person)
 ```
-</center></div>
+</center>
+</div>
 
 ## Bayes'sche IRT-Modellierung in R
 
@@ -1361,83 +1494,210 @@ birtms::plot_personresponsefunction(fit_1d_1pl_spm, respfuncdata_1pl, id = c(2:4
 </center>
 </div>
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-## birtms
+## Bayes'sche IRT-Modellierung in R
+
+<div style="width: 50%; float: left; margin-top: -40px;">
+<div class="lessspace">**Vorgehensweise:**</div>
+1. **Forschungsfragen aufstellen**
+1. Erhebung planen
+1. *Testinstrument entwickeln*
+1. Daten vorbereiten
+1. Modell formulieren
+1. Vorannahmen formulieren
+1. Modell fitten
+1. Modellpassung prüfen
+1. Itemselektion
+1. <big>Forschungsfragen untersuchen</big>
+</div>
+
+<div style="width: 50%; float: right;">
+<div class="lessspace">**Theoretisches Konstrukt:**</div>
+- Dimensionsanalyse
+- **Modellvergleiche mit birtms**
+</div>
 
 <div style="float: right; width: 50%;">
-<div class="lessspace">**Modellcheck mit birtms**</div>
-- marginal loglikelihood Modellvergleiche
+- leave-one-out crossvalidation
+  - marginal loglikelihood
+  - entferne alle Antworten einer Person
 </div>
+
+<div style="float: right; width: 50%;">
+<div class="lessspace">*Alternativen*</div>
+- grouped k-fold crossvalidation
+- Bayes Factor via bridgesampling
+</div>
+
+<div class="notes">
+- Bürkner favorisiert PSIS LOO-CV
+  - conditional LOO bevorzugt komplexere Modelle
+  - marginal LOO weist auf Probleme mit PSIS hin
+  - LOO oder k-fold können bei komplexeren Modellen sehr lange dauern
+- BayesFaktor via BridgeSampling braucht viele Posterior Samples
+  - Bayes-Faktor prior-sensibel
+  - Bridge Sampling: 110000 statt 2000
+  - preparing_bf = TRUE
+  - brms::bayes_factor()
+- Kruschke schlägt vor, mehrere Modell in einem Obermodell zusammenzufassen
+  - in Stan schwerlich möglich, da keine diskreten Variablen gezogen werden
+</div>
+
+## Bayes'sche IRT-Modellierung in R
+
+<div style="float: left; width: 50%; bottom: 200px">
+  <figure>
+  <img src="conditional.png" height = 300px class="center">
+  <figcaption style="font-size: small; text-align: center; margin-top: 5px;">conditional loo</figcaption>
+  </figure>
+</div>
+
+<div style="float: right; width: 50%; bottom: 200px">
+  <figure>
+  <img src="marginal.png" height = 300px class="center">
+  <figcaption style="font-size: small; text-align: center; margin-top: 5px;">marginal loo</figcaption>
+  </figure>
+</div>
+
+## Bayes'sche IRT-Modellierung in R
+
+<center>
+```{r}
+ic_1pl_spm <- readRDS("../../models/gdcp/ic_1pl_spm.rds")
+
+crit_vec <- c("10-fold", "grouped 10-fold", "conditional PSIS loo", "marginal PSIS loo")
+
+crit_data <- rbind(
+  ic_1pl_spm[[1]]$estimates[1,],
+  ic_1pl_spm[[2]]$estimates[1,],
+  ic_1pl_spm[[3]]$estimates[1,],
+  ic_1pl_spm[[4]]$estimates[1,]
+) %>% as_tibble() %>% mutate(information_crit = crit_vec, .before= 1)
+
+crit_data %>% ggplot(aes(x = information_crit, y = Estimate)) +
+  geom_point() +
+  geom_errorbar(aes(ymin = Estimate-SE, ymax = Estimate+SE))
+```
+</center>
+
+## Bayes'sche IRT-Modellierung in R
+
+<div style="float: left; width: 100%">
+```{r include=FALSE}
+if (file.exists("../../models/gdcp/marg_loo1pl.rds")) {
+  marg_loo1pl <- readRDS("../../models/gdcp/marg_loo1pl.rds")
+} else {
+  marg_loo1pl <- birtms::loo_marginal(fit_1d_1pl_spm)
+  marg_loo1pl %>% saveRDS("../../models/gdcp/marg_loo1pl.rds")
+}
+
+if (file.exists("../../models/gdcp/marg_loo2pl.rds")) {
+  marg_loo2pl <- readRDS("../../models/gdcp/marg_loo2pl.rds")
+} else {
+  marg_loo2pl <- birtms::loo_marginal(fit_1d_2pl_spm)
+  marg_loo2pl %>% saveRDS("../../models/gdcp/marg_loo2pl.rds")
+}
+```
+
+```{r echo=TRUE, eval=FALSE}
+marg_loo1pl <- birtms::loo_marginal(fit_1d_1pl_spm)
+marg_loo1pl <- birtms::loo_marginal(fit_1d_2pl_spm)
+```
+
+```{r echo=TRUE}
+loo::loo_compare(marg_loo1pl, marg_loo2pl)
+```
+
+</div>
+
+<div class="notes">
+[elpd_se Interpretation](https://avehtari.github.io/modelselection/CV-FAQ.html#15_How_to_interpret_in_Standard_error_(SE)_of_elpd_difference_(elpd_diff))
+- elpd_diff > 4 und > 2*se => Modell passt besser
+</div>
+
+## Bayes'sche IRT-Modellierung in R
+
+<div style="width: 50%; float: left; margin-top: -40px;">
+<div class="lessspace">**Vorgehensweise:**</div>
+1. **Forschungsfragen aufstellen**
+1. Erhebung planen
+1. *Testinstrument entwickeln*
+1. Daten vorbereiten
+1. Modell formulieren
+1. Vorannahmen formulieren
+1. Modell fitten
+1. Modellpassung prüfen
+1. Itemselektion
+1. <big>Forschungsfragen untersuchen</big>
+</div>
+
+<div style="width: 50%; float: right;">
+<div class="lessspace">**Prädiktoren:**</div>
+- latente Regression
+- ROPE + HDI
+- Varianzanalyse
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1952,25 +2212,6 @@ $fw$: Fachwissen<br>$rpk$: Repräsentationskenntnis
 - Parameterbetrachtung selbst in suboptimalen Modellen
 </div>
 
-## Modellvergleiche
-
-- Kruschke schlägt vor, mehrere Modell in einem Obermodell zusammenzufassen
-  - in Stan schwerlich möglich, da keine diskreten Variablen gezogen werden
-- BayesFaktor via BridgeSampling braucht viele Posterior Samples
-  - Bayes-Faktor prior-sensibel
-- Bürkner favorisiert PSIS LOO-CV
-  - conditional LOO bevorzugt komplexere Modelle
-  - marginal LOO weist auf Probleme mit PSIS hin
-  - LOO oder k-fold können bei komplexeren Modellen sehr lange dauern
-
-```{r}
-ic_1pl_spm <- readRDS("../../models/gdcp/ic_1pl_spm.rds")
-```
-
-<<div class="notes">
-- Bridge Sampling: 110000 statt 2000
-</div>
-
 ## Bayes'sche IRT
 
 1. Daten vorbereiten
@@ -1994,5 +2235,5 @@ ic_1pl_spm <- readRDS("../../models/gdcp/ic_1pl_spm.rds")
 - $\dots$
 </div>
 
-
+## Literatur
 
